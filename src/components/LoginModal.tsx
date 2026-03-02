@@ -115,7 +115,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose }) => {
           </button>
 
           <div className="text-center mt-4 text-[0.83rem] text-gray-600">
-            Hesabınız yok mu? <button type="button" onClick={onClose} className="text-blue-600 font-semibold no-underline hover:underline">Ücretsiz kaydolun</button>
+            Hesabınız yok mu? <button type="button" onClick={() => setIsRegisterModalOpen(true)} className="text-blue-600 font-semibold no-underline hover:underline">Ücretsiz kaydolun</button>
           </div>
         </form>
       </div>
