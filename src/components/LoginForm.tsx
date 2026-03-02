@@ -119,11 +119,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegis
             Hesabınız yok mu?{' '}
             <button
               type="button"
-              onClick={() => setIsRegisterModalOpen(true)}
+              onClick={onSwitchToRegister ?? onClose}
               className="text-blue-600 font-semibold no-underline hover:underline"
             >
               Ücretsiz kaydolun
-            </button>
+            </button> 
           </div>
         </form>
       </div>
