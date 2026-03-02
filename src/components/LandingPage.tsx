@@ -30,13 +30,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
   }, [initialModal]);
 
-  // Giriş denemesi başarısız olup global authError set edilirse login modalını açık tut
+  // Giriş denemesi başarısız olup global authError set edilirse login modalını açık tut.
+  // Ancak kullanıcı manuel olarak kayıt modalına geçtiyse (isRegisterModalOpen === true),
+  // bu etki kayıt modalını tekrar kapatmasın.
   useEffect(() => {
-    if (!isAuthenticated && authError) {
+    if (!isAuthenticated && authError && !isRegisterModalOpen) {
       setIsLoginModalOpen(true);
-      setIsRegisterModalOpen(false);
     }
-  }, [authError, isAuthenticated]);
+  }, [authError, isAuthenticated, isRegisterModalOpen]);
 
   return (
     <div className="min-h-screen bg-white">
