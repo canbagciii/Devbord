@@ -790,6 +790,9 @@ const DailyWorklogTracking: React.FC = () => {
                     {viewMode === 'weekly' ? 'Haftalık' : 'Aylık'} Toplam
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Toplam Story Point
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Hedef
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -899,10 +902,19 @@ const DailyWorklogTracking: React.FC = () => {
                         </td>
                       ))}
                       
-                      {/* Weekly/Monthly Total */}
+                      {/* Weekly/Monthly Total (saat) */}
                       <td className="px-6 py-4 text-center">
                         <span className="text-sm font-semibold text-gray-900">
                           {developer.weeklyTotal}h
+                        </span>
+                      </td>
+                      
+                      {/* Total Story Points (issue bazlı) */}
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-sm font-semibold text-gray-900">
+                          {typeof developer.weeklyStoryPointsTotal === 'number'
+                            ? developer.weeklyStoryPointsTotal
+                            : '-'}
                         </span>
                       </td>
                       
@@ -962,7 +974,7 @@ const DailyWorklogTracking: React.FC = () => {
                     {/* Expanded Details Row */}
                     {isExpanded && (
                       <tr className="bg-gray-50">
-                        <td colSpan={dateRange.dates.length + 4 + (viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK ? 1 : 0)} className="px-6 py-4">
+                        <td colSpan={dateRange.dates.length + 5 + (viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK ? 1 : 0)} className="px-6 py-4">
                           <div className="space-y-4">
                             {/* Leave Details */}
                             {hasLeave && viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && (
