@@ -23,11 +23,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegis
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
+  // authError geldiginde loading'i durdur ve hatayi goster
   useEffect(() => {
-    if (authError && !loading) {
-      setError(authError);
+    if (authError) {
+      setError('E-posta veya şifre geçersiz. Lütfen tekrar deneyin.');
+      setLoading(false);
     }
-  }, [authError, loading]);
+  }, [authError]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -100,7 +102,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegis
                 onChange={handleChange}
                 required
                 className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all"
-                placeholder="••••••••"
+                placeholder="password"
               />
             </div>
           </div>
