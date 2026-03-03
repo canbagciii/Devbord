@@ -205,7 +205,7 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const fetchAll = async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !user) return;
 
     // Cache key: seçilen proje ve yazılımcılar dahil - filtre değişince eski cache kullanılmasın
     const [projectKeys, developerNames] = await Promise.all([
@@ -223,7 +223,7 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       sprints: JiraSprint[];
       sprintTasks: Record<string, JiraTask[]>;
     }>(cacheKey);
-    
+
     if (cachedData) {
       console.log('📦 Using cached Jira data');
       setCacheStatus('cached');
@@ -240,7 +240,7 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
       return;
     }
-    
+
     setCacheStatus('loading');
     setLoading(true);
     setError(null);
@@ -249,11 +249,11 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Analist veya yazılımcı kullanıcıları için kapatılan sprintlerde tüm sprintleri getir
       const isAnalystOrDeveloper = user && (user.role === 'analyst' || user.role === 'developer');
       const shouldGetAllClosedSprints = isAnalystOrDeveloper && sprintType === 'closed';
-      
+
       const [projectsData, boardsData, sprintsData, workloadData, developerProjectMapData] = await Promise.all([
         supabaseJiraService.getProjects(),
         supabaseJiraService.getBoards(),
-        shouldGetAllClosedSprints 
+        shouldGetAllClosedSprints
           ? supabaseJiraService.getAllClosedSprints()
           : supabaseJiraService.getAllSprints(sprintType),
         supabaseJiraService.getDeveloperWorkloadAnalysis(sprintType),
@@ -261,24 +261,24 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       ]);
       setDeveloperProjectMapFromUsers(developerProjectMapData);
       setDeveloperProjectMapReady(true);
-      
+
       console.log('📊 All data fetched successfully:');
       console.log('- Projects:', projectsData.length);
       console.log('- Boards:', boardsData.length);
       console.log('- Workload entries:', workloadData.length);
       console.log(`- ${sprintType} sprints:`, sprintsData.length);
-      
+
       // Kullanıcının erişebileceği projeleri filtrele
       const accessibleProjectKeys = getAccessibleProjects();
-      const filteredProjects = accessibleProjectKeys.length > 0 
+      const filteredProjects = accessibleProjectKeys.length > 0
         ? projectsData.filter(project => accessibleProjectKeys.includes(project.key))
         : projectsData;
-      
+
       setProjects(filteredProjects);
       setBoards(boardsData);
-      
+
       // Kullanıcının görebileceği yazılımcı verilerini filtrele
-      const filteredWorkload = await filterWorkloadByUserAccess(workloadData, user);
+      const filteredWorkload = await filterWorkloadByUserAccess(workloadData, user, supabase);
       
       // Workload verilerindeki status'ü harcanan süreye göre güncelle
       const updatedWorkload = filteredWorkload.map(dev => {
@@ -393,10 +393,10 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
       fetchAll();
     }
-  }, [sprintType, isAuthenticated]);
+  }, [sprintType, isAuthenticated, user?.id]);
 
   // Seçim var ama projeler boşsa (eski cache) bir kez refresh dene
   useEffect(() => {
@@ -669,19 +669,19 @@ export const useJiraData = () => {
   return context;
 };
 
-// Kullanıcının erişim yetkilerine göre workload verilerini filtrele
-const filterWorkloadByUserAccess = async (workloadData: DeveloperWorkload[], user: any): Promise<DeveloperWorkload[]> => {
+const filterWorkloadByUserAccess = async (
+  workloadData: DeveloperWorkload[],
+  user: any,
+  supabaseClient: typeof supabase
+): Promise<DeveloperWorkload[]> => {
   if (!user) return [];
-  
-  // Admin tüm yazılımcıları görebilir
+
   if (user.role === 'admin') {
     console.log('👑 Admin kullanıcı - tüm yazılımcılar gösterilecek:', workloadData.length);
     return workloadData;
   }
-  
-  // Developer sadece kendini görebilir
+
   if (user.role === 'developer') {
-    // Esnek isim eşleştirme (Türkçe karakterler ve ara isimler dahil)
     const normalize = (s: string) => s
       .toLocaleLowerCase('tr')
       .replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ç/g, 'c').replace(/ğ/g, 'g')
@@ -708,13 +708,11 @@ const filterWorkloadByUserAccess = async (workloadData: DeveloperWorkload[], use
     console.log(`👨‍💻 Developer ${user.name} - sadece kendi verisi gösterilecek:`, filteredForDeveloper.length);
     return filteredForDeveloper;
   }
-  
-  // Analist: Sadece assignedProjects'i kesişen kullanıcıları görür (users tablosuna göre)
+
   if (user.role === 'analyst') {
     try {
       const analystProjects: string[] = Array.isArray(user.assignedProjects) ? user.assignedProjects : [];
-      // Aktif kullanıcıları çek (admin hariç)
-      const { data: projectUsers, error } = await supabase
+      const { data: projectUsers, error } = await supabaseClient
         .from('users')
         .select('name, email, role, assigned_projects, is_active')
         .eq('is_active', true);
@@ -735,7 +733,7 @@ const filterWorkloadByUserAccess = async (workloadData: DeveloperWorkload[], use
           const ap: string[] = Array.isArray(u.assigned_projects) ? u.assigned_projects : [];
           return ap.some(p => analystProjects.includes(p));
         })
-        .map(u => u.name); 
+        .map(u => u.name);
       const sharedNorm = new Set(sharedUsers.map(normalize));
       const filteredWorkload = workloadData
         .filter(dev => sharedNorm.has(normalize(dev.developer)))
@@ -747,7 +745,7 @@ const filterWorkloadByUserAccess = async (workloadData: DeveloperWorkload[], use
       return [];
     }
   }
-  
+
   return [];
 }; 
 

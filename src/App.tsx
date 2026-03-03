@@ -16,6 +16,7 @@ import { SprintNotification } from './components/SprintNotification';
 import { JiraFilterManagement } from './components/JiraFilterManagement';
 import { onboardingService } from './lib/onboardingService';
 import { jiraFilterService } from './lib/jiraFilterService';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading, hasRole, hasKolayIK, user } = useAuth();
@@ -256,11 +257,13 @@ const [activeTab, setActiveTab] = useState<
 
 function App() {
   return (
-    <AuthProvider>
-      <JiraDataProvider>
-        <AppContent />
-      </JiraDataProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <JiraDataProvider>
+          <AppContent />
+        </JiraDataProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
