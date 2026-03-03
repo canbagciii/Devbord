@@ -7,6 +7,11 @@ import { jiraFilterService } from '../lib/jiraFilterService';
 const worklogCache = new Map<string, { data: any; timestamp: number; expiry: number }>();
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes - daha uzun cache süresi
 
+// Jira "Story point estimate" alanı için dinamik field key cache'i
+let cachedStoryPointFieldKey: string | null = null;
+let cachedStoryPointFieldKeyFetchedAt: number | null = null;
+const STORY_POINT_FIELD_TTL = 60 * 60 * 1000; // 60 dakika
+
 class WorklogService {
   private normalizeName(name: string): string {
     return name
@@ -33,6 +38,19 @@ class WorklogService {
       return await jiraFilterService.getDeveloperNames();
     } catch (error) {
       console.error('Error fetching allowed developers:', error);
+      return [];
+    }
+  }
+
+  private async getAllowedDevelopersWithIds(): Promise<Array<{ name: string; accountId: string | null }>> {
+    try {
+      const selected = await jiraFilterService.getSelectedDevelopers();
+      return selected.map(dev => ({
+        name: dev.developer_name,
+        accountId: dev.jira_account_id
+      }));
+    } catch (error) {
+      console.error('Error fetching allowed developers with account ids:', error);
       return [];
     }
   }
@@ -80,22 +98,100 @@ class WorklogService {
     return data;
   }
 
+  /**
+   * Jira'daki "Story Point" alanının field key'ini (örn. customfield_10016) dinamik olarak bulur.
+   * Öncelik:
+   *  1) .env VITE_JIRA_STORY_POINT_FIELD_KEY varsa onu kullan
+   *  2) /rest/api/3/field çağır, schema.custom === 'com.pyxis.greenhopper.jira:storypoints'
+   *  3) İsimde "story point" geçen numeric alan
+   * Sonuç 1 saat boyunca memory'de cache'lenir.
+   */
+  private async getStoryPointFieldKey(): Promise<string | null> {
+    try {
+      // 1) .env override
+      const envKey = (import.meta as any).env?.VITE_JIRA_STORY_POINT_FIELD_KEY as string | undefined;
+      if (envKey && typeof envKey === 'string' && envKey.trim().length > 0) {
+        cachedStoryPointFieldKey = envKey.trim();
+        cachedStoryPointFieldKeyFetchedAt = Date.now();
+        return cachedStoryPointFieldKey;
+      }
+
+      // 2) Cache kontrolü
+      const now = Date.now();
+      if (
+        cachedStoryPointFieldKey &&
+        cachedStoryPointFieldKeyFetchedAt &&
+        now - cachedStoryPointFieldKeyFetchedAt < STORY_POINT_FIELD_TTL
+      ) {
+        return cachedStoryPointFieldKey;
+      }
+
+      // 3) Jira field metadata çağrısı
+      const fields = await this.invokeJiraProxy({
+        body: {
+          endpoint: '/rest/api/3/field',
+          method: 'GET'
+        }
+      });
+
+      if (!Array.isArray(fields)) {
+        console.warn('Story point field discovery: /field yanıtı beklenen formatta değil.');
+        return null;
+      }
+
+      // Öncelik: schema.custom === 'com.pyxis.greenhopper.jira:storypoints'
+      let spField = fields.find((f: any) => f?.schema?.custom === 'com.pyxis.greenhopper.jira:storypoints');
+
+      // Bulunamazsa isim bazlı fallback
+      if (!spField) {
+        spField = fields.find((f: any) => {
+          const name = (f?.name ?? '') as string;
+          const type = f?.schema?.type;
+          return (
+            typeof name === 'string' &&
+            name.toLocaleLowerCase('en').includes('story point') &&
+            type === 'number'
+          );
+        });
+      }
+
+      if (!spField || !spField.id) {
+        console.warn('Story point field discovery: Uygun field bulunamadı.');
+        cachedStoryPointFieldKey = null;
+        cachedStoryPointFieldKeyFetchedAt = Date.now();
+        return null;
+      }
+
+      cachedStoryPointFieldKey = String(spField.id);
+      cachedStoryPointFieldKeyFetchedAt = Date.now();
+      console.log(`✅ Story point field key bulundu: ${cachedStoryPointFieldKey}`);
+      return cachedStoryPointFieldKey;
+    } catch (e) {
+      console.warn('Story point field discovery sırasında hata oluştu, SP alanı devre dışı kalacak:', e);
+      return null;
+    }
+  }
+
   // Aylık worklog verisi - ayın tüm günleri için
   async getMonthlyWorklogData(startDate: string, endDate: string, developerLeaveInfo?: any[]): Promise<DeveloperWorklogData[]> {
     console.log(`🚀 Getting MONTHLY worklog data for ${startDate} to ${endDate}`);
 
-    const [allowedDevelopers, allowedProjects, developerEmailMap] = await Promise.all([
-      this.getAllowedDevelopers(),
+    const [allowedDevelopersWithIds, allowedProjects, developerEmailMap] = await Promise.all([
+      this.getAllowedDevelopersWithIds(),
       this.getAllowedProjects(),
       // Bazı ortamlarda getDeveloperEmailMap henüz tanımlı olmayabilir; güvenli fallback kullan
       typeof (jiraFilterService as any).getDeveloperEmailMap === 'function'
         ? jiraFilterService.getDeveloperEmailMap()
         : Promise.resolve(new Map<string, string>())
     ]);
+    const allowedDevelopers = allowedDevelopersWithIds.map(d => d.name);
     console.log(`✅ Found ${allowedDevelopers.length} active developers from database`);
     console.log(`✅ Found ${allowedProjects.length} active projects from database:`, allowedProjects);
 
     const monthlyData: DeveloperWorklogData[] = [];
+
+    // Story point alanını (varsa) bir kez belirle
+    const storyPointFieldKey = await this.getStoryPointFieldKey();
 
     // Ayın tüm günlerini oluştur
     const allDates: string[] = [];
@@ -110,7 +206,8 @@ class WorklogService {
     console.log(`📅 Monthly dates: ${allDates.length} days from ${allDates[0]} to ${allDates[allDates.length - 1]}`);
 
     // Her yazılımcı için aylık worklog verisi çek
-    for (const developer of allowedDevelopers) {
+    for (const dev of allowedDevelopersWithIds) {
+      const developer = dev.name;
       console.log(`👤 Processing monthly data for: ${developer}`);
       
       try {
@@ -127,7 +224,11 @@ class WorklogService {
           ? `project in (${allowedProjects.map(p => `"${p}"`).join(', ')}) AND `
           : '';
 
-        const jql = `${projectFilter}worklogAuthor = "${developer}" AND worklogDate >= "${jqlStartDate}" AND worklogDate <= "${jqlEndDate}" ORDER BY updated DESC`;
+        const authorClause = dev.accountId
+          ? `worklogAuthor = ${dev.accountId}`
+          : `worklogAuthor = "${developer}"`;
+
+        const jql = `${projectFilter}${authorClause} AND worklogDate >= "${jqlStartDate}" AND worklogDate <= "${jqlEndDate}" ORDER BY updated DESC`;
 
         console.log(`🔍 Monthly JQL for ${developer}: ${jql}`);
 
@@ -138,7 +239,8 @@ class WorklogService {
         
         // Sayfalı issue çekme (GET: POST /search/jql 400 Invalid payload dönüyor)
         while (startAt < total) {
-          const fieldsParam = 'worklog,summary,project,issuetype,parent,updated,created';
+          const baseFields = ['worklog', 'summary', 'project', 'issuetype', 'parent', 'updated', 'created'];
+          const fieldsParam = storyPointFieldKey ? [...baseFields, storyPointFieldKey].join(',') : baseFields.join(',');
           const searchUrl = `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${pageSize}&fields=${encodeURIComponent(fieldsParam)}`;
           const page = await this.invokeJiraProxy({
             body: {
@@ -215,6 +317,14 @@ class WorklogService {
               dailyEntries[worklogDate] = [];
             }
 
+            const storyPointsRaw = storyPointFieldKey ? issue.fields?.[storyPointFieldKey] : undefined;
+            const storyPoints =
+              typeof storyPointsRaw === 'number'
+                ? storyPointsRaw
+                : typeof storyPointsRaw === 'string'
+                  ? parseFloat(storyPointsRaw) || 0
+                  : 0;
+
             const worklogEntry: WorklogEntry = {
               id: `${issue.key}-${worklog.started}`,
               issueKey: issue.key,
@@ -228,7 +338,8 @@ class WorklogService {
               started: worklog.started,
               comment: worklog.comment,
               project: issue.fields.project.name,
-              issueType: issue.fields.issuetype?.name || 'Task'
+              issueType: issue.fields.issuetype?.name || 'Task',
+              storyPoints
             };
 
             dailyEntries[worklogDate].push(worklogEntry);
@@ -338,6 +449,7 @@ class WorklogService {
   /**
    * Proje 3 ile aynı hybrid mantık: Her yazılımcı için ayrı JQL (worklogAuthor = "İsim")
    * ile worklog'lar çekilir; böylece tek büyük worklogDate sorgusunda kaçan kayıtlar olmaz.
+   * Ayrıca ilgili issue'lardaki story point alanı da (STORY_POINT_FIELD_KEY) çekilir.
    */
   async getWorklogDataForDateRange(startDate: string, endDate: string): Promise<Array<{
     author: { displayName: string; accountId: string };
@@ -351,6 +463,7 @@ class WorklogService {
     isSubtask?: boolean;
     parentKey?: string;
     issueTypeName?: string;
+    storyPoints?: number;
   }>> {
     const cacheKey = `worklog-range-${startDate}-${endDate}`;
     const cached = this.getFromCache<any[]>(cacheKey);
@@ -358,15 +471,23 @@ class WorklogService {
 
     try {
       console.log(`🚀 HYBRID: Fetching worklog data for ${startDate} to ${endDate} (per-developer worklogAuthor JQL)`);
-      const allowedDevelopers = await this.getAllowedDevelopers();
+      const allowedDevelopers = await this.getAllowedDevelopersWithIds();
       const allWorklogs: any[] = [];
       const jqlStartDate = startDate.replace(/-/g, '/');
       const jqlEndDate = endDate.replace(/-/g, '/');
-      const fieldsParam = 'worklog,summary,project,issuetype,parent,updated,created';
 
-      for (const developer of allowedDevelopers) {
+      // Story point alanını (varsa) bir kez belirle
+      const storyPointFieldKey = await this.getStoryPointFieldKey();
+      const baseFields = ['worklog', 'summary', 'project', 'issuetype', 'parent', 'updated', 'created'];
+      const fieldsParam = storyPointFieldKey ? [...baseFields, storyPointFieldKey].join(',') : baseFields.join(',');
+
+      for (const dev of allowedDevelopers) {
         try {
-          const jql = `worklogAuthor = "${developer}" AND worklogDate >= "${jqlStartDate}" AND worklogDate <= "${jqlEndDate}" ORDER BY updated DESC`;
+          const developer = dev.name;
+          const authorClause = dev.accountId
+            ? `worklogAuthor = ${dev.accountId}`
+            : `worklogAuthor = "${developer}"`;
+          const jql = `${authorClause} AND worklogDate >= "${jqlStartDate}" AND worklogDate <= "${jqlEndDate}" ORDER BY updated DESC`;
           let startAt = 0;
           let total = Infinity;
           const developerIssues: any[] = [];
@@ -407,6 +528,14 @@ class WorklogService {
               }
             }
 
+            const storyPointsRaw = storyPointFieldKey ? issue.fields?.[storyPointFieldKey] : undefined;
+            const storyPoints =
+              typeof storyPointsRaw === 'number'
+                ? storyPointsRaw
+                : typeof storyPointsRaw === 'string'
+                  ? parseFloat(storyPointsRaw) || 0
+                  : 0;
+
             for (const worklog of worklogs) {
               if (!worklog.started || !worklog.author?.displayName) continue;
               const worklogDateObj = new Date(worklog.started);
@@ -414,7 +543,13 @@ class WorklogService {
                 String(worklogDateObj.getMonth() + 1).padStart(2, '0') + '-' +
                 String(worklogDateObj.getDate()).padStart(2, '0');
               if (worklogDate < startDate || worklogDate > endDate) continue;
-              if (this.normalizeName(worklog.author.displayName) !== this.normalizeName(developer)) continue;
+              if (
+                (dev.accountId && worklog.author?.accountId && worklog.author.accountId === dev.accountId) === false &&
+                (!dev.accountId &&
+                  this.normalizeName(worklog.author.displayName) !== this.normalizeName(developer))
+              ) {
+                continue;
+              }
 
               allWorklogs.push({
                 author: { displayName: worklog.author.displayName, accountId: worklog.author.accountId },
@@ -427,12 +562,13 @@ class WorklogService {
                 comment: worklog.comment,
                 isSubtask: issue.fields.issuetype?.name === 'Sub-task',
                 parentKey: issue.fields.parent?.key,
-                issueTypeName: issue.fields.issuetype?.name
+                issueTypeName: issue.fields.issuetype?.name,
+                storyPoints
               });
             }
           }
         } catch (err) {
-          console.warn(`❌ Worklog fetch failed for ${developer}:`, err);
+          console.warn(`❌ Worklog fetch failed for ${dev.name}:`, err);
         }
       }
 
@@ -498,7 +634,8 @@ class WorklogService {
         started: worklog.started,
         comment: worklog.comment,
         project: worklog.projectName,
-        issueType: worklog.issueTypeName || 'Task'
+        issueType: worklog.issueTypeName || 'Task',
+        storyPoints: typeof worklog.storyPoints === 'number' ? worklog.storyPoints : undefined
       };
       
       devMap.get(worklogDate)!.push(worklogEntry);
@@ -571,8 +708,24 @@ class WorklogService {
         });
       }
       
-      // Haftalık toplam hesapla
+      // Haftalık toplam saat
       const weeklyTotal = Math.round(dailySummaries.reduce((sum, day) => sum + day.totalHours, 0) * 100) / 100;
+
+      // Haftalık toplam story point (issue bazlı, tekil)
+      const seenIssueKeys = new Set<string>();
+      let weeklyStoryPointsTotal = 0;
+      for (const day of dailySummaries) {
+        for (const entry of day.entries) {
+          if (
+            typeof entry.storyPoints === 'number' &&
+            entry.storyPoints > 0 &&
+            !seenIssueKeys.has(entry.issueKey)
+          ) {
+            seenIssueKeys.add(entry.issueKey);
+            weeklyStoryPointsTotal += entry.storyPoints;
+          }
+        }
+      }
       const weeklyTarget = 35; // 7 saat x 5 iş günü
       
       let weeklyStatus: 'sufficient' | 'insufficient' | 'excessive';
@@ -593,7 +746,8 @@ class WorklogService {
         dailySummaries,
         weeklyTotal,
         weeklyTarget,
-        weeklyStatus
+        weeklyStatus,
+        weeklyStoryPointsTotal
       });
     }
 

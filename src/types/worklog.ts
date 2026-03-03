@@ -13,6 +13,8 @@ export interface WorklogEntry {
   comment?: string;
   project: string;
   issueType: string;
+  /** Jira'daki "Story point estimate" alanı (issue bazlı) */
+  storyPoints?: number;
 }
 
 export interface DailyWorklogSummary {
@@ -31,6 +33,8 @@ export interface DeveloperWorklogData {
   weeklyTotal: number;
   weeklyTarget: number;
   weeklyStatus: 'sufficient' | 'insufficient' | 'excessive';
+   /** İlgili dönemde yazılımcının çalıştığı issue'ların toplam story point'i (issue bazlı, tekil sayılır) */
+  weeklyStoryPointsTotal?: number;
 }
 
 export interface WorklogAnalytics {
