@@ -1,9 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "npm:@supabase/supabase-js@2.52.0"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-company-id',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 }
 
@@ -63,55 +62,33 @@ interface DeveloperWorkload {
   details: ProjectSprintDetail[]
 }
 
-const getJiraConfig = async (companyId: string): Promise<JiraConfig> => {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  const supabase = createClient(supabaseUrl, supabaseKey)
-
-  console.log('🔍 Fetching Jira config for company (workload-analysis):', companyId)
-
-  const { data: company, error } = await supabase
-    .from('companies')
-    .select('jira_base_url, jira_email, jira_api_token')
-    .eq('id', companyId)
-    .single()
-
-  if (error) {
-    console.error('❌ Error fetching company:', error)
-    throw new Error(`Failed to fetch company data: ${error.message}`)
-  }
-
-  if (!company) {
-    throw new Error('Company not found')
-  }
-
-  const { jira_base_url, jira_email, jira_api_token } = company
-
-  console.log('🔍 Jira config check (workload-analysis):', {
-    baseUrl: jira_base_url,
-    emailExists: !!jira_email,
-    tokenExists: !!jira_api_token,
-    emailLength: jira_email?.length || 0,
-    tokenLength: jira_api_token?.length || 0
+const getJiraConfig = (): JiraConfig => {
+  const baseUrl = Deno.env.get('JIRA_BASE_URL') || 'https://acerpro.atlassian.net'
+  const email = Deno.env.get('JIRA_EMAIL')
+  const token = Deno.env.get('JIRA_TOKEN')
+  
+  console.log('🔍 Environment variables check:', {
+    baseUrl,
+    emailExists: !!email,
+    tokenExists: !!token,
+    emailLength: email?.length || 0,
+    tokenLength: token?.length || 0
   })
-
-  if (!jira_email || !jira_api_token) {
-    const missingVars: string[] = []
-    if (!jira_email) missingVars.push('jira_email')
-    if (!jira_api_token) missingVars.push('jira_api_token')
-
-    console.error('❌ Missing Jira credentials for company:', missingVars)
-    throw new Error(`Missing Jira credentials for company: ${missingVars.join(', ')}`)
+  
+  if (!email || !token) {
+    const missingVars = []
+    if (!email) missingVars.push('JIRA_EMAIL')
+    if (!token) missingVars.push('JIRA_TOKEN')
+    
+    console.error('❌ Missing required environment variables:', missingVars)
+    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}. Please configure these in your Supabase project settings under Edge Functions.`)
   }
-
-  return {
-    baseUrl: jira_base_url || 'https://acerpro.atlassian.net',
-    email: jira_email,
-    token: jira_api_token
-  }
+  
+  return { baseUrl, email, token }
 }
 
-const makeJiraRequest = async (endpoint: string, config: JiraConfig, options: RequestInit = {}) => {
+const makeJiraRequest = async (endpoint: string, options: RequestInit = {}) => {
+  const config = getJiraConfig()
   const authHeader = btoa(`${config.email}:${config.token}`)
   
   const finalUrl = `${config.baseUrl}${endpoint}`
@@ -145,10 +122,10 @@ const makeJiraRequest = async (endpoint: string, config: JiraConfig, options: Re
   }
 }
 
-const getAllSprints = async (config: JiraConfig, sprintType: 'active' | 'closed' | 'both' = 'active') => {
+const getAllSprints = async (sprintType: 'active' | 'closed' | 'both' = 'active') => {
   console.log(`🔄 Fetching ${sprintType} sprints...`)
   
-  const boardsResponse = await makeJiraRequest('/rest/agile/1.0/board?maxResults=100', config)
+  const boardsResponse = await makeJiraRequest('/rest/agile/1.0/board?maxResults=100')
   const boards = boardsResponse.values || []
   
   console.log(`📋 Found ${boards.length} total boards`)
@@ -165,15 +142,15 @@ const getAllSprints = async (config: JiraConfig, sprintType: 'active' | 'closed'
       let sprintsResponse
       
       if (sprintType === 'active') {
-        sprintsResponse = await makeJiraRequest(`/rest/agile/1.0/board/${board.id}/sprint?state=active&maxResults=50`, config)
+        sprintsResponse = await makeJiraRequest(`/rest/agile/1.0/board/${board.id}/sprint?state=active&maxResults=50`)
       } else if (sprintType === 'closed') {
         const projectKey = extractProjectKeyFromBoard(board.name)
         console.log(`📊 Board ${board.name} (${projectKey}): Fetching last 1 closed sprint`)
-        sprintsResponse = await makeJiraRequest(`/rest/agile/1.0/board/${board.id}/sprint?state=closed&maxResults=1&orderBy=-completeDate`, config)
+        sprintsResponse = await makeJiraRequest(`/rest/agile/1.0/board/${board.id}/sprint?state=closed&maxResults=1&orderBy=-completeDate`)
       } else {
         const [activeResponse, closedResponse] = await Promise.all([
-          makeJiraRequest(`/rest/agile/1.0/board/${board.id}/sprint?state=active&maxResults=50`, config),
-          makeJiraRequest(`/rest/agile/1.0/board/${board.id}/sprint?state=closed&maxResults=1&orderBy=-completeDate`, config)
+          makeJiraRequest(`/rest/agile/1.0/board/${board.id}/sprint?state=active&maxResults=50`),
+          makeJiraRequest(`/rest/agile/1.0/board/${board.id}/sprint?state=closed&maxResults=1&orderBy=-completeDate`)
         ])
         sprintsResponse = {
           values: [...(activeResponse.values || []), ...(closedResponse.values || [])]
@@ -204,7 +181,7 @@ const getAllSprints = async (config: JiraConfig, sprintType: 'active' | 'closed'
   return allSprints
 }
 
-const getSprintIssuesWithSubtasks = async (config: JiraConfig, sprintId: string): Promise<JiraTask[]> => {
+const getSprintIssuesWithSubtasks = async (sprintId: string): Promise<JiraTask[]> => {
   try {
     console.log(`🔄 Fetching ALL issues for sprint ${sprintId}...`)
     
@@ -213,7 +190,7 @@ const getSprintIssuesWithSubtasks = async (config: JiraConfig, sprintId: string)
 
     const fieldsParam = 'summary,description,status,assignee,project,priority,created,updated,timeoriginalestimate,issuetype,parent'
     const searchUrl = `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=1000&fields=${encodeURIComponent(fieldsParam)}`
-    const response = await makeJiraRequest(searchUrl, config, { method: 'GET' })
+    const response = await makeJiraRequest(searchUrl, { method: 'GET' })
     
     if (!response.issues || !Array.isArray(response.issues)) {
       console.warn(`⚠️ No issues found for sprint ${sprintId}`)
@@ -373,7 +350,7 @@ const normalizeName = (name: string): string => {
 }
 
 // GÜNLÜK SÜRE TAKİBİ MANTIGI - BİREBİR KOPYALANDI
-const getWorklogDataForDeveloper = async (config: JiraConfig, developerName: string, startDate: string, endDate: string): Promise<Array<{
+const getWorklogDataForDeveloper = async (developerName: string, startDate: string, endDate: string): Promise<Array<{
   author: { displayName: string; accountId: string }
   timeSpentSeconds: number
   started: string
@@ -405,7 +382,7 @@ const getWorklogDataForDeveloper = async (config: JiraConfig, developerName: str
     while (startAt < total) {
       const fieldsParam = 'worklog,summary,project,issuetype,parent,updated,created'
       const searchUrl = `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${pageSize}&fields=${encodeURIComponent(fieldsParam)}`
-      const page = await makeJiraRequest(searchUrl, config, { method: 'GET' })
+      const page = await makeJiraRequest(searchUrl, { method: 'GET' })
       const issues: any[] = page.issues || []
       const pageTotal = typeof page.total === 'number' ? page.total : (startAt + issues.length)
       total = pageTotal
@@ -440,7 +417,7 @@ const getWorklogDataForDeveloper = async (config: JiraConfig, developerName: str
           let start = returned
           while (start < total) {
             try {
-              const pageResp = await makeJiraRequest(`/rest/api/3/issue/${issue.id}/worklog?startAt=${start}&maxResults=100`, config)
+              const pageResp = await makeJiraRequest(`/rest/api/3/issue/${issue.id}/worklog?startAt=${start}&maxResults=100`)
               const pageLogs = pageResp.worklogs || []
               console.log(`📄 Fetched worklog page for ${issue.key}: startAt=${start}, got=${pageLogs.length} worklogs`)
               worklogs.push(...pageLogs)
@@ -460,7 +437,7 @@ const getWorklogDataForDeveloper = async (config: JiraConfig, developerName: str
         let totalFromEndpoint = Infinity
         
         while (true) {
-          const pageResp = await makeJiraRequest(`/rest/api/3/issue/${issue.id}/worklog?startAt=${start}&maxResults=100`, config)
+          const pageResp = await makeJiraRequest(`/rest/api/3/issue/${issue.id}/worklog?startAt=${start}&maxResults=100`)
           const pageLogs = pageResp.worklogs || []
           if (start === 0 && typeof pageResp.total === 'number') {
             totalFromEndpoint = pageResp.total
@@ -539,7 +516,7 @@ const getWorklogDataForDeveloper = async (config: JiraConfig, developerName: str
   }
 }
 
-const getDeveloperWorkloadAnalysis = async (config: JiraConfig, sprintType: 'active' | 'closed' | 'both' = 'active'): Promise<DeveloperWorkload[]> => {
+const getDeveloperWorkloadAnalysis = async (sprintType: 'active' | 'closed' | 'both' = 'active'): Promise<DeveloperWorkload[]> => {
   console.log(`🚀 Starting CORRECTED workload analysis for ${sprintType} sprints using DAILY TRACKING LOGIC...`)
   
   const allowedDevelopers = [
@@ -563,7 +540,7 @@ const getDeveloperWorkloadAnalysis = async (config: JiraConfig, sprintType: 'act
 
   // ADIM 1: Sprint'leri ve görevleri al (tahmini süre için)
   console.log(`🔄 Step 1: Getting sprints and tasks for estimated hours...`)
-  const sprints = await getAllSprints(config, sprintType)
+  const sprints = await getAllSprints(sprintType)
   console.log(`📊 Found ${sprints.length} ${sprintType} sprints`)
   
   // GÜNLÜK SÜRE TAKİBİ ile AYNI TARİH ARALIĞI MANTIGI
@@ -597,7 +574,7 @@ const getDeveloperWorkloadAnalysis = async (config: JiraConfig, sprintType: 'act
   for (const { sprint, projectKey } of sprints) {
     console.log(`📊 Processing sprint: ${sprint.name} (${getProjectNameFromKey(projectKey)})`)
     
-    const sprintTasks = await getSprintIssuesWithSubtasks(config, sprint.id)
+    const sprintTasks = await getSprintIssuesWithSubtasks(sprint.id)
     const projectName = getProjectNameFromKey(projectKey)
     const sprintName = sprint.name
     
@@ -657,7 +634,7 @@ const getDeveloperWorkloadAnalysis = async (config: JiraConfig, sprintType: 'act
     
     try {
       // GÜNLÜK SÜRE TAKİBİ fonksiyonunu kullan
-      const developerWorklogs = await getWorklogDataForDeveloper(config, developerName, startDateStr, endDateStr)
+      const developerWorklogs = await getWorklogDataForDeveloper(developerName, startDateStr, endDateStr)
       
       console.log(`📊 ${developerName}: Found ${developerWorklogs.length} worklogs in date range`)
       
@@ -815,26 +792,8 @@ serve(async (req) => {
     const sprintType = url.searchParams.get('sprintType') as 'active' | 'closed' | 'both' || 'active'
     
     console.log(`🚀 Starting developer workload analysis for ${sprintType} sprints...`)
-
-    // Get company ID from header
-    const companyId = req.headers.get('x-company-id')
-    if (!companyId) {
-      console.error('❌ No company ID provided for workload analysis')
-      return new Response(
-        JSON.stringify({
-          error: 'Company ID required',
-          details: 'Please provide x-company-id header'
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      )
-    }
-
-    const config = await getJiraConfig(companyId)
     
-    const workloadData = await getDeveloperWorkloadAnalysis(config, sprintType)
+    const workloadData = await getDeveloperWorkloadAnalysis(sprintType)
     
     return new Response(JSON.stringify(workloadData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
