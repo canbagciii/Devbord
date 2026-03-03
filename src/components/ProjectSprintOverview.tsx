@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { JiraSprint, JiraProject, JiraTask } from '../types';
-import { jiraService } from '../lib/jiraService';
+import { supabaseJiraService } from '../lib/supabaseJiraService';
 import { SprintEvaluationForm } from './SprintEvaluationForm';
 import { supabaseEvaluationService } from '../lib/supabaseEvaluationService';
 import { Activity, Calendar, Users, Clock, Loader, RefreshCw, ChevronRight, Download, FileText, Bug, Zap, Target, CheckCircle } from 'lucide-react';
