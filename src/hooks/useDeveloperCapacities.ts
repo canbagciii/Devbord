@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { Database } from '../lib/database.types';
@@ -125,7 +125,7 @@ export const useDeveloperCapacities = (options: UseDeveloperCapacitiesOptions = 
   };
 
   // Get capacity for a developer (with fallback to default)
-  const getCapacity = (developerName: string): number => {
+  const getCapacity = useCallback((developerName: string): number => {
     // Şirket (global) günlük kapasite ayarını her zaman öncelikli kullan
     try {
       if (typeof localStorage !== 'undefined') {
@@ -153,7 +153,7 @@ export const useDeveloperCapacities = (options: UseDeveloperCapacitiesOptions = 
 
     // Geriye dönük uyumluluk için 70h default
     return 70;
-  };
+  }, [sprints, developerProjectKeyMap, capacities]);
 
   // Set up real-time subscription
   useEffect(() => {
