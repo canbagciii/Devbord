@@ -1,9 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { Database } from '../lib/database.types';
-import { JiraSprint } from '../types';
-import { calculateDeveloperSprintWorkingDays } from '../utils/sprintDateUtils';
 
 type DeveloperCapacityRow = Database['public']['Tables']['developer_capacities']['Row'];
 type DeveloperCapacityInsert = Database['public']['Tables']['developer_capacities']['Insert'];
@@ -29,13 +27,7 @@ const convertToCapacity = (row: DeveloperCapacityRow): DeveloperCapacity => ({
   updatedAt: new Date(row.updated_at)
 });
 
-interface UseDeveloperCapacitiesOptions {
-  sprints?: JiraSprint[] | null;
-  developerProjectKeyMap?: Record<string, string>;
-}
-
-export const useDeveloperCapacities = (options: UseDeveloperCapacitiesOptions = {}) => {
-  const { sprints, developerProjectKeyMap = {} } = options;
+export const useDeveloperCapacities = () => {
   const { user, hasRole } = useAuth();
   const [capacities, setCapacities] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -125,21 +117,15 @@ export const useDeveloperCapacities = (options: UseDeveloperCapacitiesOptions = 
   };
 
   // Get capacity for a developer (with fallback to default)
-  const getCapacity = useCallback((developerName: string): number => {
+  const getCapacity = (developerName: string): number => {
     // Şirket (global) günlük kapasite ayarını her zaman öncelikli kullan
     try {
       if (typeof localStorage !== 'undefined') {
         const stored = localStorage.getItem('dailyHours');
         const daily = stored ? parseFloat(stored) : NaN;
         if (Number.isFinite(daily) && daily > 0) {
-          // Sprint'in gerçek iş günü sayısını hesapla
-          const workingDays = calculateDeveloperSprintWorkingDays(
-            developerName,
-            sprints,
-            developerProjectKeyMap
-          );
-          console.log(`📊 ${developerName}: ${daily}h/gün × ${workingDays} iş günü = ${Math.round(daily * workingDays)}h`);
-          return Math.round(daily * workingDays);
+          // Yaklaşık 2 haftalık sprint ~ 10 iş günü
+          return Math.round(daily * 10);
         }
       }
     } catch (err) {
@@ -153,7 +139,7 @@ export const useDeveloperCapacities = (options: UseDeveloperCapacitiesOptions = 
 
     // Geriye dönük uyumluluk için 70h default
     return 70;
-  }, [sprints, developerProjectKeyMap, capacities]);
+  };
 
   // Set up real-time subscription
   useEffect(() => {
