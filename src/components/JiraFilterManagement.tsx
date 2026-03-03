@@ -61,6 +61,7 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
   const [savingPlan, setSavingPlan] = useState(false);
   const [planSaveMessage, setPlanSaveMessage] = useState<string | null>(null);
   const [planSaveError, setPlanSaveError] = useState<string | null>(null);
+  const [jiraError, setJiraError] = useState<string | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -103,8 +104,23 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
         existing_id: d.id
       })));
 
-      try { const projects = await supabaseJiraService.getAllProjectsFromJira(); setAllProjects(projects); } catch {}
-      try { const users = await supabaseJiraService.getAllUsersFromJira(); setAllUsers(users); } catch {}
+      try {
+        const projects = await supabaseJiraService.getAllProjectsFromJira();
+        setAllProjects(projects);
+        setJiraError(null);
+      } catch (error: any) {
+        const errorMsg = error?.message || 'JIRA projelerini yüklerken hata oluştu';
+        console.error('Error loading projects from JIRA:', errorMsg);
+        setJiraError(errorMsg);
+      }
+      try {
+        const users = await supabaseJiraService.getAllUsersFromJira();
+        setAllUsers(users);
+      } catch (error: any) {
+        const errorMsg = error?.message || 'JIRA kullanıcılarını yüklerken hata oluştu';
+        console.error('Error loading users from JIRA:', errorMsg);
+        if (!jiraError) setJiraError(errorMsg);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -114,6 +130,7 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
 
   const refreshFromJira = async () => {
     setRefreshing(true);
+    setJiraError(null);
     try {
       supabaseJiraService.clearCache();
       const [projects, users] = await Promise.all([
@@ -122,9 +139,15 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
       ]);
       setAllProjects(projects);
       setAllUsers(users);
-      if (projects.length > 0 || users.length > 0) setJiraConnected(true);
-    } catch (error) {
-      console.error('Error refreshing from Jira:', error);
+      if (projects.length > 0 || users.length > 0) {
+        setJiraConnected(true);
+        setJiraError(null);
+      }
+    } catch (error: any) {
+      const errorMsg = error?.message || 'JIRA\'dan veri yüklenirken hata oluştu';
+      console.error('Error refreshing from Jira:', errorMsg);
+      console.error('Full error:', error);
+      setJiraError(errorMsg);
     } finally {
       setRefreshing(false);
     }
@@ -308,7 +331,21 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
         </div>
       )}
 
-      {isOnboarding && draftProjects.length === 0 && draftDevelopers.length === 0 && (
+      {jiraError && (
+        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4">
+          <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-900">JIRA Bağlantı Hatası</p>
+            <p className="text-xs text-red-700 mt-0.5">{jiraError}</p>
+            <p className="text-xs text-red-600 mt-2">Lütfen JIRA bilgilerinizin doğru olduğundan emin olun ve tekrar deneyin.</p>
+          </div>
+          <button onClick={() => setJiraError(null)} className="text-red-400 hover:text-red-600">
+            <XCircle className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {isOnboarding && draftProjects.length === 0 && draftDevelopers.length === 0 && !jiraError && (
         <div className="flex items-start gap-3 bg-indigo-50 border border-indigo-200 rounded-xl p-4">
           <AlertCircle className="h-5 w-5 text-indigo-500 mt-0.5 flex-shrink-0" />
           <div>

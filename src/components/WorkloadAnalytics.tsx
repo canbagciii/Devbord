@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { DeveloperWorkload, WorkloadAnalytics as Analytics } from '../types';
-import { jiraService } from '../lib/jiraService';
+import { supabaseJiraService } from '../lib/supabaseJiraService';
 import { BarChart3, PieChart, TrendingUp, Users, Clock, Activity, Loader } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
 import { useAuth } from '../context/AuthContext';
