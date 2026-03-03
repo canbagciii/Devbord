@@ -37,7 +37,7 @@ const convertToUpdate = (user: Partial<User>): UserUpdate => ({
 });
 
 export const useUsers = () => {
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export const useUsers = () => {
   const addUser = async (userData: Partial<User> & { password: string }) => {
     try {
       // company_id'yi localStorage'dan al (RLS politikasi icin zorunlu)
-      const companyId = localStorage.getItem('companyId');
+      const companyId = user?.companyId;
       if (!companyId) {
         throw new Error('Sirket bilgisi bulunamadi. Lutfen tekrar giris yapin.');
       }
