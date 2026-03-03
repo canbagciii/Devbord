@@ -560,7 +560,9 @@ class JiraService {
       'Fahrettin DEMİRBAŞ': 'fahrettin.demirbas@acerpro.com.tr',
       'Abolfazl Pourmohammad': 'abolfazl.pourmohammad@acerpro.com.tr',
       'Feyza Bilgiç': 'feyza.bilgic@acerpro.com.tr',
-      'Hüseyin ORAL': 'huseyin.oral@acerpro.com.tr'
+      'Hüseyin ORAL': 'huseyin.oral@acerpro.com.tr',
+      'Göksu Deniz': 'goksu.deniz@acerpro.com.tr',
+      
     };
     
     return emailMap[name] || `${name.toLowerCase().replace(/\s+/g, '.')}@company.com`;
