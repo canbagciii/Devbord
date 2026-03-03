@@ -56,6 +56,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [customDateRange, setCustomDateRange] = useState<{ start: string; end: string } | null>(null);
   const [localLastRefreshAt, setLocalLastRefreshAt] = useState<number | null>(null);
+  const [developerProjectKeys, setDeveloperProjectKeys] = useState<Record<string, string>>({});
 
   // Tarih aralığını hesapla
   useEffect(() => {
@@ -75,6 +76,24 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
       setLocalLastRefreshAt(lastRefreshAt);
     }
   }, [lastRefreshAt]);
+
+  // Developer'ların proje anahtarlarını yükle
+  useEffect(() => {
+    if (!workload || workload.length === 0) return;
+
+    const loadProjectKeys = async () => {
+      const keys: Record<string, string> = {};
+      for (const dev of workload) {
+        const key = await getDeveloperProjectKeyFromContext(dev.developer);
+        if (key) {
+          keys[dev.developer] = key;
+        }
+      }
+      setDeveloperProjectKeys(keys);
+    };
+
+    loadProjectKeys();
+  }, [workload, getDeveloperProjectKeyFromContext]);
 
   const formatLastRefresh = () => {
     if (!localLastRefreshAt) return 'Henüz yenilenmedi';
@@ -460,7 +479,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
                             <>
                               <span className="text-lg font-semibold text-purple-600">{actualHours}h</span>
                               <div className="text-xs text-gray-500 mt-1">
-                                {getDeveloperProjectKey(developer.developer)} projesi
+                                {developerProjectKeys[developer.developer] || 'Yükleniyor...'} projesi
                               </div>
                             </>
                           )}
@@ -573,7 +592,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
                                         <h5 className="font-medium text-gray-900">{detail.project}</h5>
                                         <p className="text-sm text-gray-600">{detail.sprint}</p>
                                         <p className="text-xs text-blue-600">
-                                          Proje: {getDeveloperProjectKey(developer.developer)}
+                                          Proje: {developerProjectKeys[developer.developer] || 'Yükleniyor...'}
                                         </p>
                                       </div>
                                       <div className="text-right">
