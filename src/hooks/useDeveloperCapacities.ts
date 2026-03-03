@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { Database } from '../lib/database.types';
+import { JiraSprint } from '../types';
+import { calculateDeveloperSprintWorkingDays } from '../utils/sprintDateUtils';
 
 type DeveloperCapacityRow = Database['public']['Tables']['developer_capacities']['Row'];
 type DeveloperCapacityInsert = Database['public']['Tables']['developer_capacities']['Insert'];
@@ -27,7 +29,13 @@ const convertToCapacity = (row: DeveloperCapacityRow): DeveloperCapacity => ({
   updatedAt: new Date(row.updated_at)
 });
 
-export const useDeveloperCapacities = () => {
+interface UseDeveloperCapacitiesOptions {
+  sprints?: JiraSprint[] | null;
+  developerProjectKeyMap?: Record<string, string>;
+}
+
+export const useDeveloperCapacities = (options: UseDeveloperCapacitiesOptions = {}) => {
+  const { sprints, developerProjectKeyMap = {} } = options;
   const { user, hasRole } = useAuth();
   const [capacities, setCapacities] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -124,8 +132,14 @@ export const useDeveloperCapacities = () => {
         const stored = localStorage.getItem('dailyHours');
         const daily = stored ? parseFloat(stored) : NaN;
         if (Number.isFinite(daily) && daily > 0) {
-          // Yaklaşık 2 haftalık sprint ~ 10 iş günü
-          return Math.round(daily * 10);
+          // Sprint'in gerçek iş günü sayısını hesapla
+          const workingDays = calculateDeveloperSprintWorkingDays(
+            developerName,
+            sprints,
+            developerProjectKeyMap
+          );
+          console.log(`📊 ${developerName}: ${daily}h/gün × ${workingDays} iş günü = ${Math.round(daily * workingDays)}h`);
+          return Math.round(daily * workingDays);
         }
       }
     } catch (err) {

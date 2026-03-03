@@ -156,3 +156,77 @@ export const normalizeDeveloperName = (name: string): string => {
     .trim();
 };
 
+/**
+ * İki tarih arasındaki iş günü sayısını hesapla (hafta sonları hariç)
+ * @param startDate Başlangıç tarihi
+ * @param endDate Bitiş tarihi
+ * @returns İş günü sayısı
+ */
+export const calculateWorkingDays = (startDate: Date, endDate: Date): number => {
+  let count = 0;
+  const current = new Date(startDate);
+
+  while (current <= endDate) {
+    const dayOfWeek = current.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      count++;
+    }
+    current.setDate(current.getDate() + 1);
+  }
+
+  return count;
+};
+
+/**
+ * Sprint'in iş günü sayısını hesapla
+ * @param sprints Sprint listesi
+ * @returns İş günü sayısı (sprint yoksa 10 varsayılan değer döner)
+ */
+export const calculateSprintWorkingDays = (
+  sprints: JiraSprint[] | null | undefined
+): number => {
+  if (!sprints || sprints.length === 0) {
+    return 10;
+  }
+
+  const { earliestStart, latestEnd } = calculateSprintDateRange(sprints);
+
+  if (!earliestStart || !latestEnd) {
+    return 10;
+  }
+
+  return calculateWorkingDays(earliestStart, latestEnd);
+};
+
+/**
+ * Belirli bir developer için sprint iş günü sayısını hesapla
+ * @param developerName Yazılımcı adı
+ * @param sprints Sprint listesi
+ * @param projectKeyMap Proje anahtarı mapping
+ * @returns İş günü sayısı
+ */
+export const calculateDeveloperSprintWorkingDays = (
+  developerName: string,
+  sprints: JiraSprint[] | null | undefined,
+  projectKeyMap: Record<string, string>
+): number => {
+  const projectKey = projectKeyMap[developerName];
+  if (!projectKey || !sprints) {
+    return 10;
+  }
+
+  const developerSprints = sprints.filter(sprint => sprint.projectKey === projectKey);
+
+  if (developerSprints.length === 0) {
+    return 10;
+  }
+
+  const { earliestStart, latestEnd } = calculateSprintDateRange(developerSprints);
+
+  if (!earliestStart || !latestEnd) {
+    return 10;
+  }
+
+  return calculateWorkingDays(earliestStart, latestEnd);
+};
+

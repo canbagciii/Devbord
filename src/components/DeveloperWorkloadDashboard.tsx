@@ -38,7 +38,20 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
     lastRefreshAt
   } = useJiraData();
   const { canViewDeveloperData, user, hasKolayIK } = useAuth();
-  const { getCapacity, updateCapacity, canEdit } = useDeveloperCapacities();
+
+  // Sprint tarih aralığı için proje haritası (workload'taki her geliştirici için context'ten)
+  const developerProjectKeyMapForCapacity = React.useMemo(() => {
+    const m: Record<string, string> = {};
+    workload?.forEach(w => {
+      m[w.developer] = developerProjectKeys[w.developer] || '';
+    });
+    return m;
+  }, [workload, developerProjectKeys]);
+
+  const { getCapacity, updateCapacity, canEdit } = useDeveloperCapacities({
+    sprints,
+    developerProjectKeyMap: developerProjectKeyMapForCapacity
+  });
   const [expandedDeveloper, setExpandedDeveloper] = useState<string | null>(null);
   const [editingCapacity, setEditingCapacity] = useState<string | null>(null);
   const [capacityValue, setCapacityValue] = useState<string>('');
