@@ -63,8 +63,8 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [workload, setWorkload] = useState<DeveloperWorkload[] | null>(null);
   const [sprints, setSprints] = useState<JiraSprint[] | null>(null);
   const [sprintTasks, setSprintTasks] = useState<Record<string, JiraTask[]> | null>(null);
-  const [sprintType, setSprintType] = useState<'active' | 'closed'>('active');
-  const prevSprintTypeRef = useRef<'active' | 'closed' | null>(null);
+  const [sprintType, setSprintType] = useState<'active' | 'closed' | 'both'>('active');
+  const prevSprintTypeRef = useRef<'active' | 'closed' | 'both' | null>(null);
   
   // Sprint type değiştiğinde cache'i temizle
   useEffect(() => {
