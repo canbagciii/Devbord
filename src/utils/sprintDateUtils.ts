@@ -4,6 +4,7 @@
  */
 
 import { JiraSprint } from '../types';
+import { isTurkishHoliday } from './turkishHolidays';
 
 /**
  * Tarihi yerel timezone'da formatla (timezone kaymasını önlemek için)
@@ -157,7 +158,8 @@ export const normalizeDeveloperName = (name: string): string => {
 };
 
 /**
- * İki tarih arasındaki iş günü sayısını hesapla (hafta sonları hariç)
+ * İki tarih arasındaki iş günü sayısını hesapla (hafta sonları ve resmi tatiller hariç)
+ * Türkiye iş günleri standartlarına göre hesaplama yapar
  * @param startDate Başlangıç tarihi
  * @param endDate Bitiş tarihi
  * @returns İş günü sayısı
@@ -168,7 +170,8 @@ export const calculateWorkingDays = (startDate: Date, endDate: Date): number => 
 
   while (current <= endDate) {
     const dayOfWeek = current.getDay();
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+    // Hafta sonu değil ve resmi tatil değilse iş günü sayılır
+    if (dayOfWeek !== 0 && dayOfWeek !== 6 && !isTurkishHoliday(current)) {
       count++;
     }
     current.setDate(current.getDate() + 1);
