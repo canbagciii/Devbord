@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useUsers } from '../hooks/useUsers';
-import { User, LogOut, Shield, Eye, Settings, Key, Save, X } from 'lucide-react';
+import { ProfileSettingsModal } from './ProfileSettingsModal';
+import { JiraFilterManagement } from './JiraFilterManagement';
+import { User, LogOut, Shield, Eye, Settings, Key, Save, X, Filter } from 'lucide-react';
 
 export const UserProfile: React.FC = () => {
   const { user, logout, hasRole, getAccessibleProjects } = useAuth();
   const { changePassword } = useUsers();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -15,6 +18,7 @@ export const UserProfile: React.FC = () => {
   });
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [showJiraFilters, setShowJiraFilters] = useState(false);
 
   if (!user) return null;
 
@@ -169,6 +173,28 @@ export const UserProfile: React.FC = () => {
           <div className="p-2">
             <button
               onClick={() => {
+                setShowSettingsModal(true);
+                setShowDropdown(false);
+              }}
+              className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors mb-1"
+            >
+              <Settings className="h-4 w-4" />
+              <span>Entegrasyon Ayarları</span>
+            </button>
+            {hasRole('admin') && (
+              <button
+                onClick={() => {
+                  setShowJiraFilters(true);
+                  setShowDropdown(false);
+                }}
+                className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors mb-1"
+              >
+                <Filter className="h-4 w-4" />
+                <span>Jira Ayarları</span>
+              </button>
+            )}
+            <button
+              onClick={() => {
                 setShowPasswordModal(true);
                 setShowDropdown(false);
                 resetPasswordForm();
@@ -196,6 +222,35 @@ export const UserProfile: React.FC = () => {
         />
       )}
       </div>
+
+      {/* Profile Settings Modal */}
+      <ProfileSettingsModal
+        open={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+      />
+
+      {/* Jira Yönetimi Modalı (sadece admin) */}
+      {hasRole('admin') && showJiraFilters && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl mx-4 max-h-[90vh] overflow-y-auto border border-gray-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Jira Yönetimi</h3>
+              </div>
+              <button
+                onClick={() => setShowJiraFilters(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4 sm:p-6">
+              <JiraFilterManagement />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Password Change Modal */}
       {showPasswordModal && (
@@ -297,4 +352,4 @@ export const UserProfile: React.FC = () => {
       )}
     </>
   );
-};
+}; 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LandingPage } from './components/LandingPage';
 import { Header } from './components/Header';
@@ -10,19 +10,20 @@ import { UserSprintEvaluations } from './components/UserSprintEvaluations';
 import { UserManagement } from './components/UserManagement';
 import { KolayIKEmployees } from './components/KolayIKEmployees';
 import DailyWorklogTracking from './components/DailyWorklogTracking';
-import { Users, BarChart3, Plus, Activity, MessageSquare, Settings, FileText } from 'lucide-react';
+import { Users, BarChart3, Plus, Activity, MessageSquare, Settings } from 'lucide-react';
 import { JiraDataProvider } from "./context/JiraDataContext";
-import { Chatbot } from './components/Chatbot';
-import { DocumentManagement } from './components/DocumentManagement';
 import { SprintNotification } from './components/SprintNotification';
 import { JiraFilterManagement } from './components/JiraFilterManagement';
 import { onboardingService } from './lib/onboardingService';
+import { jiraFilterService } from './lib/jiraFilterService';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading, hasRole, hasKolayIK, user } = useAuth();
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [checkingSelections, setCheckingSelections] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
 const [activeTab, setActiveTab] = useState<
-  'dashboard' | 'projects' | 'assignment' | 'analytics' | 'evaluations' | 'my-evaluations' | 'daily-tracking' | 'user-management' | 'kolayik-employees' | 'document-management'
+  'dashboard' | 'projects' | 'assignment' | 'analytics' | 'evaluations' | 'my-evaluations' | 'daily-tracking' | 'user-management' | 'kolayik-employees'
 >('daily-tracking');
   const [activeSubTab, setActiveSubTab] = useState<{
     dashboard: 'workload';
@@ -39,7 +40,38 @@ const [activeTab, setActiveTab] = useState<
     }));
   };
 
-  if (loading) {
+  useEffect(() => {
+    const checkSelections = async () => {
+      if (!isAuthenticated || !user) {
+        setCheckingSelections(false);
+        return;
+      }
+      try {
+        const [projects, developers] = await Promise.all([
+          jiraFilterService.getSelectedProjects(),
+          jiraFilterService.getSelectedDevelopers()
+        ]);
+        const hasData = projects.length >= 1 && developers.length >= 1;
+        // En az bir proje ve bir yazılımcı varsa ana uygulamaya geç (onboardingCompleted'a bakmadan)
+        if (hasData) {
+          setNeedsOnboarding(false);
+        } else if (user.onboardingCompleted) {
+          // Onboarding tamamlanmış ama veri silinmişse yine de zorla filtreye atma
+          setNeedsOnboarding(false);
+        } else {
+          setNeedsOnboarding(true);
+        }
+      } catch (error) {
+        console.error('Error checking selections:', error);
+        setNeedsOnboarding(false);
+      }
+      setCheckingSelections(false);
+    };
+
+    checkSelections();
+  }, [isAuthenticated, user]);
+
+  if (loading || checkingSelections) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -51,25 +83,35 @@ const [activeTab, setActiveTab] = useState<
   }
 
   if (!isAuthenticated) {
+    // Henüz giriş yapılmadan sadece Landing göster; kullanıcı kendi butonlarıyla login/register açsın
     return <LandingPage />;
   }
 
-  if (user && !user.onboardingCompleted) {
+  // Sadece veri yoksa ve henüz onboarding tamamlanmamışsa Jira filtre sayfasını göster
+  if (user && needsOnboarding) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-6 bg-white rounded-lg shadow-sm p-6 border border-blue-200">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">DevPulse'a Hoş Geldiniz!</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              {!user.onboardingCompleted ? 'Devbord\'a Hoş Geldiniz!' : 'Proje ve Yazılımcı Seçimi Gerekli'}
+            </h1>
             <p className="text-gray-600">
-              Başlamak için lütfen Jira projeleri ve yazılımcıları seçin. Bu seçimler tüm raporlarınızı filtreleyecektir.
+              {!user.onboardingCompleted
+                ? 'Başlamak için lütfen Jira projeleri ve yazılımcıları seçin. Bu seçimler tüm raporlarınızı filtreleyecektir.'
+                : 'Sistemde proje veya yazılımcı seçimi bulunmuyor. Devam edebilmek için lütfen en az bir proje ve bir yazılımcı seçin.'
+              }
             </p>
           </div>
           <JiraFilterManagement
             isOnboarding={true}
             onOnboardingComplete={async () => {
               if (user?.id) {
-                await onboardingService.completeOnboarding(user.id);
+                if (!user.onboardingCompleted) {
+                  await onboardingService.completeOnboarding(user.id);
+                }
+                setNeedsOnboarding(false);
                 window.location.reload();
               }
             }}
@@ -87,7 +129,6 @@ const [activeTab, setActiveTab] = useState<
     { id: 'assignment', label: 'Jirada Görev Atama', icon: Plus },
     { id: 'user-management', label: 'Kullanıcı & Filtre Yönetimi', icon: Settings },
     ...(hasKolayIK ? [{ id: 'kolayik-employees' as const, label: 'Kolay İK', icon: Users }] : []),
-    { id: 'document-management', label: 'Döküman Yönetimi', icon: FileText },
   ];
 
   const developerTabs = [
@@ -207,17 +248,8 @@ const [activeTab, setActiveTab] = useState<
               <UserSprintEvaluations />
             </div>
           )}
-
-          {/* Döküman Yönetimi */}
-          {hasRole('admin') && (
-            <div className={activeTab === 'document-management' ? '' : 'hidden'}>
-              <DocumentManagement />
-            </div>
-          )}
         </div>
       </div>
-
-      <Chatbot />
     </div>
   );
 };

@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface RegistrationRequest {
   companyName: string;
-  companyEmail: string;
+  companyEmail?: string;
   firstName: string;
   lastName: string;
   userEmail: string;
@@ -40,11 +40,12 @@ Deno.serve(async (req: Request) => {
     });
 
     const requestData: RegistrationRequest = await req.json();
+    const companyEmail = requestData.companyEmail?.trim() || requestData.userEmail;
 
     const { data: existingCompany } = await supabase
       .from('companies')
       .select('id')
-      .eq('email', requestData.companyEmail)
+      .eq('email', companyEmail)
       .maybeSingle();
 
     if (existingCompany) {
@@ -85,16 +86,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const kolayikBaseUrl = (requestData.kolayikBaseUrl?.trim() || 'https://api.kolayik.com/v2').replace(/\/$/, '');
+
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .insert({
         name: requestData.companyName,
-        email: requestData.companyEmail,
+        email: companyEmail,
         jira_email: requestData.jiraEmail,
         jira_api_token: requestData.jiraApiToken,
         jira_base_url: requestData.jiraBaseUrl,
         kolayik_api_token: requestData.kolayikApiToken || '',
-        kolayik_base_url: requestData.kolayikBaseUrl || '',
+        kolayik_base_url: kolayikBaseUrl,
         is_active: true,
       })
       .select()

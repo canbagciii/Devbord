@@ -133,20 +133,21 @@ export const useDeveloperActualHours = ({
           console.log(`🏢 ${developerName} -> ${developerProjectKey} projesi`);
           
           // Bu yazılımcının projesine ait sprint'leri bul
-          let developerSprints = sprints.filter(sprint => sprint.projectKey === developerProjectKey);
-          console.log(`📊 ${developerName} için ${developerSprints.length} sprint bulundu`);
+          const projectSprints = sprints.filter(sprint => sprint.projectKey === developerProjectKey);
+          console.log(`📊 ${developerName} için ${projectSprints.length} sprint bulundu`);
           
-          if (developerSprints.length === 0) {
+          if (projectSprints.length === 0) {
             console.warn(`⚠️ ${developerName} (${developerProjectKey}) için sprint bulunamadı`);
             developerActualHours[developerName] = 0;
             continue;
           }
           
-          // Eğer kapatılan sprintler için sadece son kapatılan sprinti kullan
-          // DeveloperWorkloadDashboard sayfasında harcanan süre hesaplaması için
+          // Aktif sprint filtresinde nasıl davranıyorsak, kapalı sprint filtresinde de benzer davran:
+          // - active: context zaten aktif sprintleri getiriyor, tümünü kullan
+          // - closed: sadece bu projenin EN SON kapatılan sprint'ini baz al
+          let developerSprints = projectSprints;
           if (sprintType === 'closed') {
-            // Kapatılan sprintleri tarihe göre sırala (en yeni önce)
-            const closedSprints = developerSprints
+            const closedSprints = projectSprints
               .filter(sprint => sprint.state === 'closed')
               .sort((a, b) => {
                 const dateA = a.completeDate ? new Date(a.completeDate) : (a.endDate ? new Date(a.endDate) : new Date(0));
@@ -154,7 +155,6 @@ export const useDeveloperActualHours = ({
                 return dateB.getTime() - dateA.getTime(); // En yeni önce
               });
             
-            // Sadece son kapatılan sprinti kullan
             if (closedSprints.length > 0) {
               developerSprints = [closedSprints[0]];
               console.log(`📊 ${developerName} için sadece son kapatılan sprint kullanılıyor: ${developerSprints[0].name}`);
@@ -363,3 +363,4 @@ export const useDeveloperActualHours = ({
   };
 };
 
+ 

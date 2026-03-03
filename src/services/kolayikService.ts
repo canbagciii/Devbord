@@ -3,32 +3,13 @@
 
 import { KolayIKEmployee, KolayIKLeaveRequest, KolayIKLeaveType, DeveloperLeaveInfo, CapacityCalculation } from '../types/kolayik';
 import { supabase } from '../lib/supabase';
+import { jiraFilterService } from '../lib/jiraFilterService';
 
 // Cache for API responses
 const apiCache = new Map<string, { data: any; timestamp: number; expiry: number }>();
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 class KolayIKService {
-  // İzin bilgilerini çekmek istediğimiz developer ID'leri ve isimleri
-  private static readonly ALLOWED_DEVELOPERS = [
-    { id: '120e731b64b547a74b538a530da54784', name: 'Abolfazl Pourmohammad' },
-    { id: '80316fd8de5f079ab2afbf306a6ab878', name: 'Ahmet Tunç' },
-    { id: 'e47a46e2622df1734df42dbff8c47160', name: 'Canberk İsmet DİZDAŞ' },
-    { id: 'd9c90f6f3ba9f56043d43be4543d4b48', name: 'Gizem Akay' },
-    { id: '080d34252dc12c355d32b8ca5905f9af', name: 'Oktay MANAVOĞLU' },
-    { id: 'bbcdacbf7346c067787ac1f05967d028', name: 'Onur Demir' },
-    { id: '1ee4fb32c1ad9ac1bf6c37186558a955', name: 'Soner Canki' },
-    { id: '2c58a7768019edcddaab9bed90dd6635', name: 'Suat Aydoğdu' },
-    { id: '1b07268aa577f9b9305354a339e2fc17', name: 'Rüstem CIRIK' },
-    { id: '44e23d2c0e11628f4fd2b0ac9d712d4b', name: 'Melih Meral' },
-    { id: '55ea40572bb91a4257b93e3fc4bcb66b', name: 'Alicem Polat' },
-    { id: 'f55fbd897c14e4a214c7dbfa0c92c79d', name: 'Buse Eren' },
-    { id: 'ebe840ae96a3e6e0de6f7355e003e50f', name: 'Hüseyin ORAL' },
-    { id: 'cd683034f1d461eabb35e8478f3c975a', name: 'Feyza Bilgiç' },
-    { id: '89999f0c0bb2eb790f2e42543e2bba0d', name: 'Fahrettin DEMİRBAŞ' },
-    { id: 'd1937ec58e693f16eafbb64ea44773e4', name: 'Sezer SİNANOĞLU' }
-  ];
-
   private getFromCache<T>(key: string): T | null {
     const cached = apiCache.get(key);
     if (cached && Date.now() < cached.expiry) {
@@ -52,68 +33,74 @@ class KolayIKService {
     console.log('🗑️ Kolay İK cache cleared');
   }
 
+  private getCompanyId(): string | null {
+    if (typeof localStorage === 'undefined') return null;
+    return localStorage.getItem('companyId');
+  }
+
+  /**
+   * Proxy'yi anon key + fetch ile çağırır → Supabase 401 Invalid JWT olmaz.
+   * Varsa kullanıcı JWT'sini X-User-JWT header'ında gönderir; proxy şirketi oradan alır (güvenli).
+   * JWT yoksa/geçersizse proxy body'deki companyId kullanır.
+   */
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const cacheKey = `kolayik:${endpoint}`;
+    const companyId = this.getCompanyId();
+    const cacheKey = `kolayik:${companyId || 'default'}:${endpoint}`;
     const cached = this.getFromCache<T>(cacheKey);
     if (cached) return cached;
 
-    console.log(`🌐 Making Kolay İK request via Supabase proxy: ${endpoint}`);
-    
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !anonKey) {
+      throw new Error('VITE_SUPABASE_URL veya VITE_SUPABASE_ANON_KEY tanımlı değil.');
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${anonKey}`,
+    };
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers['x-user-jwt'] = session.access_token;
+    }
+
+    const url = `${supabaseUrl}/functions/v1/kolayik-proxy`;
+    console.log(`🌐 Making Kolay İK request via proxy (anon key${session?.access_token ? ' + JWT' : ''}): ${endpoint}`);
+
     try {
-      const { data, error } = await supabase.functions.invoke('kolayik-proxy', {
-        body: {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
           endpoint,
           method: options.method || 'GET',
-          ...(options.body && { body: JSON.parse(options.body as string) })
-        }
+          ...(companyId && { companyId }),
+          ...(options.body && { body: JSON.parse(options.body as string) }),
+        }),
       });
 
-      if (error) {
-        console.error(`❌ Kolay İK Proxy Error for ${endpoint}:`, error);
-        console.error(`❌ Full error object:`, JSON.stringify(error, null, 2));
-        
-        // Parse error response if it's a structured error from Edge Function
-        let errorMessage = `Kolay İK API bağlantı hatası (${endpoint})`;
-        let helpMessage = '';
-        
-        if (typeof error === 'object' && error !== null) {
-          if ('error' in error && typeof error.error === 'string') {
-            errorMessage = error.error;
-          }
-          if ('help' in error && typeof error.help === 'string') {
-            helpMessage = error.help;
-          }
-          if ('details' in error && typeof error.details === 'string') {
-            errorMessage += ` - ${error.details}`;
-          }
-        } else if (typeof error === 'string') {
-          errorMessage = error;
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-        
-        console.error(`❌ Parsed error message: ${errorMessage}`);
-        console.error(`❌ Help message: ${helpMessage}`);
-        
-        // Combine error message with help if available
-        const fullErrorMessage = helpMessage 
-          ? `${errorMessage}\n\nÇözüm önerisi: ${helpMessage}`
-          : errorMessage;
-          
-        throw new Error(fullErrorMessage);
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        const errMsg = (data?.error ?? res.statusText) || `HTTP ${res.status}`;
+        const help = data?.help ?? '';
+        throw new Error(help ? `${errMsg}\n\n${help}` : errMsg);
       }
 
-      if (!data) {
+      if (data && typeof data === 'object' && 'error' in data && typeof data.error === 'string') {
+        const msg = data.help ? `${data.error}\n\n${data.help}` : data.error;
+        throw new Error(msg);
+      }
+
+      if (data === null || data === undefined) {
         throw new Error(`Kolay İK API'den boş response geldi (${endpoint})`);
       }
 
       this.setCache(cacheKey, data);
-      
-      console.log(`✅ Kolay İK Supabase proxy request successful for: ${endpoint}`);
-      console.log(`📊 Response data type: ${typeof data}, keys: ${typeof data === 'object' ? Object.keys(data) : 'N/A'}`);
+      console.log(`✅ Kolay İK proxy request successful for: ${endpoint}`);
       return data;
     } catch (error) {
-      console.error(`🚨 Kolay İK Supabase proxy request failed for ${endpoint}:`, error);
+      console.error(`🚨 Kolay İK proxy request failed for ${endpoint}:`, error);
       throw error;
     }
   }
@@ -147,28 +134,24 @@ class KolayIKService {
         console.log('📊 Response is direct array, using it directly');
         employeeData = response;
       } else if ('data' in response) {
-        // Response.data property varsa
-        console.log('📊 Response has data property');
         const dataProperty = response.data;
-        
+        console.log('📊 Response has data property, keys:', typeof dataProperty === 'object' && dataProperty !== null ? Object.keys(dataProperty) : []);
+
         if (Array.isArray(dataProperty)) {
-          console.log('📊 Response.data is array');
           employeeData = dataProperty;
         } else if (typeof dataProperty === 'object' && dataProperty !== null) {
-          console.log('📊 Response.data is object, checking for nested arrays...');
-          console.log('📊 Data property keys:', Object.keys(dataProperty));
-          
-          // Check for common nested array patterns
-          if ('employees' in dataProperty && Array.isArray(dataProperty.employees)) {
-            employeeData = dataProperty.employees;
-          } else if ('persons' in dataProperty && Array.isArray(dataProperty.persons)) {
-            employeeData = dataProperty.persons;
-          } else if ('people' in dataProperty && Array.isArray(dataProperty.people)) {
-            employeeData = dataProperty.people;
-          } else if ('items' in dataProperty && Array.isArray(dataProperty.items)) {
-            employeeData = dataProperty.items;
-          } else if ('results' in dataProperty && Array.isArray(dataProperty.results)) {
-            employeeData = dataProperty.results;
+          // Kolay İK person/list POST formatı: data: { total, perPage, currentPage, lastPage, items: [...] }
+          if ('items' in dataProperty && Array.isArray((dataProperty as { items?: unknown[] }).items)) {
+            employeeData = (dataProperty as { items: any[] }).items;
+            console.log('📊 Using response.data.items (Kolay İK person/list format), count:', employeeData.length);
+          } else if ('employees' in dataProperty && Array.isArray((dataProperty as { employees?: unknown[] }).employees)) {
+            employeeData = (dataProperty as { employees: any[] }).employees;
+          } else if ('persons' in dataProperty && Array.isArray((dataProperty as { persons?: unknown[] }).persons)) {
+            employeeData = (dataProperty as { persons: any[] }).persons;
+          } else if ('people' in dataProperty && Array.isArray((dataProperty as { people?: unknown[] }).people)) {
+            employeeData = (dataProperty as { people: any[] }).people;
+          } else if ('results' in dataProperty && Array.isArray((dataProperty as { results?: unknown[] }).results)) {
+            employeeData = (dataProperty as { results: any[] }).results;
           } else {
             // If data is object but no known array property, try to extract values
             const values = Object.values(dataProperty);
@@ -223,30 +206,39 @@ class KolayIKService {
       if (!Array.isArray(employeeData)) {
         throw new Error(`Final employee data is not array: ${typeof employeeData}`);
       }
-      
-      return this.mapEmployeeData(employeeData);
+
+      if (employeeData.length === 0) {
+        console.warn('⚠️ Kolay İK person/list boş döndü');
+        return [];
+      }
+
+      const selectedDevelopers = await jiraFilterService.getSelectedDevelopers();
+      const selectedDeveloperNames = selectedDevelopers.map(d => d.developer_name);
+      if (selectedDeveloperNames.length === 0) {
+        console.warn('⚠️ Jira Filtre Yönetimi\'nde seçili yazılımcı yok');
+        return [];
+      }
+
+      return this.mapEmployeeData(employeeData, selectedDeveloperNames);
     } catch (error) {
       console.error('❌ Error in getEmployees:', error);
       throw new Error('Çalışan listesi alınırken hata oluştu: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
     }
   }
   
-  // Employee data mapping helper
-  private mapEmployeeData(employeeArray: any[]): KolayIKEmployee[] {
-    console.log(`🔄 Mapping ${employeeArray.length} employees...`);
+  // Employee data mapping helper (Jira Filtre Yönetimi'ndeki yazılımcılara göre filtreler)
+  private mapEmployeeData(employeeArray: any[], selectedDeveloperNames: string[]): KolayIKEmployee[] {
+    console.log(`🔄 Mapping ${employeeArray.length} employees (filter by ${selectedDeveloperNames.length} Jira developers)...`);
     
-    // Sadece belirtilen yazılımcıları filtrele (ID bazlı)
-    const ALLOWED_DEVELOPER_IDS = KolayIKService.ALLOWED_DEVELOPERS.map(dev => dev.id);
-    
-    // ID bazlı filtreleme
+    // İsim bazlı filtreleme - Jira Filtre Yönetimi'ndeki yazılımcılar
     const filteredEmployees = employeeArray.filter(emp => {
-      const empId = emp.id || emp.employee_id || emp._id || emp.uuid;
-      const isAllowed = ALLOWED_DEVELOPER_IDS.includes(empId);
+      const empName = emp.name || emp.full_name || emp.fullName || `${emp.first_name || emp.firstName || ''} ${emp.last_name || emp.lastName || ''}`.trim();
+      const isAllowed = selectedDeveloperNames.length === 0 || selectedDeveloperNames.some(devName => this.isNameMatch(empName, devName));
       
       if (isAllowed) {
-        console.log(`✅ INCLUDED: ${emp.name || emp.full_name || emp.fullName || 'Unknown'} (ID: ${empId})`);
+        console.log(`✅ INCLUDED: ${empName || 'Unknown'} (ID: ${emp.id || emp.employee_id || emp._id || emp.uuid})`);
       } else {
-        console.log(`❌ EXCLUDED: ${emp.name || emp.full_name || emp.fullName || 'Unknown'} (ID: ${empId})`);
+        console.log(`❌ EXCLUDED: ${empName || 'Unknown'} (ID: ${emp.id || emp.employee_id || emp._id || emp.uuid})`);
       }
       
       return isAllowed;
@@ -278,6 +270,10 @@ class KolayIKService {
   async getEmployeesWithLeave(startDate: string, endDate: string): Promise<KolayIKEmployee[]> {
     try {
       console.log(`🚀 Getting employees with leave between ${startDate} and ${endDate}...`);
+      
+      const developerEmailMap = await jiraFilterService.getDeveloperEmailMap();
+      const selectedDevelopers = await jiraFilterService.getSelectedDevelopers();
+      const selectedDeveloperNames = selectedDevelopers.map(d => d.developer_name);
       
       // Önce izin kayıtlarını çek
       const leaveRequests = await this.getLeaveRequests(startDate, endDate);
@@ -311,24 +307,25 @@ class KolayIKService {
           continue;
         }
         
-        // Sadece belirtilen yazılımcıları dahil et
-        const ALLOWED_DEVELOPER_IDS = KolayIKService.ALLOWED_DEVELOPERS.map(dev => dev.id);
-        
-        if (!ALLOWED_DEVELOPER_IDS.includes(personId)) {
-          console.log(`❌ EXCLUDED: ${personName} (ID: ${personId}) - not in allowed list`);
+        // Sadece Jira Filtre Yönetimi'ndeki yazılımcıları dahil et (isim bazlı)
+        const isAllowed = selectedDeveloperNames.some(devName => this.isNameMatch(personName, devName));
+        if (!isAllowed) {
+          console.log(`❌ EXCLUDED: ${personName} (ID: ${personId}) - not in Jira filter`);
           continue;
         }
         
-        console.log(`✅ INCLUDED: ${personName} (ID: ${personId}) - in allowed list`);
+        console.log(`✅ INCLUDED: ${personName} (ID: ${personId}) - in Jira filter`);
         
         // Çalışan bilgilerini oluştur
         const nameParts = personName.split(' ');
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
+        const normName = this.normalizeName(personName);
+        const devEmail = developerEmailMap.get(normName) || selectedDevelopers.find(d => this.isNameMatch(personName, d.developer_name))?.developer_email || `${personName.toLowerCase().replace(/\s+/g, '.')}@company.com`;
         
         const employee: KolayIKEmployee = {
           id: personId,
-          email: this.getDeveloperEmail(personName),
+          email: devEmail,
           firstName: firstName,
           lastName: lastName,
           fullName: personName,
@@ -493,8 +490,7 @@ class KolayIKService {
     try {
       console.log(`🔄 Fetching leave requests from ${startDate} to ${endDate}${personId ? ` for person ${personId}` : ''}...`);
       console.log(`🌐 API URL will be: https://api.kolayik.com/v2/leave/list?status=approved&startDate=${startDate} 00:00:00&endDate=${endDate} 23:59:59&limit=100`);
-      
-      // Sadece gerekli parametreler
+
       const params = new URLSearchParams();
       params.append('status', 'approved');
       params.append('startDate', `${startDate} 00:00:00`);
@@ -593,18 +589,18 @@ class KolayIKService {
     return workingDays;
   }
 
-  // Developer ID'lerini isimlerle eşleştiren map
-  private getDeveloperIdMap(): Map<string, string> {
+  // Developer ID'lerini izin kayıtlarından isimle eşleştiren map (Jira Filtre'den gelen isimler için)
+  private buildDeveloperIdMapFromLeaves(leaveRequests: KolayIKLeaveRequest[]): Map<string, string> {
     const idMap = new Map<string, string>();
-
-    KolayIKService.ALLOWED_DEVELOPERS.forEach(({ id, name }) => {
-      // Normalize edilmiş isim ile ID'yi eşleştir
-      const normalizedName = this.normalizeName(name);
-      idMap.set(normalizedName, id);
-      // Orijinal isim ile de eşleştir
-      idMap.set(name, id);
+    leaveRequests.forEach(leave => {
+      const personName = leave.personName || '';
+      const employeeId = leave.employeeId ? String(leave.employeeId).trim() : '';
+      if (personName && employeeId) {
+        const norm = this.normalizeName(personName);
+        if (!idMap.has(norm)) idMap.set(norm, employeeId);
+        idMap.set(personName, employeeId);
+      }
     });
-
     return idMap;
   }
 
@@ -618,8 +614,7 @@ class KolayIKService {
       console.log(`🔄 Getting leave info for ${developerNames.length} developers between ${startDate} and ${endDate}...`);
       console.log(`👥 Developer names: ${developerNames.join(', ')}`);
 
-      // Developer ID map'ini oluştur
-      const developerIdMap = this.getDeveloperIdMap();
+      const developerEmailMap = await jiraFilterService.getDeveloperEmailMap();
 
       // Step 0: Resmi tatilleri çek
       console.log('🔄 Step 0: Fetching public holidays...');
@@ -647,6 +642,9 @@ class KolayIKService {
       console.log(`📅 Extended fetch window: ${fmt(extendedStartDate)} → ${fmt(extendedEndDate)} (original ${startDate} → ${endDate})`);
 
       const leaveRequests = await this.getLeaveRequests(fmt(extendedStartDate), fmt(extendedEndDate));
+
+      // Developer ID map'ini izin kayıtlarından oluştur (isim -> Kolay İK ID)
+      const developerIdMap = this.buildDeveloperIdMapFromLeaves(leaveRequests);
 
       console.log(`📊 Fetched: ${leaveRequests.length} leave requests in date range`);
       console.log(`📊 Leave requests detail:`, leaveRequests.map(l => ({
@@ -722,9 +720,10 @@ class KolayIKService {
         if (employeeLeaves.length === 0) {
           console.log(`✓ ${developerName}: No leave found, but ${publicHolidayDetails.length} public holidays added`);
           const totalPublicHolidayDays = publicHolidayDetails.reduce((sum, h) => sum + h.days, 0);
+          const devEmail = developerEmailMap.get(this.normalizeName(developerName)) || `${developerName.toLowerCase().replace(/\s+/g, '.')}@company.com`;
           developerLeaveInfo.push({
             developerName,
-            email: this.getDeveloperEmail(developerName),
+            email: devEmail,
             leaveDays: totalPublicHolidayDays,
             leaveDetails: publicHolidayDetails
           });
@@ -792,9 +791,10 @@ class KolayIKService {
           employeeId: employeeLeaves[0]?.employeeId
         });
 
+        const devEmail = developerEmailMap.get(this.normalizeName(developerName)) || `${developerName.toLowerCase().replace(/\s+/g, '.')}@company.com`;
         developerLeaveInfo.push({
           developerName,
-          email: this.getDeveloperEmail(developerName),
+          email: devEmail,
           employeeId: employeeLeaves[0]?.employeeId,
           leaveDays: totalLeaveDays,
           leaveDetails
@@ -856,7 +856,21 @@ class KolayIKService {
 
     // Sprint'teki toplam iş günlerini hesapla (resmi tatiller hariç)
     const sprintWorkingDays = this.calculateWorkingDays(sprintStartDate, sprintEndDate, allPublicHolidays);
-    const originalCapacity = 70; // Her zaman 70h default
+
+    // Şirket konfigürasyonundan sprint kapasitesini türet
+    let originalCapacity = 70;
+    try {
+      const metric = typeof localStorage !== 'undefined' ? localStorage.getItem('capacityMetric') : null;
+      if (metric === 'hours') {
+        const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('dailyHours') : null;
+        const dailyParsed = stored ? parseFloat(stored) : NaN;
+        const dailyHours = Number.isFinite(dailyParsed) && dailyParsed > 0 ? dailyParsed : 7;
+        // Gerçek sprint iş günü sayısına göre kapasite
+        originalCapacity = Math.max(0, Math.round(dailyHours * sprintWorkingDays));
+      }
+    } catch (e) {
+      console.warn('Kapasite konfigürasyonu okunamadı, 70h varsayılan kullanılacak:', e);
+    }
 
     console.log(`📅 Sprint working days calculation:`, {
       sprintStartDate,
@@ -956,32 +970,15 @@ class KolayIKService {
       const lastMatch = words1[words1.length - 1] === words2[words2.length - 1];
       if (firstMatch && lastMatch) return true;
     }
-    
+
+    // Bir isim diğerini içeriyorsa (Kolay "Ad Soyad" vs Jira "Ad Soyad" / farklı yazım)
+    const shorter = normalized1.length <= normalized2.length ? normalized1 : normalized2;
+    const longer = normalized1.length > normalized2.length ? normalized1 : normalized2;
+    if (longer.includes(shorter) && shorter.length >= 4 && (words1.length >= 2 || words2.length >= 2)) {
+      return true;
+    }
+
     return false;
-  }
-
-  private getDeveloperEmail(name: string): string {
-    const emailMap: { [name: string]: string } = {
-      'Buse Eren': 'buse.eren@acerpro.com.tr',
-      'Canberk İsmet DİZDAŞ': 'canberk.dizdas@acerpro.com.tr',
-      'Melih Meral': 'melih.meral@acerpro.com.tr',
-      'Onur Demir': 'onur.demir@acerpro.com.tr',
-      'Sezer SİNANOĞLU': 'sezer.sinanoglu@acerpro.com.tr',
-      'Sezer Sinanoğlu': 'sezer.sinanoglu@acerpro.com.tr',
-      'Gizem Akay': 'gizem.akay@acerpro.com.tr',
-      'Rüstem CIRIK': 'rustem.cirik@acerpro.com.tr',
-      'Ahmet Tunç': 'ahmet.tunc@acerpro.com.tr',
-      'Soner Canki': 'soner.canki@acerpro.com.tr',
-      'Alicem Polat': 'alicem.polat@acerpro.com.tr',
-      'Suat Aydoğdu': 'suat.aydogdu@acerpro.com.tr',
-      'Oktay MANAVOĞLU': 'oktay.manavoglu@acerpro.com.tr',
-      'Fahrettin DEMİRBAŞ': 'fahrettin.demirbas@acerpro.com.tr',
-      'Abolfazl Pourmohammad': 'abolfazl.pourmohammad@acerpro.com.tr',
-      'Feyza Bilgiç': 'feyza.bilgic@acerpro.com.tr',
-      'Hüseyin ORAL': 'huseyin.oral@acerpro.com.tr'
-    };
-
-    return emailMap[name] || `${name.toLowerCase().replace(/\s+/g, '.')}@acerpro.com.tr`;
   }
 
   // API bağlantısını test et
@@ -995,7 +992,7 @@ class KolayIKService {
       
       return {
         success: true,
-        message: `Kolay İK API bağlantısı başarılı. 17 çalışan bulundu.`,
+        message: `Kolay İK API bağlantısı başarılı`,
         employeeCount: employees.length
       };
     } catch (error) {
@@ -1013,7 +1010,7 @@ class KolayIKService {
           message = 'API isteği geçersiz. Request formatını kontrol edin.';
         } else if (error.message.includes('Missing required environment variable')) {
           message = 'KOLAYIK_API_TOKEN environment variable eksik. Supabase Dashboard\'da Edge Functions ayarlarından ekleyin.';
-        } else {
+        } else { 
           message = error.message;
         }
       }

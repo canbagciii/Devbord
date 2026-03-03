@@ -11,6 +11,7 @@ interface AuthContextType extends AuthState {
   canViewDeveloperData: (developerName: string) => boolean;
   getAccessibleProjects: () => string[];
   hasKolayIK: boolean;
+  refreshKolayIK: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,31 +26,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [hasKolayIK, setHasKolayIK] = useState<boolean>(false);
 
   useEffect(() => {
-    // Sayfa yüklendiğinde mevcut kullanıcıyı kontrol et
     const user = authService.getCurrentUser();
     setAuthState({
-      user,
+      user: user || null,
       isAuthenticated: !!user,
       loading: false,
       error: null
     });
 
-    // KolayIK entegrasyonunu kontrol et
     const checkKolayIK = async () => {
       if (user?.companyId) {
         const { data, error } = await supabase
           .from('companies')
-          .select('kolayik_company_id, kolayik_username, kolayik_password')
+          .select('kolayik_api_token, kolayik_base_url')
           .eq('id', user.companyId)
           .single();
-
         if (!error && data) {
-          const hasConfig = !!(data.kolayik_company_id && data.kolayik_username && data.kolayik_password);
-          setHasKolayIK(hasConfig);
+          setHasKolayIK(!!(data.kolayik_api_token && data.kolayik_base_url));
         }
       }
     };
-
     checkKolayIK();
   }, []);
 
@@ -104,12 +100,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user?.companyId) {
         const { data, error } = await supabase
           .from('companies')
-          .select('kolayik_company_id, kolayik_username, kolayik_password')
+          .select('kolayik_api_token, kolayik_base_url')
           .eq('id', user.companyId)
           .single();
 
         if (!error && data) {
-          const hasConfig = !!(data.kolayik_company_id && data.kolayik_username && data.kolayik_password);
+          const hasConfig = !!(data.kolayik_api_token && data.kolayik_base_url);
           setHasKolayIK(hasConfig);
         }
       }
@@ -149,6 +145,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return authService.getAccessibleProjects();
   };
 
+  const refreshKolayIK = async () => {
+    const user = authService.getCurrentUser();
+    if (!user?.companyId) {
+      setHasKolayIK(false);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('companies')
+      .select('kolayik_api_token, kolayik_base_url')
+      .eq('id', user.companyId)
+      .single();
+    if (!error && data) {
+      setHasKolayIK(!!(data.kolayik_api_token && data.kolayik_base_url));
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       ...authState,
@@ -158,7 +170,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       canAccessProject,
       canViewDeveloperData,
       getAccessibleProjects,
-      hasKolayIK
+      hasKolayIK,
+      refreshKolayIK
     }}>
       {children}
     </AuthContext.Provider>

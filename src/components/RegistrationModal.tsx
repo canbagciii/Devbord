@@ -5,9 +5,10 @@ import { useAuth } from '../context/AuthContext';
 
 interface RegistrationModalProps {
   onClose: () => void;
+  onSwitchToLogin?: () => void;
 }
 
-export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose }) => {
+export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose, onSwitchToLogin }) => {
   const { login, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +23,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose })
     jiraApiToken: '',
     jiraBaseUrl: '',
     kolayikApiToken: '',
-    kolayikBaseUrl: ''
+    kolayikBaseUrl: 'https://api.kolayik.com/v2'
   });
 
   useEffect(() => {
@@ -81,7 +82,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose })
         </button>
 
         <div className="mb-7">
-          <h2 className="text-2xl font-extrabold text-gray-900 mb-1.5">DevPulse'a Katılın 🚀</h2>
+          <h2 className="text-2xl font-extrabold text-gray-900 mb-1.5">Devbord'a Katılın 🚀</h2>
           <p className="text-sm text-gray-600">Dakikalar içinde entegrasyonunuzu tamamlayın</p>
         </div>
 
@@ -107,19 +108,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose })
                   onChange={handleChange}
                   required
                   className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all"
-                  placeholder="Acme Technology"
-                />
-              </div>
-              <div>
-                <label className="block text-[0.82rem] font-semibold text-gray-900 mb-1.5">Şirket E-postası</label>
-                <input
-                  type="email"
-                  name="companyEmail"
-                  value={formData.companyEmail}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all"
-                  placeholder="info@acme.com"
+                  placeholder="Coding Technology"
                 />
               </div>
             </div>
@@ -140,7 +129,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose })
                   onChange={handleChange}
                   required
                   className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all"
-                  placeholder="Ahmet"
+                  placeholder="Can"
                 />
               </div>
               <div>
@@ -152,7 +141,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose })
                   onChange={handleChange}
                   required
                   className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all"
-                  placeholder="Kaya"
+                  placeholder="Bağcı"
                 />
               </div>
             </div>
@@ -166,7 +155,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose })
                   onChange={handleChange}
                   required
                   className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all"
-                  placeholder="ahmet@acme.com"
+                  placeholder="can@acer.com"
                 />
               </div>
               <div>
@@ -221,16 +210,16 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose })
               </div>
               <div>
                 <label className="block text-[0.82rem] font-semibold text-gray-900 mb-1.5">Jira Base URL</label>
-                <input
+                <input 
                   type="url"
                   name="jiraBaseUrl"
                   value={formData.jiraBaseUrl}
                   onChange={handleChange}
                   required
                   className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all"
-                  placeholder="https://acme.atlassian.net"
+                  placeholder="https://sirketadi.atlassian.net"
                 />
-                <div className="text-xs text-gray-600 mt-1.5">Örn: https://acme.atlassian.net</div>
+                <div className="text-xs text-gray-600 mt-1.5">Örn: https://sirketadi.atlassian.net</div>
               </div>
             </div>
           </div>
@@ -257,9 +246,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose })
                 <div className="text-xs text-gray-600 mt-1.5">Kolay İK panel → Ayarlar → API bölümünden alabilirsiniz</div>
               </div>
               <div>
-                <label className="block text-[0.82rem] font-semibold text-gray-900 mb-1.5">
-                  Kolay İK Base URL <span className="text-gray-400 font-normal">(opsiyonel)</span>
-                </label>
+                <label className="block text-[0.82rem] font-semibold text-gray-900 mb-1.5">Kolay İK Base URL</label>
                 <input
                   type="url"
                   name="kolayikBaseUrl"
@@ -268,7 +255,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose })
                   className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all"
                   placeholder="https://api.kolayik.com/v2"
                 />
-                <div className="text-xs text-gray-600 mt-1.5">Kolay İK API dökümantasyonunuzdan edinebilirsiniz</div>
+                <div className="text-xs text-gray-600 mt-1.5">Varsayılan: https://api.kolayik.com/v2</div>
               </div>
             </div>
           </div>
@@ -282,7 +269,14 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose })
           </button>
 
           <div className="text-center mt-4 text-[0.83rem] text-gray-600">
-            Zaten hesabınız var mı? <button type="button" onClick={onClose} className="text-blue-600 font-semibold no-underline hover:underline">Giriş yapın</button>
+            Zaten hesabınız var mı?{' '}
+            <button
+              type="button"
+              onClick={onSwitchToLogin ?? onClose}
+              className="text-blue-600 font-semibold no-underline hover:underline"
+            >
+              Giriş yapın
+            </button>
           </div>
         </form>
       </div>

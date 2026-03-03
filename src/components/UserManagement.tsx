@@ -28,7 +28,7 @@ export const UserManagement: React.FC = () => {
     refetch
   } = useUsers();
 
-  const [activeTab, setActiveTab] = useState<'users' | 'jira-filters'>('users');
+  const [activeTab, setActiveTab] = useState<'users'>('users');
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -246,41 +246,8 @@ export const UserManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Tab Navigation */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
-              activeTab === 'users'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <Users className="h-5 w-5" />
-            Kullanıcı Yönetimi
-          </button>
-          <button
-            onClick={() => setActiveTab('jira-filters')}
-            className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
-              activeTab === 'jira-filters'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <Filter className="h-5 w-5" />
-            JIRA Filtre Yönetimi
-          </button>
-        </div>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === 'jira-filters' ? (
-        <JiraFilterManagement />
-      ) : (
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Kullanıcı Yönetimi</h2>
           <p className="text-gray-600 mt-1">Sistem kullanıcılarını yönetin ve proje erişimlerini düzenleyin</p>
@@ -799,8 +766,6 @@ export const UserManagement: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
-      )}
         </div>
       )}
     </div>
