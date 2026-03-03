@@ -42,6 +42,19 @@ class WorklogService {
     }
   }
 
+  private async getAllowedDevelopersWithIds(): Promise<Array<{ name: string; accountId: string | null }>> {
+    try {
+      const selected = await jiraFilterService.getSelectedDevelopers();
+      return selected.map(dev => ({
+        name: dev.developer_name,
+        accountId: dev.jira_account_id
+      }));
+    } catch (error) {
+      console.error('Error fetching allowed developers with account ids:', error);
+      return [];
+    }
+  }
+
   private async getAllowedProjects(): Promise<string[]> {
     try {
       return await jiraFilterService.getProjectKeys();
@@ -163,14 +176,15 @@ class WorklogService {
   async getMonthlyWorklogData(startDate: string, endDate: string, developerLeaveInfo?: any[]): Promise<DeveloperWorklogData[]> {
     console.log(`🚀 Getting MONTHLY worklog data for ${startDate} to ${endDate}`);
 
-    const [allowedDevelopers, allowedProjects, developerEmailMap] = await Promise.all([
-      this.getAllowedDevelopers(),
+    const [allowedDevelopersWithIds, allowedProjects, developerEmailMap] = await Promise.all([
+      this.getAllowedDevelopersWithIds(),
       this.getAllowedProjects(),
       // Bazı ortamlarda getDeveloperEmailMap henüz tanımlı olmayabilir; güvenli fallback kullan
       typeof (jiraFilterService as any).getDeveloperEmailMap === 'function'
         ? jiraFilterService.getDeveloperEmailMap()
         : Promise.resolve(new Map<string, string>())
     ]);
+    const allowedDevelopers = allowedDevelopersWithIds.map(d => d.name);
     console.log(`✅ Found ${allowedDevelopers.length} active developers from database`);
     console.log(`✅ Found ${allowedProjects.length} active projects from database:`, allowedProjects);
 
@@ -192,7 +206,8 @@ class WorklogService {
     console.log(`📅 Monthly dates: ${allDates.length} days from ${allDates[0]} to ${allDates[allDates.length - 1]}`);
 
     // Her yazılımcı için aylık worklog verisi çek
-    for (const developer of allowedDevelopers) {
+    for (const dev of allowedDevelopersWithIds) {
+      const developer = dev.name;
       console.log(`👤 Processing monthly data for: ${developer}`);
       
       try {
@@ -209,7 +224,11 @@ class WorklogService {
           ? `project in (${allowedProjects.map(p => `"${p}"`).join(', ')}) AND `
           : '';
 
-        const jql = `${projectFilter}worklogAuthor = "${developer}" AND worklogDate >= "${jqlStartDate}" AND worklogDate <= "${jqlEndDate}" ORDER BY updated DESC`;
+        const authorClause = dev.accountId
+          ? `worklogAuthor = ${dev.accountId}`
+          : `worklogAuthor = "${developer}"`;
+
+        const jql = `${projectFilter}${authorClause} AND worklogDate >= "${jqlStartDate}" AND worklogDate <= "${jqlEndDate}" ORDER BY updated DESC`;
 
         console.log(`🔍 Monthly JQL for ${developer}: ${jql}`);
 
@@ -452,7 +471,7 @@ class WorklogService {
 
     try {
       console.log(`🚀 HYBRID: Fetching worklog data for ${startDate} to ${endDate} (per-developer worklogAuthor JQL)`);
-      const allowedDevelopers = await this.getAllowedDevelopers();
+      const allowedDevelopers = await this.getAllowedDevelopersWithIds();
       const allWorklogs: any[] = [];
       const jqlStartDate = startDate.replace(/-/g, '/');
       const jqlEndDate = endDate.replace(/-/g, '/');
@@ -462,9 +481,13 @@ class WorklogService {
       const baseFields = ['worklog', 'summary', 'project', 'issuetype', 'parent', 'updated', 'created'];
       const fieldsParam = storyPointFieldKey ? [...baseFields, storyPointFieldKey].join(',') : baseFields.join(',');
 
-      for (const developer of allowedDevelopers) {
+      for (const dev of allowedDevelopers) {
         try {
-          const jql = `worklogAuthor = "${developer}" AND worklogDate >= "${jqlStartDate}" AND worklogDate <= "${jqlEndDate}" ORDER BY updated DESC`;
+          const developer = dev.name;
+          const authorClause = dev.accountId
+            ? `worklogAuthor = ${dev.accountId}`
+            : `worklogAuthor = "${developer}"`;
+          const jql = `${authorClause} AND worklogDate >= "${jqlStartDate}" AND worklogDate <= "${jqlEndDate}" ORDER BY updated DESC`;
           let startAt = 0;
           let total = Infinity;
           const developerIssues: any[] = [];
@@ -520,7 +543,13 @@ class WorklogService {
                 String(worklogDateObj.getMonth() + 1).padStart(2, '0') + '-' +
                 String(worklogDateObj.getDate()).padStart(2, '0');
               if (worklogDate < startDate || worklogDate > endDate) continue;
-              if (this.normalizeName(worklog.author.displayName) !== this.normalizeName(developer)) continue;
+              if (
+                (dev.accountId && worklog.author?.accountId && worklog.author.accountId === dev.accountId) === false &&
+                (!dev.accountId &&
+                  this.normalizeName(worklog.author.displayName) !== this.normalizeName(developer))
+              ) {
+                continue;
+              }
 
               allWorklogs.push({
                 author: { displayName: worklog.author.displayName, accountId: worklog.author.accountId },
@@ -539,7 +568,7 @@ class WorklogService {
             }
           }
         } catch (err) {
-          console.warn(`❌ Worklog fetch failed for ${developer}:`, err);
+          console.warn(`❌ Worklog fetch failed for ${dev.name}:`, err);
         }
       }
 
