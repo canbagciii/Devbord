@@ -123,7 +123,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegis
               className="text-blue-600 font-semibold no-underline hover:underline"
             >
               Ücretsiz kaydolun
-            </button> 
+            </button>
           </div>
         </form>
       </div>

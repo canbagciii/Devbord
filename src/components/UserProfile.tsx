@@ -179,7 +179,7 @@ export const UserProfile: React.FC = () => {
               className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors mb-1"
             >
               <Settings className="h-4 w-4" />
-              <span>Entegrasyon Ayarları</span>
+              <span>Ayarlar</span>
             </button>
             {hasRole('admin') && (
               <button
@@ -190,7 +190,7 @@ export const UserProfile: React.FC = () => {
                 className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors mb-1"
               >
                 <Filter className="h-4 w-4" />
-                <span>Jira Ayarları</span>
+                <span>Jira Yönetimi</span>
               </button>
             )}
             <button
