@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext';
 
 interface LoginModalProps {
   onClose: () => void;
+  onSwitchToRegister: () => void;
 }
 
-export const LoginModal: React.FC<LoginModalProps> = ({ onClose }) => {
+export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegister }) => {
   const { login, isAuthenticated, error: authError } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +23,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  // AuthContext içindeki hata değiştiğinde yerel hata mesajını da güncelle
   useEffect(() => {
     if (authError && !loading) {
       setError(authError);
@@ -42,7 +42,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose }) => {
     try {
       await login(formData);
     } catch (err) {
-      // Kullanıcı dostu sabit bir mesaj göster
       setError('E-posta veya şifre geçersiz. Lütfen tekrar deneyin.');
       setLoading(false);
     }
@@ -115,7 +114,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose }) => {
           </button>
 
           <div className="text-center mt-4 text-[0.83rem] text-gray-600">
-            Hesabınız yok mu? <button type="button" onClick={() => setIsRegisterModalOpen(true)} className="text-blue-600 font-semibold no-underline hover:underline">Ücretsiz kaydolun</button>
+            Hesabınız yok mu?{' '}
+            <button
+              type="button"
+              onClick={onSwitchToRegister}
+              className="text-blue-600 font-semibold hover:underline"
+            >
+              Ücretsiz kaydolun
+            </button>
           </div>
         </form>
       </div>
