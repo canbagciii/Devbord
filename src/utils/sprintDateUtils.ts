@@ -218,18 +218,41 @@ export const calculateDeveloperSprintWorkingDays = (
     return 10;
   }
 
+  // Sadece projeye ait sprintleri filtrele
   const developerSprints = sprints.filter(sprint => sprint.projectKey === projectKey);
 
   if (developerSprints.length === 0) {
     return 10;
   }
 
-  const { earliestStart, latestEnd } = calculateSprintDateRange(developerSprints);
+  // Sadece aktif sprintleri kullan (state = 'active')
+  const activeSprints = developerSprints.filter(sprint => sprint.state === 'active');
+
+  // Aktif sprint yoksa, en son kapanan sprintleri kullan
+  const sprintsToUse = activeSprints.length > 0
+    ? activeSprints
+    : developerSprints
+        .filter(sprint => sprint.endDate)
+        .sort((a, b) => {
+          const dateA = new Date(b.endDate!);
+          const dateB = new Date(a.endDate!);
+          return dateA.getTime() - dateB.getTime();
+        })
+        .slice(0, 1); // Sadece en son sprint
+
+  if (sprintsToUse.length === 0) {
+    return 10;
+  }
+
+  const { earliestStart, latestEnd } = calculateSprintDateRange(sprintsToUse);
 
   if (!earliestStart || !latestEnd) {
     return 10;
   }
 
-  return calculateWorkingDays(earliestStart, latestEnd);
+  const workingDays = calculateWorkingDays(earliestStart, latestEnd);
+
+  // Maksimum 15 iş günü (3 hafta) ile sınırla - absürt değerleri önlemek için
+  return Math.min(workingDays, 15);
 };
 
