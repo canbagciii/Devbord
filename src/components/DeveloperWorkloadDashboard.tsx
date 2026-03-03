@@ -39,6 +39,17 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
   } = useJiraData();
   const { canViewDeveloperData, user, hasKolayIK } = useAuth();
 
+  const [expandedDeveloper, setExpandedDeveloper] = useState<string | null>(null);
+  const [editingCapacity, setEditingCapacity] = useState<string | null>(null);
+  const [capacityValue, setCapacityValue] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showKolayIKIntegration, setShowKolayIKIntegration] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('weekly');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [customDateRange, setCustomDateRange] = useState<{ start: string; end: string } | null>(null);
+  const [localLastRefreshAt, setLocalLastRefreshAt] = useState<number | null>(null);
+  const [developerProjectKeys, setDeveloperProjectKeys] = useState<Record<string, string>>({});
+
   // Sprint tarih aralığı için proje haritası (workload'taki her geliştirici için context'ten)
   const developerProjectKeyMapForCapacity = React.useMemo(() => {
     const m: Record<string, string> = {};
@@ -52,11 +63,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
     sprints,
     developerProjectKeyMap: developerProjectKeyMapForCapacity
   });
-  const [expandedDeveloper, setExpandedDeveloper] = useState<string | null>(null);
-  const [editingCapacity, setEditingCapacity] = useState<string | null>(null);
-  const [capacityValue, setCapacityValue] = useState<string>('');
-  const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Actual hours yönetimi için custom hook
   const { actualHoursData, loading: actualHoursLoading, error: actualHoursError } = useDeveloperActualHours({
     workload,
@@ -64,12 +71,6 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
     sprintType,
     cacheStatus
   });
-  const [showKolayIKIntegration, setShowKolayIKIntegration] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>('weekly');
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [customDateRange, setCustomDateRange] = useState<{ start: string; end: string } | null>(null);
-  const [localLastRefreshAt, setLocalLastRefreshAt] = useState<number | null>(null);
-  const [developerProjectKeys, setDeveloperProjectKeys] = useState<Record<string, string>>({});
 
   // Tarih aralığını hesapla
   useEffect(() => {
