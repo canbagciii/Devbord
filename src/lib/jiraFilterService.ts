@@ -88,8 +88,7 @@ class JiraFilterService {
       throw new Error('Kullanıcı oturum açmamış');
     }
 
-    const localCompanyId = typeof localStorage !== 'undefined' ? localStorage.getItem('companyId') : null;
-    const company_id = localCompanyId ?? user.app_metadata?.company_id ?? null;
+    const company_id = user.app_metadata?.company_id ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('companyId') : null);
 
     console.log('🔍 addProject - company_id:', company_id);
 
@@ -151,8 +150,7 @@ class JiraFilterService {
       throw new Error('Kullanıcı oturum açmamış');
     }
 
-    const localCompanyId = typeof localStorage !== 'undefined' ? localStorage.getItem('companyId') : null;
-    const company_id = localCompanyId ?? user.app_metadata?.company_id ?? null;
+    const company_id = user.app_metadata?.company_id ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('companyId') : null);
 
     console.log('🔍 addDeveloper - company_id:', company_id);
 
@@ -168,7 +166,6 @@ class JiraFilterService {
             .from('selected_projects')
             .select('*')
             .eq('project_key', projectKey)
-            .eq('company_id', company_id)
             .maybeSingle();
 
           if (!existingProject) {

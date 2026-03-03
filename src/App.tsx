@@ -126,8 +126,8 @@ const [activeTab, setActiveTab] = useState<
     { id: 'daily-tracking', label: 'Günlük Süre Takibi', icon: BarChart3 },
     { id: 'projects', label: 'Sprint Yönetimi', icon: Activity },
     { id: 'dashboard', label: 'Yazılımcı Analizi', icon: Users },
-    { id: 'assignment', label: 'Eksik Süre Takibi', icon: Plus },
-    { id: 'user-management', label: 'Kullanıcı Yönetimi', icon: Settings },
+    { id: 'assignment', label: 'Jirada Görev Atama', icon: Plus },
+    { id: 'user-management', label: 'Kullanıcı & Filtre Yönetimi', icon: Settings },
     ...(hasKolayIK ? [{ id: 'kolayik-employees' as const, label: 'Kolay İK', icon: Users }] : []),
   ];
 
