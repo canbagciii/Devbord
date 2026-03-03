@@ -17,6 +17,7 @@ export const developerProjectKeyMap: { [developerName: string]: string } = {
   'Abolfazl Pourmohammad': 'OB',
   'Feyza Bilgiç': 'TFKB',
   'Hüseyin ORAL': 'BB',
+  'Göksu Deniz': 'IGW',
 };
 
 
