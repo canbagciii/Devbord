@@ -89,7 +89,7 @@ class JiraFilterService {
     }
 
     const localCompanyId = typeof localStorage !== 'undefined' ? localStorage.getItem('companyId') : null;
-    const company_id = localCompanyId || user.app_metadata?.company_id ?? null;
+    const company_id = localCompanyId ?? user.app_metadata?.company_id ?? null;
 
     console.log('🔍 addProject - company_id:', company_id);
 
@@ -152,7 +152,7 @@ class JiraFilterService {
     }
 
     const localCompanyId = typeof localStorage !== 'undefined' ? localStorage.getItem('companyId') : null;
-    const company_id = localCompanyId || user.app_metadata?.company_id ?? null;
+    const company_id = localCompanyId ?? user.app_metadata?.company_id ?? null;
 
     console.log('🔍 addDeveloper - company_id:', company_id);
 
