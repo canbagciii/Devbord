@@ -5,7 +5,7 @@ import { supabase } from "../lib/supabase";
 import { jiraFilterService } from "../lib/jiraFilterService";
 import { useAuth } from "./AuthContext";
 import type { JiraProject, JiraBoard, DeveloperWorkload, JiraSprint, JiraTask } from "../types";
-import { developerProjectMapService } from "../data/developerProjectMap";
+import { developerProjectKeyMap } from "../data/developerProjectMap";
 import { worklogService } from "../services/worklogService";
 
 // Cache interface
@@ -46,8 +46,8 @@ interface JiraDataContextType {
   developerActualHoursUpdatedAt: number | null;
   developerActualHoursLoading: boolean;
   developerActualHoursError: string | null;
-  /** Kullanıcı Yönetimi (users.assigned_projects) öncelikli; yoksa dinamik harita. */
-  getDeveloperProjectKey: (developerName: string) => Promise<string | undefined>;
+  /** Kullanıcı Yönetimi (users.assigned_projects) öncelikli; yoksa statik harita. */
+  getDeveloperProjectKey: (developerName: string) => string | undefined;
   /** Proje atama haritası yüklendi mi (Günlük Süre Takibi vb. bu değere göre yeniden yükleyebilir). */
   developerProjectMapReady: boolean;
   /** Jira verisinin en son ne zaman yenilendiği (timestamp, ms). */
@@ -156,12 +156,12 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     .replace(/\s+/g, ' ')
     .trim();
 
-  const getDeveloperProjectKey = useCallback(async (developerName: string): Promise<string | undefined> => {
+  // Kullanıcı Yönetimi proje atamaları: öncelik users.assigned_projects, yoksa statik harita
+  const getDeveloperProjectKey = useCallback((developerName: string): string | undefined => {
     const n = normalizeName(developerName);
     const fromUsers = developerProjectMapFromUsers.get(n)?.[0];
     if (fromUsers) return fromUsers;
-
-    return await developerProjectMapService.getDeveloperProjectKey(developerName);
+    return developerProjectKeyMap[developerName];
   }, [developerProjectMapFromUsers]);
 
   useEffect(() => {
@@ -452,7 +452,7 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     for (const developer of workload) {
       const developerName = developer.developer;
-      const projectKey = await getDeveloperProjectKey(developerName);
+      const projectKey = getDeveloperProjectKey(developerName);
       const fallback = Math.round((developer.totalActualHours || 0) * 100) / 100;
 
       if (!projectKey) {
