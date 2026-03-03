@@ -1,8 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "npm:@supabase/supabase-js@2.52.0"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-company-id',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 }
 
@@ -12,20 +13,55 @@ interface JiraConfig {
   token: string
 }
 
-const getJiraConfig = (): JiraConfig => {
-  const baseUrl = Deno.env.get('JIRA_BASE_URL') || 'https://acerpro.atlassian.net'
-  const email = Deno.env.get('JIRA_EMAIL')
-  const token = Deno.env.get('JIRA_TOKEN')
-  
-  if (!email || !token) {
-    throw new Error('JIRA_EMAIL and JIRA_TOKEN environment variables are required')
+const getJiraConfig = async (companyId: string): Promise<JiraConfig> => {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const supabase = createClient(supabaseUrl, supabaseKey)
+
+  console.log('🔍 Fetching Jira config for company (create-issue):', companyId)
+
+  const { data: company, error } = await supabase
+    .from('companies')
+    .select('jira_base_url, jira_email, jira_api_token')
+    .eq('id', companyId)
+    .single()
+
+  if (error) {
+    console.error('❌ Error fetching company:', error)
+    throw new Error(`Failed to fetch company data: ${error.message}`)
   }
-  
-  return { baseUrl, email, token }
+
+  if (!company) {
+    throw new Error('Company not found')
+  }
+
+  const { jira_base_url, jira_email, jira_api_token } = company
+
+  console.log('🔍 Jira config check (create-issue):', {
+    baseUrl: jira_base_url,
+    emailExists: !!jira_email,
+    tokenExists: !!jira_api_token,
+    emailLength: jira_email?.length || 0,
+    tokenLength: jira_api_token?.length || 0
+  })
+
+  if (!jira_email || !jira_api_token) {
+    const missingVars: string[] = []
+    if (!jira_email) missingVars.push('jira_email')
+    if (!jira_api_token) missingVars.push('jira_api_token')
+
+    console.error('❌ Missing Jira credentials for company:', missingVars)
+    throw new Error(`Missing Jira credentials for company: ${missingVars.join(', ')}`)
+  }
+
+  return {
+    baseUrl: jira_base_url || 'https://acerpro.atlassian.net',
+    email: jira_email,
+    token: jira_api_token
+  }
 }
 
-const makeJiraRequest = async (endpoint: string, options: RequestInit = {}) => {
-  const config = getJiraConfig()
+const makeJiraRequest = async (endpoint: string, config: JiraConfig, options: RequestInit = {}) => {
   const authHeader = btoa(`${config.email}:${config.token}`)
   
   const url = `${config.baseUrl}${endpoint}`
@@ -49,8 +85,8 @@ const makeJiraRequest = async (endpoint: string, options: RequestInit = {}) => {
   return response.json()
 }
 
-const addIssueToSprint = async (issueId: string, sprintId: string): Promise<void> => {
-  await makeJiraRequest(`/rest/agile/1.0/sprint/${sprintId}/issue`, {
+const addIssueToSprint = async (issueId: string, sprintId: string, config: JiraConfig): Promise<void> => {
+  await makeJiraRequest(`/rest/agile/1.0/sprint/${sprintId}/issue`, config, {
     method: 'POST',
     body: JSON.stringify({
       issues: [issueId]
@@ -73,33 +109,17 @@ serve(async (req) => {
   try {
     console.log('🚀 Starting issue creation process...')
     
-    // Check environment variables first
-    const jiraEmail = Deno.env.get('JIRA_EMAIL')
-    const jiraToken = Deno.env.get('JIRA_TOKEN')
-    const jiraBaseUrl = Deno.env.get('JIRA_BASE_URL') || 'https://acerpro.atlassian.net'
-    
-    console.log('🔍 Environment check:', {
-      baseUrl: jiraBaseUrl,
-      emailExists: !!jiraEmail,
-      tokenExists: !!jiraToken,
-      emailLength: jiraEmail?.length || 0,
-      tokenLength: jiraToken?.length || 0
-    })
-    
-    if (!jiraEmail || !jiraToken) {
-      const missingVars = []
-      if (!jiraEmail) missingVars.push('JIRA_EMAIL')
-      if (!jiraToken) missingVars.push('JIRA_TOKEN')
-      
-      console.error('❌ Missing environment variables:', missingVars)
+    // Get company ID from header
+    const companyId = req.headers.get('x-company-id')
+    if (!companyId) {
+      console.error('❌ No company ID provided for issue creation')
       return new Response(
-        JSON.stringify({ 
-          error: `Missing required environment variables: ${missingVars.join(', ')}`,
-          details: 'Please configure JIRA_EMAIL and JIRA_TOKEN in Supabase Dashboard → Project Settings → Edge Functions',
-          help: 'Go to your Supabase project settings and add the missing environment variables'
+        JSON.stringify({
+          error: 'Company ID required',
+          details: 'Please provide x-company-id header'
         }),
         {
-          status: 500,
+          status: 400,
           headers: {
             ...corsHeaders,
             'Content-Type': 'application/json',
@@ -107,6 +127,8 @@ serve(async (req) => {
         }
       )
     }
+
+    const config = await getJiraConfig(companyId)
     
     const issueData = await req.json()
     console.log('📝 Received issue data:', JSON.stringify(issueData, null, 2))
@@ -185,7 +207,7 @@ serve(async (req) => {
 
     console.log('🚀 Creating Jira issue with payload:', JSON.stringify(payload, null, 2))
 
-    const response = await makeJiraRequest('/rest/api/3/issue', {
+    const response = await makeJiraRequest('/rest/api/3/issue', config, {
       method: 'POST',
       body: JSON.stringify(payload)
     })
@@ -196,7 +218,7 @@ serve(async (req) => {
     if (issueData.sprintId && response.key) {
       try {
         console.log(`🔄 Adding issue ${response.key} to sprint ${issueData.sprintId}`)
-        await addIssueToSprint(response.id, issueData.sprintId)
+        await addIssueToSprint(response.id, issueData.sprintId, config)
         console.log(`Issue ${response.key} added to sprint ${issueData.sprintId}`)
       } catch (sprintError) {
         console.warn('⚠️ Issue created but could not add to sprint:', sprintError)
