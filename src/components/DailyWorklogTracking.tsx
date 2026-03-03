@@ -48,43 +48,6 @@ const DailyWorklogTracking: React.FC = () => {
     ? getWeekRange(currentDate)
     : getMonthRange(currentDate);
 
-  // Kapasite konfigürasyonuna göre hedef (haftalık/aylık) hesapla
-  const getCapacityTarget = (): number => {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const metric = localStorage.getItem('capacityMetric');
-        if (metric === 'hours') {
-          const stored = localStorage.getItem('dailyHours');
-          const parsed = stored ? parseFloat(stored) : NaN;
-          const daily = Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
-
-          if (viewMode === 'weekly') {
-            // 5 iş günü * günlük kapasite
-            return Math.round(daily * 5);
-          }
-
-          const workingDays = dateRange.dates.filter(date => {
-            const dayOfWeek = new Date(date).getDay();
-            return dayOfWeek >= 1 && dayOfWeek <= 5;
-          }).length;
-          return Math.round(daily * workingDays);
-        }
-      }
-    } catch (e) {
-      console.warn('Günlük kapasite konfigürasyonu okunamadı, varsayılan hedef kullanılacak:', e);
-    }
-
-    // Eski varsayılan: 35h / 7h*iş günü
-    if (viewMode === 'weekly') {
-      return 35;
-    }
-    const workingDays = dateRange.dates.filter(date => {
-      const dayOfWeek = new Date(date).getDay();
-      return dayOfWeek >= 1 && dayOfWeek <= 5;
-    }).length;
-    return workingDays * 7;
-  };
-
   // İzin verilerine göre worklog verilerini ayarla (pure function)
   const applyLeaveAdjustments = (data: DeveloperWorklogData[], leaveInfo: DeveloperLeaveInfo[]): DeveloperWorklogData[] => {
     console.log(`🔄 Applying leave adjustments to ${data.length} developers with ${leaveInfo.length} leave records`);
@@ -137,19 +100,7 @@ const DailyWorklogTracking: React.FC = () => {
       }
 
       // İzin günlerine göre haftalık hedefi ayarla
-      let originalTarget = 35;
-      try {
-        const metric = typeof localStorage !== 'undefined' ? localStorage.getItem('capacityMetric') : null;
-        if (metric === 'hours') {
-          const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('dailyHours') : null;
-          const parsed = stored ? parseFloat(stored) : NaN;
-          const daily = Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
-          // Haftalık hedef: 5 iş günü * günlük kapasite
-          originalTarget = Math.round(daily * 5);
-        }
-      } catch (e) {
-        console.warn('Günlük kapasite konfigürasyonu okunamadı, 35h varsayılan kullanılacak:', e);
-      }
+      const originalTarget = 35;
       const leaveDays = developerLeave.leaveDays;
       const adjustedTarget = Math.max(0, originalTarget - (leaveDays * 7));
 
@@ -213,32 +164,34 @@ const DailyWorklogTracking: React.FC = () => {
       // Önce filtrelemeyi yap
       let filteredData: DeveloperWorklogData[];
 
-      // Kapasite ayarlaması aktifse ve KolayIK entegrasyonu varsa izin verilerini de yükle
-      if (capacityAdjustmentEnabled && canViewDeveloperData && hasKolayIK) {
-        let leaveInfo: DeveloperLeaveInfo[] = [];
+      // Kapasite ayarlaması aktifse izin verilerini de yükle
+      if (capacityAdjustmentEnabled && canViewDeveloperData) {
         try {
-          setLeaveLoading(true);
-          console.log(`🔄 Loading leave data for all developers`);
+          // KolayIK entegrasyonu varsa izin bilgilerini yükle
+          if (hasKolayIK) {
+            setLeaveLoading(true);
+            console.log(`🔄 Loading leave data for all developers`);
 
-          const allDeveloperNames = await worklogService['getAllowedDevelopers']();
-          console.log(`👥 Developer names from DB:`, allDeveloperNames);
+            const allDeveloperNames = await worklogService['getAllowedDevelopers']();
+            console.log(`👥 Developer names from DB:`, allDeveloperNames);
 
-          leaveInfo = await kolayikService.getDeveloperLeaveInfo(
-            allDeveloperNames,
-            dateRange.start,
-            dateRange.end
-          );
+            const leaveInfo = await kolayikService.getDeveloperLeaveInfo(
+              allDeveloperNames,
+              dateRange.start,
+              dateRange.end
+            );
 
-          console.log(`📊 Leave info received:`, leaveInfo.map(l => ({
-            name: l.developerName,
-            email: l.email,
-            leaveDays: l.leaveDays,
-            hasLeave: l.leaveDays > 0
-          })));
+            console.log(`📊 Leave info received:`, leaveInfo.map(l => ({
+              name: l.developerName,
+              email: l.email,
+              leaveDays: l.leaveDays,
+              hasLeave: l.leaveDays > 0
+            })));
 
-          setLeaveData(leaveInfo);
-          console.log(`✅ Leave data loaded for ${leaveInfo.length} developers`);
-          console.log(`📊 Developers with leave:`, leaveInfo.filter(l => l.leaveDays > 0).map(l => l.developerName));
+            setLeaveData(leaveInfo);
+            console.log(`✅ Leave data loaded for ${leaveInfo.length} developers`);
+            console.log(`📊 Developers with leave:`, leaveInfo.filter(l => l.leaveDays > 0).map(l => l.developerName));
+          }
 
           // İzin bilgisi ile veriyi çek
           if (viewMode === 'weekly') {
@@ -251,31 +204,10 @@ const DailyWorklogTracking: React.FC = () => {
 
             filteredData = applyLeaveAdjustments(filteredData, leaveInfo);
             console.log(`📊 After leave adjustments: ${filteredData.length} developers`);
-
-            // İzin ayarlamasından sonra kapasite hedefine göre weeklyTarget'ı güncelle
-            const baseTarget = getCapacityTarget();
-            filteredData = filteredData.map(dev => {
-              const developerLeave = leaveInfo.find(leave => leave.developerName === dev.developerName);
-              if (developerLeave && developerLeave.leaveDays > 0) {
-                // İzni olan geliştiriciler için applyLeaveAdjustments zaten baseTarget üzerinden ayarlama yaptı
-                return dev;
-              }
-              return {
-                ...dev,
-                weeklyTarget: baseTarget
-              };
-            });
           } else {
             // Aylık modda izin bilgisini servise gönder
             data = await worklogService.getMonthlyWorklogData(dateRange.start, dateRange.end, leaveInfo);
             filteredData = filterWorklogDataByRole(data);
-
-            // Aylık modda da kapasite hedefine göre target'ı güncelle
-            const baseTarget = getCapacityTarget();
-            filteredData = filteredData.map(dev => ({
-              ...dev,
-              weeklyTarget: baseTarget
-            }));
           }
 
           console.log(`✅ Applied leave adjustments to worklog data`);
@@ -291,13 +223,6 @@ const DailyWorklogTracking: React.FC = () => {
             data = await worklogService.getMonthlyWorklogData(dateRange.start, dateRange.end);
           }
           filteredData = filterWorklogDataByRole(data);
-
-          // Kapasite hedefine göre weeklyTarget'ı güncelle
-          const baseTarget = getCapacityTarget();
-          filteredData = filteredData.map(dev => ({
-            ...dev,
-            weeklyTarget: baseTarget
-          }));
         } finally {
           setLeaveLoading(false);
         }
@@ -309,13 +234,6 @@ const DailyWorklogTracking: React.FC = () => {
           data = await worklogService.getMonthlyWorklogData(dateRange.start, dateRange.end);
         }
         filteredData = filterWorklogDataByRole(data);
-
-        // Kapasite hedefine göre weeklyTarget'ı güncelle
-        const baseTarget = getCapacityTarget();
-        filteredData = filteredData.map(dev => ({
-          ...dev,
-          weeklyTarget: baseTarget
-        }));
       }
 
       analyticsData = await worklogService.getWorklogAnalytics(dateRange.start, dateRange.end);
@@ -384,36 +302,10 @@ const DailyWorklogTracking: React.FC = () => {
     const csvData = dataToExport.map(dev => {
       const developerLeave = leaveData.find(leave => leave.developerName === dev.developerName);
       const leaveDays = developerLeave?.leaveDays || 0;
-      let originalTarget: number;
-      try {
-        const metric = typeof localStorage !== 'undefined' ? localStorage.getItem('capacityMetric') : null;
-        if (metric === 'hours') {
-          const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('dailyHours') : null;
-          const parsed = stored ? parseFloat(stored) : NaN;
-          const daily = Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
-          if (viewMode === 'weekly') {
-            originalTarget = Math.round(daily * 5);
-          } else {
-            const workingDays = dateRange.dates.filter(date => {
-              const dayOfWeek = new Date(date).getDay();
-              return dayOfWeek >= 1 && dayOfWeek <= 5;
-            }).length;
-            originalTarget = Math.round(daily * workingDays);
-          }
-        } else {
-          // Story point veya bilinmeyen metrikte eski davranışa dön
-          originalTarget = viewMode === 'weekly' ? 35 : dateRange.dates.filter(date => {
-            const dayOfWeek = new Date(date).getDay();
-            return dayOfWeek >= 1 && dayOfWeek <= 5;
-          }).length * 7;
-        }
-      } catch (e) {
-        console.warn('Günlük kapasite konfigürasyonu okunamadı, varsayılan hedef kullanılacak:', e);
-        originalTarget = viewMode === 'weekly' ? 35 : dateRange.dates.filter(date => {
-          const dayOfWeek = new Date(date).getDay();
-          return dayOfWeek >= 1 && dayOfWeek <= 5;
-        }).length * 7;
-      }
+      const originalTarget = viewMode === 'weekly' ? 35 : dateRange.dates.filter(date => {
+        const dayOfWeek = new Date(date).getDay();
+        return dayOfWeek >= 1 && dayOfWeek <= 5;
+      }).length * 7;
       const capacityAdjustment = leaveDays > 0 ? `${originalTarget}h → ${dev.weeklyTarget}h (-${leaveDays * 7}h)` : 'Ayarlama yok';
       
       return [
@@ -538,8 +430,8 @@ const DailyWorklogTracking: React.FC = () => {
               </button>
             </div>
 
-            {/* Capacity Adjustment Toggle - Sadece haftalık modda ve KolayIK varsa */}
-            {viewMode === 'weekly' && hasKolayIK && (
+            {/* Capacity Adjustment Toggle - Sadece haftalık modda */}
+            {viewMode === 'weekly' && (
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2">
                   <input
@@ -553,7 +445,7 @@ const DailyWorklogTracking: React.FC = () => {
                     İzin Günlerine Göre Kapasite Ayarla
                   </label>
                 </div>
-
+               
               </div>
             )}
 
@@ -614,8 +506,8 @@ const DailyWorklogTracking: React.FC = () => {
         </div>
       </div>
 
-      {/* Leave Integration Status - Sadece haftalık modda ve KolayIK entegrasyonu varsa */}
-      {viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && (
+      {/* Leave Integration Status - Sadece haftalık modda */}
+      {viewMode === 'weekly' && capacityAdjustmentEnabled && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -627,7 +519,7 @@ const DailyWorklogTracking: React.FC = () => {
                 </p>
               </div>
             </div>
-
+            
             {leaveLoading && (
               <div className="flex items-center space-x-2 text-blue-600">
                 <Loader className="h-4 w-4 animate-spin" />
@@ -655,7 +547,7 @@ const DailyWorklogTracking: React.FC = () => {
                   </span>
                 </div>
               </div>
-
+              
               <div className="bg-orange-50 rounded-lg p-3">
                 <div className="flex items-center space-x-2">
                   <Clock className="h-4 w-4 text-orange-600" />
@@ -664,7 +556,7 @@ const DailyWorklogTracking: React.FC = () => {
                   </span>
                 </div>
               </div>
-
+              
               <div className="bg-green-50 rounded-lg p-3">
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="h-4 w-4 text-green-600" />
@@ -759,7 +651,7 @@ const DailyWorklogTracking: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900">
                 {viewMode === 'weekly' ? 'Haftalık' : 'Aylık'} Süre Takibi
               </h3>
-              {viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && leaveData.some(leave => leave.leaveDays > 0) && (
+              {viewMode === 'weekly' && capacityAdjustmentEnabled && leaveData.some(leave => leave.leaveDays > 0) && (
                 <div className="flex items-center space-x-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
                   <CalendarDays className="h-4 w-4" />
                   <span>İzin ayarlaması aktif</span>
@@ -795,7 +687,7 @@ const DailyWorklogTracking: React.FC = () => {
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Durum
                   </th>
-                  {viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && (
+                  {viewMode === 'weekly' && capacityAdjustmentEnabled && (
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       İzin Etkisi
                     </th>
@@ -806,34 +698,10 @@ const DailyWorklogTracking: React.FC = () => {
                 {filteredWorklogData.map((developer, index) => {
                   const developerLeave = leaveData.find(leave => leave.developerName === developer.developerName);
                   const hasLeave = developerLeave && developerLeave.leaveDays > 0;
-                  let originalTarget: number;
-                  try {
-                    const metric = typeof localStorage !== 'undefined' ? localStorage.getItem('capacityMetric') : null;
-                    if (metric === 'hours') {
-                      const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('dailyHours') : null;
-                      const parsed = stored ? parseFloat(stored) : NaN;
-                      const daily = Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
-                      if (viewMode === 'weekly') {
-                        originalTarget = Math.round(daily * 5);
-                      } else {
-                        const workingDays = dateRange.dates.filter(date => {
-                          const dayOfWeek = new Date(date).getDay();
-                          return dayOfWeek >= 1 && dayOfWeek <= 5;
-                        }).length;
-                        originalTarget = Math.round(daily * workingDays);
-                      }
-                    } else {
-                      originalTarget = viewMode === 'weekly' ? 35 : dateRange.dates.filter(date => {
-                        const dayOfWeek = new Date(date).getDay();
-                        return dayOfWeek >= 1 && dayOfWeek <= 5;
-                      }).length * 7;
-                    }
-                  } catch {
-                    originalTarget = viewMode === 'weekly' ? 35 : dateRange.dates.filter(date => {
-                      const dayOfWeek = new Date(date).getDay();
-                      return dayOfWeek >= 1 && dayOfWeek <= 5;
-                    }).length * 7;
-                  }
+                  const originalTarget = viewMode === 'weekly' ? 35 : dateRange.dates.filter(date => {
+                    const dayOfWeek = new Date(date).getDay();
+                    return dayOfWeek >= 1 && dayOfWeek <= 5;
+                  }).length * 7;
                   
                   const isExpanded = expandedDevelopers.has(developer.developerName);
                   const toggleExpanded = () => {
@@ -871,7 +739,7 @@ const DailyWorklogTracking: React.FC = () => {
                           <div>
                             <p className="text-sm font-medium text-gray-900">{developer.developerName}</p>
                             <p className="text-xs text-gray-500">{developer.email}</p>
-                            {hasLeave && viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && (
+                            {hasLeave && viewMode === 'weekly' && capacityAdjustmentEnabled && (
                               <div className="flex items-center space-x-1 mt-1">
                                 <CalendarDays className="h-3 w-3 text-orange-500" />
                                 <span className="text-xs text-orange-600">
@@ -912,7 +780,7 @@ const DailyWorklogTracking: React.FC = () => {
                           <span className="text-sm font-medium text-gray-900">
                             {developer.weeklyTarget}h
                           </span>
-                          {hasLeave && viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && (
+                          {hasLeave && viewMode === 'weekly' && capacityAdjustmentEnabled && (
                             <span className="text-xs text-orange-600">
                               (orijinal: {originalTarget}h)
                             </span>
@@ -940,8 +808,8 @@ const DailyWorklogTracking: React.FC = () => {
                         </div>
                       </td>
                       
-                      {/* Leave Impact - Sadece haftalık modda ve KolayIK varsa */}
-                      {viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && (
+                      {/* Leave Impact - Sadece haftalık modda */}
+                      {viewMode === 'weekly' && capacityAdjustmentEnabled && (
                         <td className="px-6 py-4 text-center">
                           {hasLeave ? (
                             <div className="space-y-1">
@@ -962,10 +830,10 @@ const DailyWorklogTracking: React.FC = () => {
                     {/* Expanded Details Row */}
                     {isExpanded && (
                       <tr className="bg-gray-50">
-                        <td colSpan={dateRange.dates.length + 4 + (viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK ? 1 : 0)} className="px-6 py-4">
+                        <td colSpan={dateRange.dates.length + 4 + (viewMode === 'weekly' && capacityAdjustmentEnabled ? 1 : 0)} className="px-6 py-4">
                           <div className="space-y-4">
                             {/* Leave Details */}
-                            {hasLeave && viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && (
+                            {hasLeave && viewMode === 'weekly' && capacityAdjustmentEnabled && (
                               <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                                 <div className="flex items-center space-x-2 mb-2">
                                   <CalendarDays className="h-4 w-4 text-orange-600" />

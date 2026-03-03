@@ -29,7 +29,7 @@ export const Header: React.FC = () => {
 <BarChart3 className="h-4 w-4 text-white" />
 </div>
 <div>
-<h1 className="text-base font-semibold text-gray-900">Devbord</h1>
+<h1 className="text-base font-semibold text-gray-900">Bankasürans</h1>
 <p className="text-xs text-gray-600">Sprint Ve Yazılımcı Takip Sistemi</p>
 </div>
 </div>

@@ -103,25 +103,7 @@ export const useKolayIKIntegration = (
   // Yazılımcının ayarlanmış kapasitesini getir
   const getAdjustedCapacity = (developerName: string): number => {
     const calculation = state.capacityCalculations.find(calc => calc.developerName === developerName);
-    if (calculation) {
-      return calculation.adjustedCapacity;
-    }
-
-    // Kapasite hesabı yoksa şirket konfigürasyonundan mantıklı bir varsayılan üret
-    try {
-      const metric = typeof localStorage !== 'undefined' ? localStorage.getItem('capacityMetric') : null;
-      if (metric === 'hours') {
-        const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('dailyHours') : null;
-        const dailyParsed = stored ? parseFloat(stored) : NaN;
-        const dailyHours = Number.isFinite(dailyParsed) && dailyParsed > 0 ? dailyParsed : 7;
-        // Ortalama 2 haftalık sprint ~ 10 iş günü
-        return Math.round(dailyHours * 10);
-      }
-    } catch (e) {
-      console.warn('Kapasite konfigürasyonu okunamadı, 70h varsayılan kullanılacak:', e);
-    }
-
-    return 70; // Eski davranış ile geriye dönük uyumluluk
+    return calculation?.adjustedCapacity || 70; // Varsayılan 70 saat
   };
 
   // Yazılımcının izin detaylarını getir

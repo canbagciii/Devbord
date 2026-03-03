@@ -187,10 +187,8 @@ const getSprintIssuesWithSubtasks = async (sprintId: string): Promise<JiraTask[]
     
     const jql = `sprint = ${sprintId} ORDER BY key ASC`
     console.log(`🔍 Using JQL: ${jql}`)
-
-    const fieldsParam = 'summary,description,status,assignee,project,priority,created,updated,timeoriginalestimate,issuetype,parent'
-    const searchUrl = `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=1000&fields=${encodeURIComponent(fieldsParam)}`
-    const response = await makeJiraRequest(searchUrl, { method: 'GET' })
+    
+    const response = await makeJiraRequest(`/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=1000&fields=summary,description,status,assignee,project,priority,created,updated,timeoriginalestimate,issuetype,parent`)
     
     if (!response.issues || !Array.isArray(response.issues)) {
       console.warn(`⚠️ No issues found for sprint ${sprintId}`)
@@ -322,8 +320,8 @@ const getDeveloperEmail = (name: string): string => {
       'Suat Aydoğdu': 'suat.aydogdu@acerpro.com.tr',
       'Oktay MANAVOĞLU': 'oktay.manavoglu@acerpro.com.tr',
       'Fahrettin DEMİRBAŞ': 'fahrettin.demirbas@acerpro.com.tr',
-      'Abolfazl Pourmohammad': 'abolfazl.pourmohammad@acerpro.com.tr',
-      'Feyza Bilgiç': 'feyza.bilgic@acerpro.com.tr',
+      'Abolfazl Pourmohammad': 'abolfazl.pourmohammad@acerpro.com.tr'
+      'Feyza Bilgiç': 'feyza.bilgic@acerpro.com.tr',,
       'Hüseyin ORAL': 'huseyin.oral@acerpro.com.tr'
   }
   
@@ -378,11 +376,11 @@ const getWorklogDataForDeveloper = async (developerName: string, startDate: stri
     let total = Infinity
     const developerIssues: any[] = []
     
-    // Sayfalı issue çekme - GET kullan (POST /search/jql 400 Invalid request payload dönüyor)
+    // Sayfalı issue çekme - GÜNLÜK SÜRE TAKİBİ ile AYNI
     while (startAt < total) {
-      const fieldsParam = 'worklog,summary,project,issuetype,parent,updated,created'
-      const searchUrl = `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${pageSize}&fields=${encodeURIComponent(fieldsParam)}`
-      const page = await makeJiraRequest(searchUrl, { method: 'GET' })
+      const endpoint = `/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=${pageSize}&startAt=${startAt}&fields=worklog,summary,project,issuetype,parent,updated,created`
+      
+      const page = await makeJiraRequest(endpoint)
       const issues: any[] = page.issues || []
       const pageTotal = typeof page.total === 'number' ? page.total : (startAt + issues.length)
       total = pageTotal

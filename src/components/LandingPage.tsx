@@ -1,89 +1,45 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart3, Zap, Users, LinkIcon, Building2, TrendingUp, Bell, LayoutGrid, UserCog } from 'lucide-react';
+import React, { useState } from 'react';
+import { BarChart3, Zap, Users, LinkIcon, Building2, TrendingUp, Bell } from 'lucide-react';
 import { RegistrationModal } from './RegistrationModal';
 import { LoginModal } from './LoginModal';
-import { useAuth } from '../context/AuthContext';
 
-interface LandingPageProps {
-  /** İlk açılışta hangi modal açık olsun? */
-  initialModal?: 'login' | 'register' | null;
-  /** Üstte bilgi mesajı göstermek için opsiyonel metin. */
-  infoMessage?: string | null;
-}
-
-export const LandingPage: React.FC<LandingPageProps> = ({
-  initialModal = null,
-  infoMessage = null
-}) => {
-  const { error: authError, isAuthenticated } = useAuth();
-  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(initialModal === 'register');
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(initialModal === 'login');
-
-  // initialModal değeri dışarıdan sonradan değişirse senkron tut
-  useEffect(() => {
-    if (initialModal === 'login') {
-      setIsLoginModalOpen(true);
-      setIsRegisterModalOpen(false);
-    } else if (initialModal === 'register') {
-      setIsRegisterModalOpen(true);
-      setIsLoginModalOpen(false);
-    }
-  }, [initialModal]);
-
-  // Giriş denemesi başarısız olup global authError set edilirse login modalını açık tut.
-  // Ancak kullanıcı manuel olarak kayıt modalına geçtiyse (isRegisterModalOpen === true),
-  // bu etki kayıt modalını tekrar kapatmasın.
-  useEffect(() => {
-    if (!isAuthenticated && authError && !isRegisterModalOpen) {
-      setIsLoginModalOpen(true);
-    }
-  }, [authError, isAuthenticated, isRegisterModalOpen]);
+export const LandingPage: React.FC = () => {
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-white">
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 flex items-center justify-between h-17">
-          <a href="#" className="flex items-center gap-2.5 font-bold text-xl text-gray-900">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-600/30">
-              <Zap className="w-5 h-5 text-white fill-white" />
-            </div>
-            Devbord
-          </a>
-          <ul className="hidden md:flex items-center gap-8 list-none">
-            <li><a href="#problem" className="text-gray-600 text-sm font-medium hover:text-blue-600 transition-colors">Sorunlar</a></li>
-            <li><a href="#how" className="text-gray-600 text-sm font-medium hover:text-blue-600 transition-colors">Nasıl Çalışır</a></li>
-            <li><a href="#features" className="text-gray-600 text-sm font-medium hover:text-blue-600 transition-colors">Özellikler</a></li>
-          </ul>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsLoginModalOpen(true)}
-              className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-900 bg-transparent border-[1.5px] border-gray-300 hover:border-blue-600 hover:text-blue-600 transition-all"
-            >
-              Giriş Yap
-            </button>
-            <button
-              onClick={() => setIsRegisterModalOpen(true)}
-              className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/25 hover:shadow-blue-600/30 hover:-translate-y-0.5 transition-all"
-            >
-              Ücretsiz Başla →
-            </button>
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200 px-[5%] flex items-center justify-between h-17">
+        <a href="#" className="flex items-center gap-3 font-bold text-xl text-gray-900">
+          <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center relative overflow-hidden">
+            <div className="absolute w-2.5 h-4.5 rounded-sm bg-white left-2 bottom-2" />
+            <div className="absolute w-2.5 h-3 rounded-sm bg-white/50 right-2 bottom-2" />
           </div>
+          DevPulse
+        </a>
+        <ul className="hidden md:flex items-center gap-8 list-none">
+          <li><a href="#problem" className="text-gray-600 text-sm font-medium hover:text-blue-600 transition-colors">Sorunlar</a></li>
+          <li><a href="#how" className="text-gray-600 text-sm font-medium hover:text-blue-600 transition-colors">Nasıl Çalışır</a></li>
+          <li><a href="#features" className="text-gray-600 text-sm font-medium hover:text-blue-600 transition-colors">Özellikler</a></li>
+        </ul>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsLoginModalOpen(true)}
+            className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-900 bg-transparent border-[1.5px] border-gray-300 hover:border-blue-600 hover:text-blue-600 transition-all"
+          >
+            Giriş Yap
+          </button>
+          <button
+            onClick={() => setIsRegisterModalOpen(true)}
+            className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/25 hover:shadow-blue-600/30 hover:-translate-y-0.5 transition-all"
+          >
+            Ücretsiz Başla →
+          </button>
         </div>
       </nav>
 
-      {/* Opsiyonel bilgi mesajı (ör. oturum süresi doldu, tekrar giriş yapın) */}
-      {infoMessage && (
-        <div className="mt-16 bg-amber-50 border-b border-amber-200">
-          <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-3">
-            <p className="text-xs sm:text-sm text-amber-800 font-medium">
-              {infoMessage}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <section id="free-start" className="pt-[140px] pb-[100px]">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
+      <section className="pt-[140px] pb-[100px] px-[5%]">
+        <div className="max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
           <div className="animate-in fade-in slide-in-from-left duration-700">
             <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-3.5 py-1.5 rounded-full text-xs font-semibold mb-6 border border-blue-600/15">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
@@ -102,9 +58,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               >
                 Hemen Başla — Ücretsiz
               </button>
-              <a href="#how" className="px-6 py-3.5 rounded-xl text-base font-semibold text-gray-900 bg-transparent border-[1.5px] border-gray-300 hover:border-blue-600 hover:text-blue-600 transition-all no-underline">
+              <button className="px-6 py-3.5 rounded-xl text-base font-semibold text-gray-900 bg-transparent border-[1.5px] border-gray-300 hover:border-blue-600 hover:text-blue-600 transition-all">
                 Nasıl çalışır?
-              </a>
+              </button>
             </div>
             <div className="flex items-center gap-2 text-xs text-gray-600 mt-4">
               <svg className="w-3.5 h-3.5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
@@ -126,89 +82,59 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           <div className="relative animate-in fade-in slide-in-from-bottom duration-800">
-            {/* Floating — Sprint durumu */}
             <div className="absolute top-[-20px] left-[-30px] bg-white border-[1.5px] border-gray-200 rounded-xl p-3 pr-4 shadow-lg flex items-center gap-2.5 z-10">
               <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center text-base">🚀</div>
               <div>
                 <div className="text-base font-extrabold">Sprint 14</div>
-                <div className="text-[0.7rem] text-gray-500">5 gün kaldı</div>
+                <div className="text-[0.7rem] text-gray-500">Aktif sprint</div>
               </div>
             </div>
-
             <div className="bg-white rounded-2xl border-[1.5px] border-gray-200 shadow-2xl p-6 overflow-hidden">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="font-bold text-[0.95rem]">Sprint 14 — Genel Bakış</div>
+              <div className="flex items-center justify-between mb-5">
+                <div className="font-bold text-[0.95rem]">Sprint Özeti</div>
                 <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md text-xs font-semibold">Aktif</span>
               </div>
-
-              {/* Sprint ilerleme barları */}
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {[
-                  { label: 'Tamamlandı', value: 18, total: 25, color: 'bg-green-500', pct: '72%' },
-                  { label: 'Devam', value: 5, total: 25, color: 'bg-blue-500', pct: '20%' },
-                  { label: 'Bekliyor', value: 2, total: 25, color: 'bg-gray-300', pct: '8%' },
-                ].map((item) => (
-                  <div key={item.label} className="bg-gray-50 rounded-xl p-3 text-center">
-                    <div className="text-lg font-extrabold text-gray-900">{item.value}</div>
-                    <div className="text-[0.65rem] text-gray-500 mb-2">{item.label}</div>
-                    <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div className={`h-full ${item.color} rounded-full`} style={{ width: item.pct }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Genel progress */}
-              <div className="mb-4">
-                <div className="flex justify-between text-[0.78rem] text-gray-600 mb-1.5">
-                  <span className="font-medium">Sprint tamamlanma</span>
-                  <span className="font-bold text-blue-600">72%</span>
+              <div className="mb-5">
+                <div className="flex justify-between text-[0.8rem] text-gray-600 mb-2">
+                  <span>Tamamlanma</span>
+                  <span className="font-semibold text-blue-600">72%</span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full" style={{ width: '72%' }} />
+                  <div className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-1000" style={{ width: '72%' }} />
                 </div>
               </div>
-
-              {/* Ayırıcı */}
-              <div className="flex items-center gap-2 mb-3">
-                <div className="text-[0.7rem] font-bold text-gray-400 uppercase tracking-widest">Yazılımcı Süreleri</div>
-                <div className="flex-1 h-px bg-gray-100" />
-              </div>
-
-              {/* Developer satırları — süre bilgisiyle */}
-              <div className="flex flex-col gap-2">
-                {[
-                  { initials: 'CB', color: 'bg-blue-600', name: 'Can Bağcı', task: 'AUTH-124', logged: 12, est: 13, status: 'Bitti', statusClass: 'bg-green-50 text-green-600' },
-                  { initials: 'CÇ', color: 'bg-purple-600', name: 'Cihan Çelen', task: 'API-88', logged: 8, est: 16, status: 'Devam', statusClass: 'bg-amber-50 text-amber-600' },
-                  { initials: 'CÖ', color: 'bg-green-600', name: 'Cem Özbey', task: 'UI-201', logged: 6, est: 10, status: 'Review', statusClass: 'bg-purple-50 text-purple-600' },
-                ].map((dev) => (
-                  <div key={dev.initials} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
-                    <div className={`w-8 h-8 rounded-full ${dev.color} flex items-center justify-center text-white text-[0.7rem] font-bold flex-shrink-0`}>{dev.initials}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="text-[0.8rem] font-semibold text-gray-900">{dev.name}</div>
-                        <div className="text-[0.7rem] text-gray-500 flex-shrink-0 ml-2">{dev.logged}s / {dev.est}s</div>
-                      </div>
-                      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${dev.logged / dev.est > 0.85 ? 'bg-green-500' : 'bg-blue-400'}`}
-                          style={{ width: `${Math.min((dev.logged / dev.est) * 100, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                    <span className={`${dev.statusClass} text-[0.68rem] font-semibold px-2 py-0.5 rounded flex-shrink-0`}>{dev.status}</span>
+              <div className="flex flex-col gap-2.5">
+                <div className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-[0.7rem] font-bold flex-shrink-0">AK</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[0.82rem] font-semibold text-gray-900">Ahmet Kaya</div>
+                    <div className="text-[0.74rem] text-gray-600 truncate">AUTH-124: Login flow refactor</div>
                   </div>
-                ))}
+                  <span className="bg-green-50 text-green-600 text-[0.72rem] font-semibold px-2 py-0.5 rounded flex-shrink-0">Bitti</span>
+                </div>
+                <div className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-[0.7rem] font-bold flex-shrink-0">SE</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[0.82rem] font-semibold text-gray-900">Selin Erdoğan</div>
+                    <div className="text-[0.74rem] text-gray-600 truncate">API-88: Rate limiting middleware</div>
+                  </div>
+                  <span className="bg-amber-50 text-amber-600 text-[0.72rem] font-semibold px-2 py-0.5 rounded flex-shrink-0">Devam</span>
+                </div>
+                <div className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-[0.7rem] font-bold flex-shrink-0">MÇ</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[0.82rem] font-semibold text-gray-900">Mert Çelik</div>
+                    <div className="text-[0.74rem] text-gray-600 truncate">UI-201: Dashboard redesign</div>
+                  </div>
+                  <span className="bg-purple-50 text-purple-600 text-[0.72rem] font-semibold px-2 py-0.5 rounded flex-shrink-0">Review</span>
+                </div>
               </div>
             </div>
-
-            {/* Floating — toplam süre */}
             <div className="absolute bottom-[-20px] right-[-20px] bg-white border-[1.5px] border-gray-200 rounded-xl p-3 pr-4 shadow-lg flex items-center gap-2.5 z-10">
-              <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center text-base">⏱️</div>
+              <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center text-base">✅</div>
               <div>
-                <div className="text-base font-extrabold">26s / 39s</div>
-                <div className="text-[0.7rem] text-gray-500">Toplam harcanan süre</div>
+                <div className="text-base font-extrabold">18/25</div>
+                <div className="text-[0.7rem] text-gray-500">Görev tamamlandı</div>
               </div>
             </div>
           </div>
@@ -219,7 +145,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-[1100px] mx-auto text-center">
           <span className="inline-block text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1.5 rounded-md mb-4">Tanıdık geldi mi?</span>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 mb-4 max-w-[600px] mx-auto">Her takımın yaşadığı 3 büyük sorun</h2>
-          <p className="text-lg text-gray-600 max-w-[540px] mx-auto leading-relaxed">Devbord, yazılım ekiplerinin sprint ve insan kaynakları süreçlerinde yaşadığı karmaşayı ortadan kaldırır.</p>
+          <p className="text-lg text-gray-600 max-w-[540px] mx-auto leading-relaxed">DevPulse, yazılım ekiplerinin sprint ve insan kaynakları süreçlerinde yaşadığı karmaşayı ortadan kaldırır.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-[1100px] mx-auto mt-14">
           <div className="bg-white border-[1.5px] border-gray-200 rounded-2xl p-7 hover:border-blue-600 hover:shadow-lg hover:-translate-y-1 transition-all">
@@ -240,30 +166,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      <section id="how" className="py-[100px] px-[5%]">
-        <div className="max-w-[1100px] mx-auto text-center mb-16">
-          <span className="inline-block text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1.5 rounded-md mb-4">Nasıl Çalışır</span>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 mb-4 max-w-[600px] mx-auto">3 adımda çalışmaya başlayın</h2>
-          <p className="text-lg text-gray-600 max-w-[540px] mx-auto leading-relaxed">Dakikalar içinde kurulumu tamamlayın, entegrasyonlarınızı bağlayın ve ekibinizi gerçek zamanlı takip etmeye başlayın.</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-[1100px] mx-auto relative">
-          <div className="hidden md:block absolute top-8 left-[calc(16.6%+16px)] right-[calc(16.6%+16px)] h-0.5 bg-gradient-to-r from-blue-600 via-gray-200 to-blue-600" />
-          {[
-            { num: '1', title: 'Hesap Oluşturun', desc: 'Jira API bilgilerinizi girerek hesabınızı oluşturun. Kolay İK entegrasyonu isteğe bağlıdır, sonradan eklenebilir.' },
-            { num: '2', title: 'Entegrasyonları Bağlayın', desc: 'Tek tıkla Jira projelerinizi ve Kolay İK hesabınızı bağlayın. Veriler otomatik olarak senkronize olur.' },
-            { num: '3', title: 'Takip & Analiz Edin', desc: 'Sprint ilerlemesini, developer katkılarını ve İK verilerini tek ekranda görün. Kararlarınızı verilerle alın.' },
-          ].map((step) => (
-            <div key={step.num} className="text-center relative z-10">
-              <div className="w-16 h-16 rounded-full bg-blue-600 text-white text-2xl font-extrabold flex items-center justify-center mx-auto mb-5 border-4 border-white ring-2 ring-blue-600 shadow-lg shadow-blue-600/20">
-                {step.num}
-              </div>
-              <h3 className="text-base font-bold mb-2.5 text-gray-900">{step.title}</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">{step.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       <section id="features" className="py-[100px] px-[5%] bg-gray-50 border-t border-b border-gray-200">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
@@ -273,12 +175,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { icon: <Zap className="w-6 h-6 text-blue-600" />, title: 'Gerçek Zamanlı Sprint Takibi', desc: "Jira'dan otomatik çekilen verilerle sprint ilerlemenizi canlı olarak izleyin. Görev durumları, tamamlanma yüzdeleri ve kalan süreler tek bakışta." },
+              { icon: <Zap className="w-6 h-6 text-blue-600" />, title: 'Gerçek Zamanlı Sprint Takibi', desc: 'Jira\'dan otomatik çekilen verilerle sprint ilerlemenizi canlı olarak izleyin. Görev durumları, tamamlanma yüzdeleri ve kalan süreler tek bakışta.' },
               { icon: <Users className="w-6 h-6 text-blue-600" />, title: 'Developer Performans Analizi', desc: 'Her yazılımcının sprint bazında katkısını, tamamladığı görevleri ve çalışma hızını ölçün. Adil ve veriye dayalı değerlendirme yapın.' },
-              { icon: <LinkIcon className="w-6 h-6 text-blue-600" />, title: 'Jira Entegrasyonu', desc: "Mevcut Jira projelerinizle tam entegrasyon. Ticket'lar, board'lar, sprint'ler — hepsi Devbord'ta, hiçbir veri girilmesine gerek yok." },
+              { icon: <LinkIcon className="w-6 h-6 text-blue-600" />, title: 'Jira Entegrasyonu', desc: 'Mevcut Jira projelerinizle tam entegrasyon. Ticket\'lar, board\'lar, sprint\'ler — hepsi DevPulse\'ta, hiçbir veri girilmesine gerek yok.' },
               { icon: <Building2 className="w-6 h-6 text-blue-600" />, title: 'Kolay İK Entegrasyonu', desc: 'İzin ve mesai bilgilerini sprint planlamasına yansıtın. Kimin ne zaman uygun olduğunu tek platformdan görün, sürpriz kapasitesi sorunlarına son.' },
-              { icon: <LayoutGrid className="w-6 h-6 text-blue-600" />, title: 'Çoklu Proje Yönetimi', desc: 'Onlarca projeyi tek panelden yönetin. Her projenin sprint durumunu, ekip kapasitesini ve ilerleme oranını yan yana görün — hiçbir proje gözden kaçmasın.' },
-              { icon: <UserCog className="w-6 h-6 text-blue-600" />, title: 'Yazılımcı Yönetimi', desc: 'Yazılımcılarınızı projeler arasında kolayca atayın, iş yüklerini dengeleyin. Kim nerede, ne kadar meşgul — tek bakışta anlayın, doğru kişiyi doğru işe yönlendirin.' },
+              { icon: <TrendingUp className="w-6 h-6 text-blue-600" />, title: 'Akıllı Raporlama', desc: 'Otomatik oluşturulan sprint raporları ve trend analizleriyle paydaşlarınıza dakikalar içinde sunum yapın. Velocity, burndown ve daha fazlası.' },
+              { icon: <Bell className="w-6 h-6 text-blue-600" />, title: 'Proaktif Uyarılar', desc: 'Sprint kapanmadan önce riskli görevleri fark edin. Gecikme ihtimali yüksek ticket\'lar ve bottleneck noktaları için otomatik bildirim alın.' },
             ].map((feature, i) => (
               <div key={i} className="bg-white border-[1.5px] border-gray-200 rounded-2xl p-8 hover:border-blue-600 hover:shadow-2xl hover:-translate-y-1 transition-all relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
@@ -300,7 +202,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="max-w-[1100px] mx-auto">
             <div className="text-center mb-14">
               <h2 className="text-white text-3xl md:text-4xl font-extrabold mb-3">Sayılar konuşuyor</h2>
-              <p className="text-white/60 text-base">Devbord kullanan ekipler ne kazanıyor?</p>
+              <p className="text-white/60 text-base">DevPulse kullanan ekipler ne kazanıyor?</p>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-10">
               {[
@@ -342,40 +244,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       <footer className="py-10 px-[5%] border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">
-        <div className="font-bold text-base text-gray-900">Devbord</div>
+        <div className="font-bold text-base text-gray-900">DevPulse</div>
         <ul className="flex gap-6 list-none">
-          <li>
-            <a href="#" className="text-sm text-gray-600 hover:text-blue-600 no-underline">Gizlilik</a>
-          </li>
-          <li>
-            <a href="#" className="text-sm text-gray-600 hover:text-blue-600 no-underline">Kullanım Koşulları</a>
-          </li>
-          <li>
-            <a href="#" className="text-sm text-gray-600 hover:text-blue-600 no-underline">Destek</a>
-          </li>
+          <li><a href="#" className="text-sm text-gray-600 hover:text-blue-600 no-underline">Gizlilik</a></li>
+          <li><a href="#" className="text-sm text-gray-600 hover:text-blue-600 no-underline">Kullanım Koşulları</a></li>
+          <li><a href="#" className="text-sm text-gray-600 hover:text-blue-600 no-underline">Destek</a></li>
         </ul>
-        <p className="text-[0.82rem] text-gray-400">© 2026 Devbord. Tüm hakları saklıdır.</p>
+        <p className="text-[0.82rem] text-gray-400">© 2025 DevPulse. Tüm hakları saklıdır.</p>
       </footer>
 
-      {isRegisterModalOpen && (
-        <RegistrationModal
-          onClose={() => setIsRegisterModalOpen(false)}
-          onSwitchToLogin={() => {
-            setIsRegisterModalOpen(false);
-            setIsLoginModalOpen(true);
-          }}
-        />
-      )}
-      {isLoginModalOpen && (
-        <LoginModal
-          onClose={() => setIsLoginModalOpen(false)}
-          onSwitchToRegister={() => {
-            // Login modalını kapatıp hesap oluştur (kayıt) modalını aç
-            setIsLoginModalOpen(false);
-            setIsRegisterModalOpen(true);
-          }}
-        />
-      )}
+      {isRegisterModalOpen && <RegistrationModal onClose={() => setIsRegisterModalOpen(false)} />}
+      {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
     </div>
   );
 };

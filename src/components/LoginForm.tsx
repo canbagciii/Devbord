@@ -1,131 +1,132 @@
-import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { User, Lock, Eye, EyeOff, Loader } from 'lucide-react';
 
-interface LoginModalProps {
-  onClose: () => void;
-  onSwitchToRegister?: () => void;
-}
-
-export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegister }) => {
-  const { login, isAuthenticated, error: authError } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
+export const LoginForm: React.FC = () => {
+  const { login, loading, error } = useAuth();
+  const [credentials, setCredentials] = useState({
     email: '',
     password: ''
   });
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      onClose();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
-
-  // AuthContext içindeki hata değiştiğinde yerel hata mesajını da güncelle
-  useEffect(() => {
-    if (authError && !loading) {
-      setError(authError);
-    }
-  }, [authError, loading]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError(null);
-  };
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-
     try {
-      await login(formData);
-    } catch (err) {
-      // Kullanıcı dostu sabit bir mesaj göster
-      setError('E-posta veya şifre geçersiz. Lütfen tekrar deneyin.');
-      setLoading(false);
+      await login(credentials);
+    } catch (error) {
+      // Error is handled by AuthContext
     }
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
+  const demoAccounts = [
+    {
+      role: 'Yönetici',
+      email: 'can.bagci@acerpro.com.tr',
+      password: '123456',
+      description: 'Tüm projelere ve verilere erişim'
+    },
+    {
+      role: 'Analist',
+      email: 'ahmet.korkusuz@acerpro.com.tr',
+      password: '123456',
+      description: 'Atandığı projelerdeki yazılımcı verilerini görüntüleme'
+    },
+    {
+      role: 'Yazılımcı',
+      email: 'buse.eren@acerpro.com.tr',
+      password: '123456',
+      description: 'Sadece kendi verilerini görüntüleme'
     }
+  ];
+
+  const fillDemoAccount = (email: string, password: string) => {
+    setCredentials({ email, password });
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[999] bg-gray-900/45 backdrop-blur-sm flex items-center justify-center p-5"
-      onClick={handleOverlayClick}
-    >
-      <div className="bg-white rounded-3xl w-full max-w-[520px] shadow-2xl p-10 relative animate-in fade-in zoom-in-95 duration-300">
-        <button
-          onClick={onClose}
-          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 border-[1.5px] border-gray-300 flex items-center justify-center text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-600 transition-all"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        <div className="mb-7">
-          <h2 className="text-2xl font-extrabold text-gray-900 mb-1.5">Tekrar hoş geldiniz 👋</h2>
-          <p className="text-sm text-gray-600">Devbord hesabınıza giriş yapın</p>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <div className="mx-auto h-64  w-64">
+            <img src="/logo.png" alt="logo"   /> 
+          </div>
+          <h2 className="mt-2 text-center text-1xl font-extrabold text-gray-900">
+             Hesabınızla giriş yapın
+          </h2>
         </div>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-3.5 mb-6">
-            <div>
-              <label className="block text-[0.82rem] font-semibold text-gray-900 mb-1.5">E-posta</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all"
-                placeholder="ornek@sirket.com"
-              />
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+              <div className="text-sm text-red-800">{error}</div>
             </div>
+          )}
+
+          <div className="space-y-4">
             <div>
-              <label className="block text-[0.82rem] font-semibold text-gray-900 mb-1.5">Şifre</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all"
-                placeholder="••••••••"
-              />
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                E-posta Adresi
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={credentials.email}
+                  onChange={(e) => setCredentials(prev => ({ ...prev, email: e.target.value }))}
+                  className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="E-posta adresinizi girin"
+                />
+                <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Şifre
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={credentials.password}
+                  onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
+                  className="appearance-none relative block w-full px-3 py-2 pl-10 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="Şifrenizi girin"
+                />
+                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl text-[0.95rem] font-bold text-white bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
-          </button>
-
-          <div className="text-center mt-4 text-[0.83rem] text-gray-600">
-            Hesabınız yok mu?{' '}
+          <div>
             <button
-              type="button"
-              onClick={onSwitchToRegister ?? onClose}
-              className="text-blue-600 font-semibold no-underline hover:underline"
+              type="submit"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Ücretsiz kaydolun
-            </button> 
+              {loading ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                'Giriş Yap'
+              )}
+            </button>
           </div>
         </form>
+
       </div>
     </div>
   );

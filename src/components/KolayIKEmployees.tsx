@@ -69,47 +69,94 @@ export const KolayIKEmployees: React.FC = () => {
   const loadEmployeesWithLeave = async () => {
     setLoading(true);
     setError(null);
-    setEmployeesWithLeave([]);
-    setLeaveData([]);
-
+    
     try {
-      console.log('🚀 Kolay İK sayfası: önce seçili kullanıcılar (person/list), sonra izinler');
+      console.log('🚀 Loading employees with leave for month:', selectedMonth);
+      
+      // Önce bağlantıyı test et
       const testResult = await kolayikService.testConnection();
       setConnectionStatus(testResult);
+      
       if (!testResult.success) {
         throw new Error(testResult.message);
       }
-
-      // 1) Sadece Jira Filtre Yönetimi'nde seçili yazılımcılar: person/list + isim eşleşmesi
-      const employees = await kolayikService.getEmployees();
-      if (!employees.length) {
-        setError(
-          'Bu sayfada sadece Jira Filtre Yönetimi\'nde seçili yazılımcılar gösterilir. Liste boş ise: ' +
-          '1) Kullanıcı & Filtre Yönetimi\'nden en az bir yazılımcı seçin. ' +
-          '2) Kolay İK\'daki person isimleri (Ad Soyad) Jira\'daki yazılımcı isimleriyle aynı/benzer olmalı. ' +
-          '3) Kolay İK token ve person listesini kontrol edin. "Tekrar Dene" ile yenileyin.'
-        );
-        setLoading(false);
-        return;
-      }
-      console.log(`📋 Seçili kullanıcılar (Kolay İK person/list): ${employees.length}`, employees.map(e => e.fullName));
-
-      // 2) Seçilen ayın tarih aralığı
+      
+      // Seçilen ayın tarih aralığını hesapla
       const [year, month] = selectedMonth.split('-');
       const startDate = `${year}-${month}-01`;
       const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
       const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+      
+      console.log(`📅 Date range: ${startDate} to ${endDate}`);
+      
+      // TÜM developer'ların izin bilgilerini yükle (izin kaydı olmasa bile)
+      // Bu sayede Sezer ve Hüseyin gibi kullanıcılar da dahil edilir ve resmi tatiller de eklenir
+      const allDeveloperNames = [
+        'Abolfazl Pourmohammad',
+        'Canberk İsmet DİZDAŞ',
+        'Gizem Akay',
+        'Oktay MANAVOĞLU',
+        'Onur Demir',
+        'Soner Canki',
+        'Suat Aydoğdu',
+        'Rüstem CIRIK',
+        'Melih Meral',
+        'Alicem Polat',
+        'Buse Eren',
+        'Hüseyin ORAL',
+        'Feyza Bilgiç',
+        'Fahrettin DEMİRBAŞ',
+        'Sezer SİNANOĞLU'
+      ];
+      
+      try {
+        // getDeveloperLeaveInfo kullan - resmi tatilleri otomatik ekler
+        // Tüm developer'lar için izin bilgisi döndürür (izin kaydı olmasa bile resmi tatiller dahil)
+        const leaveInfo = await kolayikService.getDeveloperLeaveInfo(
+          allDeveloperNames,
+          startDate,
+          endDate
+        );
 
-      // 3) Bu kullanıcıların izinlerini çek (resmi tatiller dahil)
-      const developerNames = employees.map(e => e.fullName);
-      const leaveInfo = await kolayikService.getDeveloperLeaveInfo(developerNames, startDate, endDate);
-
-      setEmployeesWithLeave(employees);
-      setLeaveData(leaveInfo);
-      console.log(`✅ ${employees.length} seçili kullanıcı, ${leaveInfo.length} izin kaydı yüklendi`);
+        setLeaveData(leaveInfo);
+        console.log(`✅ Loaded leave data for ${leaveInfo.length} employees (including public holidays)`);
+        
+        // Sadece izni olan çalışanları filtrele (resmi tatiller dahil, toplam izin günü > 0)
+        const employeesWithLeaveOnly = leaveInfo.filter(leave => leave.leaveDays > 0);
+        
+        console.log(`📊 Developers with leave: ${employeesWithLeaveOnly.length}`, employeesWithLeaveOnly.map(l => `${l.developerName} (${l.leaveDays} gün)`));
+        console.log(`📊 Developers without leave: ${leaveInfo.length - employeesWithLeaveOnly.length}`, leaveInfo.filter(l => l.leaveDays === 0).map(l => l.developerName));
+        
+        // Sadece izni olan çalışanları oluştur
+        const allEmployees: KolayIKEmployee[] = employeesWithLeaveOnly.map(leave => {
+          const nameParts = leave.developerName.split(' ');
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
+          
+          return {
+            id: leave.employeeId || leave.developerName, // ID yoksa isim kullan
+            email: leave.email,
+            firstName: firstName,
+            lastName: lastName,
+            fullName: leave.developerName,
+            department: 'Yazılım Geliştirme',
+            position: 'Yazılım Geliştirici',
+            isActive: true,
+            startDate: undefined
+          };
+        });
+        
+        setEmployeesWithLeave(allEmployees);
+        console.log(`✅ Created ${allEmployees.length} employee records (only with leave)`);
+      } catch (leaveError) {
+        console.error('Error loading leave details:', leaveError);
+        setLeaveData([]);
+        setEmployeesWithLeave([]);
+      }
+      
     } catch (err) {
-      console.error('Error loading employees/leave:', err);
-      setError(err instanceof Error ? err.message : 'Çalışanlar veya izinler yüklenirken hata oluştu');
+      console.error('Error loading employees:', err);
+      setError(err instanceof Error ? err.message : 'Çalışanlar yüklenirken hata oluştu');
     } finally {
       setLoading(false);
     }

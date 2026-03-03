@@ -29,6 +29,15 @@ const convertToUser = (row: UserRow): User => ({
   updatedAt: new Date(row.updated_at || '')
 });
 
+const convertToInsert = (user: Partial<User> & { passwordHash: string }): UserInsert => ({
+  email: user.email!,
+  name: user.name!,
+  password_hash: user.passwordHash,
+  role: user.role!,
+  assigned_projects: user.assignedProjects || [],
+  is_active: user.isActive !== undefined ? user.isActive : true
+});
+
 const convertToUpdate = (user: Partial<User>): UserUpdate => ({
   ...(user.name && { name: user.name }),
   ...(user.role && { role: user.role }),
@@ -37,52 +46,44 @@ const convertToUpdate = (user: Partial<User>): UserUpdate => ({
 });
 
 export const useUsers = () => {
-  const { hasRole, user } = useAuth();
+  const { hasRole } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch users
   const fetchUsers = async () => {
     if (!hasRole('admin')) {
       setLoading(false);
       return;
     }
+
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false });
+
       if (error) throw error;
-      setUsers(data.map(convertToUser));
+
+      const convertedUsers = data.map(convertToUser);
+      setUsers(convertedUsers);
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError(err instanceof Error ? err.message : 'Kullanicilar yuklenirken hata olustu');
+      setError(err instanceof Error ? err.message : 'Kullanıcılar yüklenirken hata oluştu');
     } finally {
       setLoading(false);
     }
   };
 
+  // Add user
   const addUser = async (userData: Partial<User> & { password: string }) => {
     try {
-      // company_id'yi localStorage'dan al (RLS politikasi icin zorunlu)
-      const companyId = user?.companyId;
-      if (!companyId) {
-        throw new Error('Sirket bilgisi bulunamadi. Lutfen tekrar giris yapin.');
-      }
-
-      const passwordHash = '$2b$10$dummy.hash.' + userData.password + '.for.demo';
-
-      const insertData: UserInsert = {
-        email: userData.email!,
-        name: userData.name!,
-        password_hash: passwordHash,
-        role: userData.role!,
-        assigned_projects: userData.assignedProjects || [],
-        is_active: userData.isActive !== undefined ? userData.isActive : true,
-        company_id: companyId,
-      };
-
+      // Simple password hashing (in production, use proper bcrypt)
+      const passwordHash = `$2b$10$dummy.hash.${userData.password}.for.demo`;
+      
+      const insertData = convertToInsert({ ...userData, passwordHash });
       const { data, error } = await supabase
         .from('users')
         .insert([insertData])
@@ -96,112 +97,185 @@ export const useUsers = () => {
       return newUser;
     } catch (err) {
       console.error('Error adding user:', err);
-      setError(err instanceof Error ? err.message : 'Kullanici eklenirken hata olustu');
+      setError(err instanceof Error ? err.message : 'Kullanıcı eklenirken hata oluştu');
       throw err;
     }
   };
 
+  // Update user
   const updateUser = async (userId: string, userData: Partial<User>) => {
     try {
+      const updateData = convertToUpdate(userData);
       const { data, error } = await supabase
         .from('users')
-        .update(convertToUpdate(userData))
+        .update(updateData)
         .eq('id', userId)
         .select()
         .single();
+
       if (error) throw error;
+
       const updatedUser = convertToUser(data);
-      setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+      setUsers(prev => prev.map(user => 
+        user.id === userId ? updatedUser : user
+      ));
       return updatedUser;
     } catch (err) {
       console.error('Error updating user:', err);
-      setError(err instanceof Error ? err.message : 'Kullanici guncellenirken hata olustu');
+      setError(err instanceof Error ? err.message : 'Kullanıcı güncellenirken hata oluştu');
       throw err;
     }
   };
 
+  // Delete user (soft delete by setting is_active to false)
   const deleteUser = async (userId: string) => {
     try {
-      const { error } = await supabase.from('users').update({ is_active: false }).eq('id', userId);
-      if (error) throw error;
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, isActive: false } : u));
-    } catch (err) {
-      console.error('Error deleting user:', err);
-      setError(err instanceof Error ? err.message : 'Kullanici silinirken hata olustu');
-      throw err;
-    }
-  };
-
-  const permanentlyDeleteUser = async (userId: string) => {
-    try {
-      const { error } = await supabase.from('users').delete().eq('id', userId);
-      if (error) throw error;
-      setUsers(prev => prev.filter(u => u.id !== userId));
-    } catch (err) {
-      console.error('Error permanently deleting user:', err);
-      setError(err instanceof Error ? err.message : 'Kullanici kalici olarak silinirken hata olustu');
-      throw err;
-    }
-  };
-
-  const reactivateUser = async (userId: string) => {
-    try {
-      const { error } = await supabase.from('users').update({ is_active: true }).eq('id', userId);
-      if (error) throw error;
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, isActive: true } : u));
-    } catch (err) {
-      console.error('Error reactivating user:', err);
-      setError(err instanceof Error ? err.message : 'Kullanici aktiflestirilirken hata olustu');
-      throw err;
-    }
-  };
-
-  const changePassword = async (userId: string, currentPassword: string, newPassword: string) => {
-    try {
-      const { data: userData, error: fetchError } = await supabase
-        .from('users').select('password_hash').eq('id', userId).single();
-      if (fetchError) throw fetchError;
-
-      const isValid = userData.password_hash.includes(currentPassword) || currentPassword === '123456';
-      if (!isValid) throw new Error('Mevcut sifre yanlis');
-
       const { error } = await supabase
         .from('users')
-        .update({ password_hash: '$2b$10$dummy.hash.' + newPassword + '.for.demo' })
+        .update({ is_active: false })
         .eq('id', userId);
+
       if (error) throw error;
+
+      setUsers(prev => prev.map(user => 
+        user.id === userId ? { ...user, isActive: false } : user
+      ));
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      setError(err instanceof Error ? err.message : 'Kullanıcı silinirken hata oluştu');
+      throw err;
+    }
+  };
+
+  // Permanently delete user
+  const permanentlyDeleteUser = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      setUsers(prev => prev.filter(user => user.id !== userId));
+    } catch (err) {
+      console.error('Error permanently deleting user:', err);
+      setError(err instanceof Error ? err.message : 'Kullanıcı kalıcı olarak silinirken hata oluştu');
+      throw err;
+    }
+  };
+
+  // Reactivate user
+  const reactivateUser = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ is_active: true })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      setUsers(prev => prev.map(user => 
+        user.id === userId ? { ...user, isActive: true } : user
+      ));
+    } catch (err) {
+      console.error('Error reactivating user:', err);
+      setError(err instanceof Error ? err.message : 'Kullanıcı aktifleştirilirken hata oluştu');
+      throw err;
+    }
+  };
+
+  // Change password
+  const changePassword = async (userId: string, currentPassword: string, newPassword: string) => {
+    try {
+      // Demo için basit şifre değiştirme
+      // Gerçek uygulamada backend'de güvenli şifre değiştirme yapılmalı
+      
+      // Mevcut şifreyi kontrol et (demo için)
+      const { data: userData, error: fetchError } = await supabase
+        .from('users')
+        .select('password_hash')
+        .eq('id', userId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Basit şifre kontrolü (demo için)
+      const isCurrentPasswordValid = userData.password_hash.includes(currentPassword) || 
+                                    currentPassword === '123456';
+      
+      if (!isCurrentPasswordValid) {
+        throw new Error('Mevcut şifre yanlış');
+      }
+
+      // Yeni şifre hash'i oluştur (demo için)
+      const newPasswordHash = `$2b$10$dummy.hash.${newPassword}.for.demo`;
+      
+      const { error } = await supabase
+        .from('users')
+        .update({ password_hash: newPasswordHash })
+        .eq('id', userId);
+
+      if (error) throw error;
+
       return true;
     } catch (err) {
       console.error('Error changing password:', err);
-      setError(err instanceof Error ? err.message : 'Sifre degistirilirken hata olustu');
+      setError(err instanceof Error ? err.message : 'Şifre değiştirilirken hata oluştu');
       throw err;
     }
   };
 
-  useEffect(() => { fetchUsers(); }, [hasRole]);
+  useEffect(() => {
+    fetchUsers();
+  }, [hasRole]);
 
+  // Set up real-time subscription
   useEffect(() => {
     if (!hasRole('admin')) return;
+
     const channel = supabase
       .channel('users-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setUsers(prev => [convertToUser(payload.new as UserRow), ...prev]);
-        } else if (payload.eventType === 'UPDATE') {
-          const u = convertToUser(payload.new as UserRow);
-          setUsers(prev => prev.map(user => user.id === u.id ? u : user));
-        } else if (payload.eventType === 'DELETE') {
-          setUsers(prev => prev.filter(user => user.id !== payload.old.id));
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'users',
+        },
+        (payload) => {
+          console.log('Real-time user update:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            const newUser = convertToUser(payload.new as UserRow);
+            setUsers(prev => [newUser, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedUser = convertToUser(payload.new as UserRow);
+            setUsers(prev => prev.map(user => 
+              user.id === updatedUser.id ? updatedUser : user
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            setUsers(prev => prev.filter(user => user.id !== payload.old.id));
+          }
         }
-      })
+      )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [hasRole]);
 
   return {
-    users, loading, error,
-    addUser, updateUser, deleteUser,
-    permanentlyDeleteUser, reactivateUser, changePassword,
+    users,
+    loading,
+    error,
+    addUser,
+    updateUser,
+    deleteUser,
+    permanentlyDeleteUser,
+    reactivateUser,
+    changePassword,
     refetch: fetchUsers,
     canManage: hasRole('admin')
   };

@@ -96,7 +96,6 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [developerProjectMapFromUsers, setDeveloperProjectMapFromUsers] = useState<Map<string, string[]>>(new Map());
   const [developerProjectMapReady, setDeveloperProjectMapReady] = useState(false);
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
-  const hasTriedRefreshForEmptyProjects = useRef(false);
 
   const setCapacityCalculations = (calculations: any[], cacheKey: string | null = null) => {
     setCapacityCalculationsState(calculations);
@@ -207,13 +206,9 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const fetchAll = async () => {
     if (!isAuthenticated) return;
 
-    // Cache key: seçilen proje ve yazılımcılar dahil - filtre değişince eski cache kullanılmasın
-    const [projectKeys, developerNames] = await Promise.all([
-      jiraFilterService.getProjectKeys(),
-      jiraFilterService.getDeveloperNames()
-    ]);
-    const selectionKey = [...projectKeys].sort().join(',') + '|' + [...developerNames].sort().join(',');
-    const cacheKey = `jira-data-${sprintType}-${selectionKey}`;
+    // Cache key - sprintType ve isAuthenticated'e göre
+    // Date.now() kullanmıyoruz çünkü bu cache'i her zaman miss yapar
+    const cacheKey = `jira-data-${sprintType}-${isAuthenticated}`;
 
     // Check cache first
     const cachedData = getFromCache<{
@@ -283,21 +278,7 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Workload verilerindeki status'ü harcanan süreye göre güncelle
       const updatedWorkload = filteredWorkload.map(dev => {
         const totalActualHours = dev.totalActualHours || 0;
-
-        // Varsayılan kapasiteyi frontend günlük kapasite ayarına göre belirle
-        let capacity = 70;
-        try {
-          if (typeof localStorage !== 'undefined') {
-            const storedDaily = localStorage.getItem('dailyHours');
-            const parsed = storedDaily ? parseFloat(storedDaily) : NaN;
-            if (Number.isFinite(parsed) && parsed > 0) {
-              // Yaklaşık 2 haftalık sprint için 10 iş günü
-              capacity = Math.round(parsed * 10);
-            }
-          }
-        } catch (e) {
-          console.warn('Kapasite konfigürasyonu okunamadı, 70h varsayılan kullanılacak:', e);
-        }
+        const capacity = 70; // Her zaman 70h default
         
         let newStatus: 'Eksik Yük' | 'Yeterli' | 'Aşırı Yük';
         if (totalActualHours < capacity) {
@@ -396,24 +377,7 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (isAuthenticated) {
       fetchAll();
     }
-  }, [sprintType, isAuthenticated]);
-
-  // Seçim var ama projeler boşsa (eski cache) bir kez refresh dene
-  useEffect(() => {
-    if (!isAuthenticated || loading || hasTriedRefreshForEmptyProjects.current) return;
-    if (projects && projects.length > 0) return;
-
-    jiraFilterService.getSelectedProjects().then((selected) => {
-      if (selected.length > 0 && !hasTriedRefreshForEmptyProjects.current) {
-        hasTriedRefreshForEmptyProjects.current = true;
-        console.log('🔄 Seçili projeler var ama liste boş (cache uyumsuz), yeniden yükleniyor...');
-        clearCache();
-        supabaseJiraService.clearCache();
-        worklogService.clearCache();
-        fetchAll();
-      }
-    });
-  }, [isAuthenticated, loading, projects]);
+  }, [sprintType, isAuthenticated]); // isAuthenticated eklendi
 
   const refresh = () => {
     clearCache();

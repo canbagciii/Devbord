@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ManualTaskAssignment as TaskAssignment, DeveloperWorkload, JiraSprint } from '../types';
 import { supabaseJiraService } from '../lib/supabaseJiraService';
-import { jiraFilterService } from '../lib/jiraFilterService';
 import { Plus, Save, X, User, Clock, AlertTriangle, CheckCircle, ExternalLink, Loader, Download, RefreshCw } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
 import { useAuth } from '../context/AuthContext';
@@ -27,7 +26,7 @@ export const ManualTaskAssignment: React.FC = () => {
     capacityReady,
     capacityCacheKey
   } = useJiraData();
-  const { hasRole, canAccessProject, getAccessibleProjects, hasKolayIK } = useAuth();
+  const { hasRole, canAccessProject, getAccessibleProjects } = useAuth();
   const { getCapacity } = useDeveloperCapacities();
   const [assignments, setAssignments] = useState<TaskAssignment[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -36,7 +35,6 @@ export const ManualTaskAssignment: React.FC = () => {
   const [availableSprints, setAvailableSprints] = useState<JiraSprint[]>([]);
   const [loadingSprints, setLoadingSprints] = useState(false);
   const [componentError, setComponentError] = useState<string | null>(null);
-  const [fallbackDeveloperNames, setFallbackDeveloperNames] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -79,16 +77,6 @@ export const ManualTaskAssignment: React.FC = () => {
       setComponentError(err instanceof Error ? err.message : 'Component initialization error');
     }
   }, []);
-
-  // Workload boşsa seçili yazılımcıları filtre servisinden al (assignee dropdown için)
-  useEffect(() => {
-    if (workload && workload.length > 0) return;
-    let cancelled = false;
-    jiraFilterService.getDeveloperNames().then(names => {
-      if (!cancelled) setFallbackDeveloperNames(names || []);
-    }).catch(() => { if (!cancelled) setFallbackDeveloperNames([]); });
-    return () => { cancelled = true; };
-  }, [workload]);
 
   const loadAssignments = () => {
     try {
@@ -293,9 +281,12 @@ export const ManualTaskAssignment: React.FC = () => {
   };
 
   const getAdjustedCapacity = (developerName: string): number => {
-    // Kapasiteyi her zaman global günlük kapasite ayarına göre hesaplayan
-    // useDeveloperCapacities.getCapacity üzerinden alıyoruz.
-    // Kolay İK entegrasyonu sadece izin düşürmelerini etkiler; baz kapasite ayarı buradan gelir.
+    if (capacityCalculations && capacityCalculations.length > 0) {
+      const calc = capacityCalculations.find(c => c.developerName === developerName);
+      if (calc) {
+        return calc.adjustedCapacity;
+      }
+    }
     return getCapacity(developerName);
   };
 
@@ -313,9 +304,33 @@ export const ManualTaskAssignment: React.FC = () => {
     capacityReady &&
     !!localCacheKey &&
     capacityCacheKey === localCacheKey;
-  // Sayfa sadece Jira context yüklenirken bloklansın; workload/sprint boşsa veya
-  // kapasite henüz hazır değilse sayfa açılsın, eksik yük listesi opsiyonel olarak gelsin
-  const pageLoading = loading;
+  const pageLoading = loading || !workloadReady || !capacitiesReadyForPage;
+
+  // Eksik yükteki geliştiricileri cache'leyen local state
+  const [underloadedDevelopers, setUnderloadedDevelopers] = useState<DeveloperWorkload[]>([]);
+
+  // Kapasite ve workload hazır olduğunda, önce cache'e bak; yoksa hesaplayıp cache'e yaz
+  useEffect(() => {
+    if (!workloadReady || !capacitiesReadyForPage || !localCacheKey) {
+      return;
+    }
+
+    const cached = underloadedDevelopersCache.get(localCacheKey);
+    if (cached) {
+      setUnderloadedDevelopers(cached);
+      return;
+    }
+
+    if (workload) {
+      const list = workload.filter(dev => {
+        const capacity = getAdjustedCapacity(dev.developer);
+        const estimatedHours = dev.totalHours || 0;
+        return estimatedHours < capacity;
+      });
+      underloadedDevelopersCache.set(localCacheKey, list);
+      setUnderloadedDevelopers(list);
+    }
+  }, [workloadReady, capacitiesReadyForPage, localCacheKey, workload]);
 
   // Yetki kontrolü - sadece admin ve analist görev atayabilir
   if (!hasRole('admin') && !hasRole('analyst')) {
@@ -403,30 +418,8 @@ export const ManualTaskAssignment: React.FC = () => {
     );
   }
 
-  // Workload ve sprint varsa arka planda kapasite hesaplamasını tetikle (eksik yük listesi için)
-  const shouldBootstrapCapacities =
-    workloadReady &&
-    overallSprintRange &&
-    (!localCacheKey || capacityCacheKey !== localCacheKey);
-
   return (
     <div className="space-y-6">
-      {/* Arka planda kapasite hesaplaması - eksik yük listesini doldurmak için */}
-      {shouldBootstrapCapacities && (
-        <div className="hidden">
-          <DeveloperCapacityAdjustment
-            workload={workload as DeveloperWorkload[]}
-            sprintStartDate={overallSprintRange!.start}
-            sprintEndDate={overallSprintRange!.end}
-            onCapacityUpdate={updateWorkloadStatus}
-            updateWorkloadStatus={updateWorkloadStatus}
-            onCapacityCalculationsChange={(calculations, cacheKey) => {
-              setCapacityCalculations(calculations, cacheKey);
-            }}
-          />
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -447,53 +440,32 @@ export const ManualTaskAssignment: React.FC = () => {
         </div>
       </div>
 
-      {/* Veri yoksa bilgilendirme */}
-      {!workloadReady && !loading && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-blue-800 text-sm">
-            Eksik yük listesi için Jira projeleri ve yazılımcı seçimi yapılmış olmalı. Kullanıcı & Filtre Yönetimi sayfasından proje ve yazılımcı seçin.
-          </p>
-        </div>
-      )}
-
-      {/* Yazılımcı Özeti: Tahmini süre + Kapasite (Kolay İK varsa izin düşürülmüş, yoksa günlük kapasite üzerinden) */}
-      {workloadReady && workload && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Yazılımcı Kapasite Özeti</h3>
-            <p className="text-sm text-gray-500 mt-1">
-              Tahmini süre (Jira) ve kapasite (saat) — Kolay İK varsa izinler düşülerek hesaplanır
-            </p>
+      {/* Underloaded Developers Alert */}
+      {underloadedDevelopers.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2 mb-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            <h3 className="font-medium text-yellow-800">Eksik Yükü Olan Yazılımcılar</h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Yazılımcı</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tahmini Süre</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Kapasite</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {workload.map(dev => {
-                  const capacity = getAdjustedCapacity(dev.developer);
-                  const estimatedHours = Math.round((dev.totalHours || 0) * 100) / 100;
-                  return (
-                    <tr key={dev.developer} className="hover:bg-gray-50">
-                      <td className="px-6 py-3 text-sm font-medium text-gray-900">{dev.developer}</td>
-                      <td className="px-6 py-3 text-sm text-right text-gray-700">{estimatedHours}h</td>
-                      <td className="px-6 py-3 text-sm text-right text-gray-700">{capacity}h</td>
-                      <td className="px-6 py-3 text-center">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(dev.status)}`}>
-                          {dev.status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {underloadedDevelopers.map(dev => {
+              const capacity = getAdjustedCapacity(dev.developer);
+              const estimatedHours = Math.round((dev.totalHours || 0) * 100) / 100;
+              return (
+                <div key={dev.developer} className="bg-white rounded p-3 border border-yellow-200">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-900">{dev.developer}</span>
+                    <span className="text-sm text-yellow-700">{estimatedHours}h / {capacity}h</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                    <div
+                      className="bg-yellow-500 h-2 rounded-full"
+                      style={{ width: `${Math.min((estimatedHours / capacity) * 100, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -595,19 +567,15 @@ export const ManualTaskAssignment: React.FC = () => {
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Seçiniz</option>
-                    {workload && workload.length > 0
-                      ? workload.map(dev => {
-                          const capacity = getAdjustedCapacity(dev.developer);
-                          const estimatedHours = Math.round((dev.totalHours || 0) * 100) / 100;
-                          return (
-                            <option key={dev.developer} value={dev.developer}>
-                              {dev.developer} ({estimatedHours}h / {capacity}h - {dev.status})
-                            </option>
-                          );
-                        })
-                      : fallbackDeveloperNames.map(name => (
-                          <option key={name} value={name}>{name}</option>
-                        ))}
+                    {workload && workload.map(dev => {
+                      const capacity = getAdjustedCapacity(dev.developer);
+                      const estimatedHours = Math.round((dev.totalHours || 0) * 100) / 100;
+                      return (
+                        <option key={dev.developer} value={dev.developer}>
+                          {dev.developer} ({estimatedHours}h / {capacity}h - {dev.status})
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 
@@ -860,7 +828,7 @@ export const ManualTaskAssignment: React.FC = () => {
                         title="Sil"
                       >
                         <X className="h-4 w-4" />
-                      </button> 
+                      </button>
                     </td>
                   </tr>
                 ))}

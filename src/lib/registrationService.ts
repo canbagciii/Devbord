@@ -1,6 +1,6 @@
 export interface CompanyRegistrationData {
   companyName: string;
-  companyEmail?: string;
+  companyEmail: string;
   firstName: string;
   lastName: string;
   userEmail: string;

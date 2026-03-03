@@ -152,26 +152,26 @@ class SupabaseJiraService {
   }
 
   async getProjects(): Promise<JiraProject[]> {
+    const cacheKey = 'projects';
+    const cached = this.getFromCache<JiraProject[]>(cacheKey);
+    if (cached) return cached;
+
     try {
-      // First, get selected projects from filter service (company-specific)
-      const selectedProjects = await jiraFilterService.getSelectedProjects();
+      console.log('🔄 Fetching projects from Jira...');
+      const projects = await this.callEdgeFunction<JiraProject[]>('jira-proxy', {
+        body: {
+          endpoint: '/rest/api/3/project?fields=key,name,projectTypeKey,lead',
+          method: 'GET'
+        }
+      });
 
-      console.log('🔍 Selected projects from filters:', selectedProjects.map(p => p.project_key).join(', '));
-
-      // If no projects selected, return empty array (don't fetch all projects)
-      if (selectedProjects.length === 0) {
-        console.log('⚠️ No projects selected. Please select projects in Jira Filter Management.');
-        return [];
+      if (!Array.isArray(projects)) {
+        console.error('❌ Projects response is not an array:', projects);
+        throw new Error('Invalid projects response format');
       }
 
-      // Map selected projects to JiraProject format
-      const projects: JiraProject[] = selectedProjects.map(p => ({
-        id: p.id,
-        key: p.project_key,
-        name: p.project_name
-      }));
-
-      console.log(`✅ Returning ${projects.length} selected projects`);
+      console.log(`✅ Successfully fetched ${projects.length} projects`);
+      this.setCache(cacheKey, projects);
       return projects;
     } catch (error) {
       console.error('❌ Error fetching projects:', error);
@@ -180,104 +180,31 @@ class SupabaseJiraService {
   }
 
   async getAllUsers(): Promise<Array<{ accountId: string; displayName: string; emailAddress?: string; active: boolean }>> {
-    try {
-      // First, get selected developers from filter service (company-specific)
-      const selectedDevelopers = await jiraFilterService.getSelectedDevelopers();
-
-      console.log('🔍 Selected developers from filters:', selectedDevelopers.map(d => d.developer_name).join(', '));
-
-      // If no developers selected, return empty array (don't fetch all users)
-      if (selectedDevelopers.length === 0) {
-        console.log('⚠️ No developers selected. Please select developers in Jira Filter Management.');
-        return [];
-      }
-
-      // Map selected developers to Jira user format
-      const users = selectedDevelopers.map(d => ({
-        accountId: d.jira_account_id || d.id,
-        displayName: d.developer_name,
-        emailAddress: d.developer_email || undefined,
-        active: d.is_active
-      }));
-
-      console.log(`✅ Returning ${users.length} selected developers`);
-      return users;
-    } catch (error) {
-      console.error('❌ Error fetching users:', error);
-      throw error;
-    }
-  }
-
-  async getAllProjectsFromJira(): Promise<JiraProject[]> {
-    const cacheKey = 'all-jira-projects';
-    const cached = this.getFromCache<JiraProject[]>(cacheKey);
-    if (cached) {
-      console.log(`✅ Returning ${cached.length} projects from cache`);
-      return cached;
-    }
+    const cacheKey = 'all-users';
+    const cached = this.getFromCache<Array<{ accountId: string; displayName: string; emailAddress?: string; active: boolean }>>(cacheKey);
+    if (cached) return cached;
 
     try {
-      console.log('🔄 Fetching ALL projects from JIRA...');
-      const response = await this.callEdgeFunction<any>('jira-proxy', {
-        body: {
-          endpoint: '/rest/api/3/project/search?maxResults=1000',
-          method: 'GET'
-        }
-      });
-
-      console.log('🔍 JIRA projects response:', response);
-
-      const projectsArray = response.values || (Array.isArray(response) ? response : []);
-      const projects: JiraProject[] = projectsArray
-        .filter((p: any) => p && p.key && p.name)
-        .map((p: any) => ({
-          id: p.id,
-          key: p.key,
-          name: p.name
-        }));
-
-      console.log(`✅ Fetched ${projects.length} projects from JIRA`);
-      this.setCache(cacheKey, projects);
-      return projects;
-    } catch (error) {
-      console.error('❌ Error fetching projects from JIRA:', error);
-      throw error;
-    }
-  }
-
-  async getAllUsersFromJira(): Promise<Array<{ accountId: string; displayName: string; emailAddress?: string }>> {
-    const cacheKey = 'all-jira-users';
-    const cached = this.getFromCache<Array<{ accountId: string; displayName: string; emailAddress?: string }>>(cacheKey);
-    if (cached) {
-      console.log(`✅ Returning ${cached.length} users from cache`);
-      return cached;
-    }
-
-    try {
-      console.log('🔄 Fetching ALL users from JIRA...');
-      const response = await this.callEdgeFunction<any>('jira-proxy', {
+      console.log('🔄 Fetching users from Jira...');
+      const users = await this.callEdgeFunction<Array<{ accountId: string; displayName: string; emailAddress?: string; active: boolean }>>('jira-proxy', {
         body: {
           endpoint: '/rest/api/3/users/search?maxResults=1000',
           method: 'GET'
         }
       });
 
-      console.log('🔍 JIRA users response:', response);
+      if (!Array.isArray(users)) {
+        console.error('❌ Users response is not an array:', users);
+        throw new Error('Invalid users response format');
+      }
 
-      const usersArray = Array.isArray(response) ? response : [];
-      const users = usersArray
-        .filter((u: any) => u && u.accountId && u.displayName)
-        .map((u: any) => ({
-          accountId: u.accountId,
-          displayName: u.displayName,
-          emailAddress: u.emailAddress
-        }));
+      const activeUsers = users.filter(user => user.active);
 
-      console.log(`✅ Fetched ${users.length} users from JIRA`);
-      this.setCache(cacheKey, users);
-      return users;
+      console.log(`✅ Successfully fetched ${activeUsers.length} active users`);
+      this.setCache(cacheKey, activeUsers);
+      return activeUsers;
     } catch (error) {
-      console.error('❌ Error fetching users from JIRA:', error);
+      console.error('❌ Error fetching users:', error);
       throw error;
     }
   }
@@ -758,12 +685,10 @@ class SupabaseJiraService {
       if (end) jql += ` AND created <= "${end} 23:59"`;
       jql += ' ORDER BY created DESC';
       
-      // Single API call to get all issues with subtasks (GET: POST /search/jql 400 Invalid payload dönüyor)
-      const fieldsParam = 'summary,description,status,assignee,project,priority,created,updated,timeoriginalestimate,timespent,subtasks,issuetype,parent';
-      const searchUrl = `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=500&fields=${encodeURIComponent(fieldsParam)}`;
+      // Single API call to get all issues with subtasks
       const response = await this.callEdgeFunction<{ issues: any[] }>('jira-proxy', {
-        body: {
-          endpoint: searchUrl,
+        body: { 
+          endpoint: `/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=500&fields=summary,description,status,assignee,project,priority,created,updated,timeoriginalestimate,timespent,subtasks,issuetype,parent`,
           method: 'GET'
         }
       });
@@ -883,11 +808,9 @@ class SupabaseJiraService {
           for (let i = 0; i < parentKeysArray.length; i += batchSize) {
             const batch = parentKeysArray.slice(i, i + batchSize);
             const parentJql = `issuekey in (${batch.map(k => `'${k}'`).join(',')})`;
-            const parentFields = 'summary,description,status,assignee,project,priority,created,updated,timeoriginalestimate,timespent,issuetype';
-            const parentSearchUrl = `/rest/api/3/search/jql?jql=${encodeURIComponent(parentJql)}&maxResults=${batch.length}&fields=${encodeURIComponent(parentFields)}`;
             const parentResp = await this.callEdgeFunction<{ issues: any[] }>('jira-proxy', {
               body: {
-                endpoint: parentSearchUrl,
+                endpoint: `/rest/api/3/search?jql=${encodeURIComponent(parentJql)}&maxResults=${batch.length}&fields=summary,description,status,assignee,project,priority,created,updated,timeoriginalestimate,timespent,issuetype`,
                 method: 'GET'
               }
             });
@@ -1437,11 +1360,9 @@ class SupabaseJiraService {
 
   async searchIssues(jql: string, maxResults: number = 100): Promise<any> {
     try {
-      const fieldsParam = 'summary,description,status,assignee,project,priority,created,updated,timeoriginalestimate,timespent';
-      const searchUrl = `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&fields=${encodeURIComponent(fieldsParam)}`;
       const response = await this.callEdgeFunction<{ issues: any[] }>('jira-proxy', {
         body: {
-          endpoint: searchUrl,
+          endpoint: `/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&fields=summary,description,status,assignee,project,priority,created,updated,timeoriginalestimate,timespent`,
           method: 'GET'
         }
       });
@@ -1471,105 +1392,54 @@ class SupabaseJiraService {
 
     try {
       console.log(`🔄 Fetching worklog data for date range: ${startDate} to ${endDate}`);
-
+      
+      // Use a more efficient JQL query
       const jqlStartDate = startDate.replace(/-/g, '/');
       const jqlEndDate = endDate.replace(/-/g, '/');
       const jql = `worklogDate >= "${jqlStartDate}" AND worklogDate <= "${jqlEndDate}" ORDER BY updated DESC`;
-
+      
+      const response = await this.callEdgeFunction<{ issues: any[] }>('jira-proxy', {
+        body: { 
+          endpoint: `/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=1000&fields=worklog,summary,project,issuetype,parent`,
+          method: 'GET'
+        }
+      });
+      
       const allWorklogs: any[] = [];
       const allowedDevelopers = await jiraFilterService.getDeveloperNames();
       const normalizedAllowed = allowedDevelopers.map(n => this.normalizeName(n));
-
-      // Pagination: Fetch all issues with worklogs
-      const pageSize = 100;
-      let startAt = 0;
-      let totalIssues = 0;
-      let fetchedIssues = 0;
-
-      do {
-        console.log(`📄 Fetching worklog issues page: startAt=${startAt}, pageSize=${pageSize}`);
-
-        // Jira Cloud: POST /rest/api/3/search/jql "Invalid request payload" veriyor; GET + query params kullanıyoruz
-        const fieldsParam = 'worklog,summary,project,issuetype,parent';
-        const searchUrl = `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${pageSize}&fields=${encodeURIComponent(fieldsParam)}`;
-        const response = await this.callEdgeFunction<{ issues: any[]; total: number }>('jira-proxy', {
-          body: {
-            endpoint: searchUrl,
-            method: 'GET'
-          }
-        });
-
-        const issues = response.issues || [];
-        totalIssues = response.total || issues.length;
-        fetchedIssues += issues.length;
-
-        console.log(`📊 Fetched ${issues.length} issues (${fetchedIssues}/${totalIssues} total)`);
-
-        for (const issue of issues) {
-          let worklogs = issue.fields.worklog?.worklogs || [];
-          const worklogTotal = issue.fields.worklog?.total || 0;
-          const worklogMaxResults = issue.fields.worklog?.maxResults || 0;
-
-          // If there are more worklogs than returned, fetch them separately
-          if (worklogTotal > worklogs.length) {
-            console.log(`📋 Issue ${issue.key} has ${worklogTotal} worklogs, fetching all...`);
-            let worklogStartAt = worklogs.length;
-
-            while (worklogStartAt < worklogTotal) {
-              const worklogResponse = await this.callEdgeFunction<{ worklogs: any[] }>('jira-proxy', {
-                body: {
-                  endpoint: `/rest/api/3/issue/${issue.key}/worklog?startAt=${worklogStartAt}&maxResults=100`,
-                  method: 'GET'
-                }
-              });
-
-              const additionalWorklogs = worklogResponse.worklogs || [];
-              worklogs.push(...additionalWorklogs);
-              worklogStartAt += additionalWorklogs.length;
-
-              if (additionalWorklogs.length === 0) break;
-            }
-
-            console.log(`✅ Fetched all ${worklogs.length} worklogs for issue ${issue.key}`);
-          }
-
-          for (const worklog of worklogs) {
-            if (!worklog.started || !worklog.author?.displayName) continue;
-
-            // Türkiye saatine göre gün (UTC kullanılırsa gece yazılan süreler ertesi güne düşer, eksik görünür)
-            const worklogDate = new Date(worklog.started).toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
-            if (worklogDate < startDate || worklogDate > endDate) continue;
-
-            if (normalizedAllowed.includes(this.normalizeName(worklog.author.displayName))) {
-              allWorklogs.push({
-                author: {
-                  displayName: worklog.author.displayName,
-                  accountId: worklog.author.accountId
-                },
-                timeSpentSeconds: worklog.timeSpentSeconds || 0,
-                started: worklog.started,
-                projectKey: issue.fields.project.key,
-                projectName: issue.fields.project.name,
-                issueKey: issue.key,
-                issueSummary: issue.fields.summary,
-                comment: worklog.comment,
-                isSubtask: issue.fields.issuetype?.name === 'Sub-task',
-                parentKey: issue.fields.parent?.key,
-                issueTypeName: issue.fields.issuetype?.name
-              });
-            }
-          }
+      
+      for (const issue of response.issues || []) {
+        const worklogs = issue.fields.worklog?.worklogs || [];
+        
+        for (const worklog of worklogs) {
+          if (!worklog.started || !worklog.author?.displayName) continue;
+          
+          const worklogDate = worklog.started.split('T')[0];
+          if (worklogDate < startDate || worklogDate > endDate) continue;
+          
+          if (normalizedAllowed.includes(this.normalizeName(worklog.author.displayName))) {
+            allWorklogs.push({
+              author: {
+                displayName: worklog.author.displayName,
+                accountId: worklog.author.accountId
+              },
+              timeSpentSeconds: worklog.timeSpentSeconds || 0,
+              started: worklog.started,
+              projectKey: issue.fields.project.key,
+              projectName: issue.fields.project.name,
+              issueKey: issue.key,
+              issueSummary: issue.fields.summary,
+              comment: worklog.comment,
+              isSubtask: issue.fields.issuetype?.name === 'Sub-task',
+              parentKey: issue.fields.parent?.key,
+              issueTypeName: issue.fields.issuetype?.name
+            });
+          } 
         }
-
-        startAt += pageSize;
-
-        // Break if no more issues
-        if (issues.length === 0 || fetchedIssues >= totalIssues) {
-          break;
-        }
-      } while (true);
-
-      console.log(`✅ Total worklogs found: ${allWorklogs.length} from ${fetchedIssues} issues`);
+      }
+      
+      console.log(`✅ Total worklogs found: ${allWorklogs.length}`);
       this.setCache(cacheKey, allWorklogs);
       return allWorklogs;
     } catch (error) {

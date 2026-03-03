@@ -4,11 +4,10 @@ import { useAuth } from '../context/AuthContext';
 
 interface LoginModalProps {
   onClose: () => void;
-  onSwitchToRegister: () => void;
 }
 
-export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegister }) => {
-  const { login, isAuthenticated, error: authError } = useAuth();
+export const LoginModal: React.FC<LoginModalProps> = ({ onClose }) => {
+  const { login, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -23,14 +22,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegis
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  // authError geldiginde loading'i durdur ve hatayi goster
-  useEffect(() => {
-    if (authError) {
-      setError('E-posta veya şifre geçersiz. Lütfen tekrar deneyin.');
-      setLoading(false);
-    }
-  }, [authError]);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError(null);
@@ -44,7 +35,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegis
     try {
       await login(formData);
     } catch (err) {
-      setError('E-posta veya şifre geçersiz. Lütfen tekrar deneyin.');
+      setError(err instanceof Error ? err.message : 'Giriş yapılırken hata oluştu');
       setLoading(false);
     }
   };
@@ -70,7 +61,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegis
 
         <div className="mb-7">
           <h2 className="text-2xl font-extrabold text-gray-900 mb-1.5">Tekrar hoş geldiniz 👋</h2>
-          <p className="text-sm text-gray-600">Devbord hesabınıza giriş yapın</p>
+          <p className="text-sm text-gray-600">DevPulse hesabınıza giriş yapın</p>
         </div>
 
         {error && (
@@ -102,7 +93,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegis
                 onChange={handleChange}
                 required
                 className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all"
-                placeholder="password"
+                placeholder="••••••••"
               />
             </div>
           </div>
@@ -116,14 +107,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegis
           </button>
 
           <div className="text-center mt-4 text-[0.83rem] text-gray-600">
-            Hesabınız yok mu?{' '}
-            <button
-              type="button"
-              onClick={onSwitchToRegister}
-              className="text-blue-600 font-semibold hover:underline"
-            >
-              Ücretsiz kaydolun
-            </button>
+            Hesabınız yok mu? <button type="button" onClick={onClose} className="text-blue-600 font-semibold no-underline hover:underline">Ücretsiz kaydolun</button>
           </div>
         </form>
       </div>

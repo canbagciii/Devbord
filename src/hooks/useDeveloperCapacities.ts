@@ -118,26 +118,7 @@ export const useDeveloperCapacities = () => {
 
   // Get capacity for a developer (with fallback to default)
   const getCapacity = (developerName: string): number => {
-    // Şirket (global) günlük kapasite ayarını her zaman öncelikli kullan
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const stored = localStorage.getItem('dailyHours');
-        const daily = stored ? parseFloat(stored) : NaN;
-        if (Number.isFinite(daily) && daily > 0) {
-          // Yaklaşık 2 haftalık sprint ~ 10 iş günü
-          return Math.round(daily * 10);
-        }
-      }
-    } catch (err) {
-      console.warn('Kapasite konfigürasyonu okunamadı, 70h varsayılan kullanılacak:', err);
-    }
-
-    // Global ayar yoksa geliştiriciye özel kapasiteyi kullan
-    if (capacities[developerName] != null) {
-      return capacities[developerName];
-    }
-
-    // Geriye dönük uyumluluk için 70h default
+    // Her zaman 70h default döndür - izin ayarlamaları ayrı yapılacak
     return 70;
   };
 

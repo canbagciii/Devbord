@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevPulse — Sprint & Ekip Yönetimi</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0A0F1E;
+    --ink-60: #5A6070;
+    --ink-30: #C2C6D0;
+    --surface: #F8F9FC;
+    --white: #FFFFFF;
+    --accent: #2563EB;
+    --accent-light: #EEF3FF;
+    --accent-hover: #1D4ED8;
+    --green: #10B981;
+    --green-light: #ECFDF5;
+    --amber: #F59E0B;
+    --border: #E4E7EF;
+    --shadow-sm: 0 1px 3px rgba(10,15,30,0.06), 0 1px 2px rgba(10,15,30,0.04);
+    --shadow-md: 0 4px 16px rgba(10,15,30,0.08), 0 2px 6px rgba(10,15,30,0.04);
+    --shadow-lg: 0 20px 60px rgba(10,15,30,0.10), 0 8px 20px rgba(10,15,30,0.06);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--white);
+    color: var(--ink);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5 { font-family: 'Sora', sans-serif; line-height: 1.2; }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 5%;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 68px;
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Sora', sans-serif; font-weight: 700; font-size: 1.25rem; color: var(--ink);
+    text-decoration: none;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+
+  .logo-icon::before {
+    content: '';
+    position: absolute;
+    width: 10px; height: 18px;
+    border-radius: 2px;
+    background: white;
+    left: 8px; bottom: 8px;
+  }
+  .logo-icon::after {
+    content: '';
+    position: absolute;
+    width: 10px; height: 12px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.5);
+    right: 8px; bottom: 8px;
+  }
+
+  .nav-links {
+    display: flex; align-items: center; gap: 32px; list-style: none;
+  }
+
+  .nav-links a {
+    text-decoration: none; color: var(--ink-60); font-size: 0.9rem; font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+
+  .nav-cta {
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; border-radius: var(--radius-sm);
+    font-family: 'Sora', sans-serif; font-size: 0.875rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; border: none; text-decoration: none;
+  }
+
+  .btn-ghost {
+    background: transparent; color: var(--ink); border: 1.5px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-primary {
+    background: var(--accent); color: white;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+  }
+  .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(37,99,235,0.3); }
+
+  .btn-primary-lg {
+    padding: 14px 28px; font-size: 1rem; border-radius: 10px;
+    background: var(--accent); color: white;
+    box-shadow: 0 4px 16px rgba(37,99,235,0.25);
+  }
+  .btn-primary-lg:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(37,99,235,0.35); }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 140px 5% 100px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center;
+    max-width: 1280px; margin: 0 auto;
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent-light); color: var(--accent);
+    padding: 6px 14px; border-radius: 999px;
+    font-size: 0.8rem; font-weight: 600; font-family: 'Sora', sans-serif;
+    margin-bottom: 24px; border: 1px solid rgba(37,99,235,0.15);
+  }
+
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.4); }
+  }
+
+  .hero h1 {
+    font-size: clamp(2.2rem, 4vw, 3.4rem);
+    font-weight: 800; line-height: 1.1;
+    color: var(--ink); margin-bottom: 20px;
+  }
+
+  .hero h1 em { font-style: normal; color: var(--accent); }
+
+  .hero p {
+    font-size: 1.1rem; color: var(--ink-60); line-height: 1.7;
+    margin-bottom: 36px; max-width: 480px;
+  }
+
+  .hero-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+  .hero-note {
+    font-size: 0.8rem; color: var(--ink-60); display: flex; align-items: center; gap: 6px;
+  }
+
+  .hero-note svg { color: var(--green); }
+
+  .integrations-label {
+    font-size: 0.78rem; font-weight: 600; color: var(--ink-30); text-transform: uppercase;
+    letter-spacing: 0.1em; margin-top: 48px; margin-bottom: 14px;
+  }
+
+  .integration-chips { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .chip {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 8px 14px;
+    font-size: 0.82rem; font-weight: 600; color: var(--ink);
+  }
+
+  /* ── HERO VISUAL ── */
+  .hero-visual {
+    position: relative; animation: floatUp 0.8s ease-out both;
+  }
+
+  @keyframes floatUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .dashboard-card {
+    background: var(--white); border-radius: 18px; border: 1.5px solid var(--border);
+    box-shadow: var(--shadow-lg); padding: 24px; overflow: hidden;
+  }
+
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+  }
+
+  .card-title { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 0.95rem; }
+
+  .sprint-badge {
+    background: var(--accent-light); color: var(--accent);
+    padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;
+  }
+
+  .progress-section { margin-bottom: 20px; }
+
+  .progress-label {
+    display: flex; justify-content: space-between; margin-bottom: 8px;
+    font-size: 0.8rem; color: var(--ink-60);
+  }
+
+  .progress-bar {
+    height: 8px; background: var(--surface); border-radius: 4px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), #60A5FA);
+    transition: width 1s ease;
+  }
+
+  .dev-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .dev-row {
+    display: flex; align-items: center; gap: 12px; padding: 10px; background: var(--surface);
+    border-radius: 10px;
+  }
+
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Sora', sans-serif; font-size: 0.7rem; font-weight: 700; color: white;
+    flex-shrink: 0;
+  }
+
+  .dev-info { flex: 1; min-width: 0; }
+  .dev-name { font-size: 0.82rem; font-weight: 600; color: var(--ink); }
+  .dev-task { font-size: 0.74rem; color: var(--ink-60); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .dev-status {
+    font-size: 0.72rem; font-weight: 600; padding: 3px 8px; border-radius: 5px; flex-shrink: 0;
+  }
+  .status-done { background: var(--green-light); color: var(--green); }
+  .status-progress { background: #FEF3C7; color: #D97706; }
+  .status-review { background: #EDE9FE; color: #7C3AED; }
+
+  .floating-stat {
+    position: absolute; background: white; border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 12px 16px; box-shadow: var(--shadow-md);
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .floating-stat.top-left { top: -20px; left: -30px; }
+  .floating-stat.bottom-right { bottom: -20px; right: -20px; }
+
+  .stat-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 1rem;
+  }
+
+  .stat-num { font-family: 'Sora', sans-serif; font-size: 1.1rem; font-weight: 800; }
+  .stat-lbl { font-size: 0.72rem; color: var(--ink-60); }
+
+  /* ── SECTION ── */
+  section { padding: 100px 5%; }
+
+  .section-tag {
+    display: inline-block;
+    font-size: 0.75rem; font-weight: 700; font-family: 'Sora', sans-serif;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--accent); background: var(--accent-light);
+    padding: 5px 12px; border-radius: 6px; margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 800;
+    color: var(--ink); margin-bottom: 16px; max-width: 600px;
+  }
+
+  .section-sub {
+    font-size: 1.05rem; color: var(--ink-60); max-width: 540px; line-height: 1.7;
+  }
+
+  .center { text-align: center; }
+  .center .section-title, .center .section-sub { margin-left: auto; margin-right: auto; }
+
+  /* ── PAIN ── */
+  .pain-bg {
+    background: var(--surface);
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  }
+
+  .pain-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1100px; margin: 56px auto 0; }
+
+  .pain-card {
+    background: white; border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 28px; transition: all 0.25s;
+  }
+  .pain-card:hover { border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-3px); }
+
+  .pain-icon { font-size: 1.8rem; margin-bottom: 14px; }
+  .pain-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; color: var(--ink); }
+  .pain-card p { font-size: 0.88rem; color: var(--ink-60); line-height: 1.65; }
+
+  /* ── HOW ── */
+  .how-inner { max-width: 1100px; margin: 0 auto; }
+  .how-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-top: 64px; position: relative; }
+
+  .how-steps::before {
+    content: '';
+    position: absolute; top: 32px; left: calc(16.6% + 16px); right: calc(16.6% + 16px);
+    height: 2px; background: linear-gradient(90deg, var(--accent), var(--border) 50%, var(--accent));
+    z-index: 0;
+  }
+
+  .how-step { text-align: center; position: relative; z-index: 1; }
+
+  .step-num {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--accent); color: white;
+    font-family: 'Sora', sans-serif; font-size: 1.3rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px; border: 4px solid white; box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  .how-step h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
+  .how-step p { font-size: 0.88rem; color: var(--ink-60); line-height: 1.65; }
+
+  /* ── FEATURES ── */
+  .features-inner { max-width: 1200px; margin: 0 auto; }
+
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 64px; }
+
+  .feature-card {
+    background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 32px 28px; transition: all 0.25s; position: relative; overflow: hidden;
+  }
+
+  .feature-card::before {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: linear-gradient(135deg, var(--accent-light) 0%, transparent 60%);
+    opacity: 0; transition: opacity 0.3s;
+  }
+
+  .feature-card:hover { border-color: var(--accent); box-shadow: var(--shadow-lg); transform: translateY(-4px); }
+  .feature-card:hover::before { opacity: 1; }
+
+  .feature-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: var(--accent-light); display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; margin-bottom: 20px; position: relative; z-index: 1;
+  }
+
+  .feature-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; position: relative; z-index: 1; }
+  .feature-card p { font-size: 0.88rem; color: var(--ink-60); line-height: 1.65; position: relative; z-index: 1; }
+
+  /* ── STATS ── */
+  .stats-bg {
+    background: linear-gradient(135deg, #0A0F1E 0%, #1E3A6E 100%);
+    border-radius: 24px; margin: 0 5%; padding: 72px 8%;
+  }
+
+  .stats-inner { max-width: 1100px; margin: 0 auto; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; margin-top: 0; }
+
+  .stat-item { text-align: center; }
+  .stat-item .stat-big { font-family: 'Sora', sans-serif; font-size: 2.8rem; font-weight: 800; color: white; }
+  .stat-item .stat-label { font-size: 0.9rem; color: rgba(255,255,255,0.6); margin-top: 6px; }
+
+  /* ── CTA ── */
+  .cta-section { background: var(--surface); border-top: 1px solid var(--border); }
+
+  .cta-inner {
+    max-width: 640px; margin: 0 auto; text-align: center;
+  }
+
+  .cta-inner h2 { font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 800; margin-bottom: 16px; }
+  .cta-inner p { color: var(--ink-60); margin-bottom: 36px; font-size: 1.05rem; }
+  .cta-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 40px 5%; border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+  }
+
+  .footer-logo { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 1rem; color: var(--ink); }
+  .footer-links { display: flex; gap: 24px; list-style: none; }
+  .footer-links a { font-size: 0.85rem; color: var(--ink-60); text-decoration: none; }
+  .footer-links a:hover { color: var(--accent); }
+  .footer-copy { font-size: 0.82rem; color: var(--ink-30); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 999;
+    background: rgba(10,15,30,0.45); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: white; border-radius: 20px; width: 100%; max-width: 520px;
+    box-shadow: var(--shadow-lg); padding: 40px;
+    transform: translateY(20px) scale(0.97); transition: transform 0.3s ease;
+    max-height: 92vh; overflow-y: auto;
+  }
+  .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+
+  .modal-header { margin-bottom: 28px; }
+  .modal-title { font-size: 1.5rem; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+  .modal-sub { font-size: 0.9rem; color: var(--ink-60); }
+
+  .form-section { margin-bottom: 24px; }
+
+  .form-section-title {
+    font-family: 'Sora', sans-serif; font-size: 0.72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent);
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .form-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .form-group { margin-bottom: 14px; }
+
+  .form-label {
+    display: block; font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 6px;
+  }
+
+  .form-label .opt {
+    font-weight: 400; color: var(--ink-30); font-size: 0.75rem; margin-left: 4px;
+  }
+
+  .form-input {
+    width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 9px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--ink);
+    background: var(--surface); transition: all 0.2s; outline: none;
+  }
+  .form-input:focus { border-color: var(--accent); background: white; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+  .form-input::placeholder { color: var(--ink-30); }
+
+  .form-hint { font-size: 0.75rem; color: var(--ink-60); margin-top: 5px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .modal-submit {
+    width: 100%; padding: 13px; border-radius: 10px;
+    background: var(--accent); color: white; border: none;
+    font-family: 'Sora', sans-serif; font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; margin-top: 8px;
+  }
+  .modal-submit:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.3); }
+
+  .modal-footer {
+    text-align: center; margin-top: 16px;
+    font-size: 0.83rem; color: var(--ink-60);
+  }
+  .modal-footer a { color: var(--accent); font-weight: 600; text-decoration: none; cursor: pointer; }
+
+  .modal-close {
+    position: absolute; top: 20px; right: 20px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--surface); border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 1rem; color: var(--ink-60); transition: all 0.2s;
+  }
+  .modal-close:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+
+  .modal-wrapper { position: relative; }
+
+  /* ── ANIMATIONS ── */
+  .fade-in {
+    opacity: 0; transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .fade-in.visible { opacity: 1; transform: none; }
+
+  .hero-content { animation: heroIn 0.7s ease-out both; }
+  @keyframes heroIn {
+    from { opacity: 0; transform: translateX(-30px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; gap: 48px; padding: 120px 5% 80px; }
+    .pain-grid, .how-steps, .features-grid { grid-template-columns: 1fr 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .how-steps::before { display: none; }
+    .nav-links { display: none; }
+  }
+
+  @media (max-width: 560px) {
+    .pain-grid, .how-steps, .features-grid, .stats-grid { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .modal { padding: 28px 20px; }
+  }
+
+  /* Login modal variant */
+  .mode-login .login-only { display: block; }
+  .mode-login .register-only { display: none; }
+  .mode-register .login-only { display: none; }
+  .mode-register .register-only { display: block; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">
+    <div class="logo-icon"></div>
+    DevPulse
+  </a>
+  <ul class="nav-links">
+    <li><a href="#problem">Sorunlar</a></li>
+    <li><a href="#how">Nasıl Çalışır</a></li>
+    <li><a href="#features">Özellikler</a></li>
+  </ul>
+  <div class="nav-cta">
+    <button class="btn btn-ghost" onclick="openModal('login')">Giriş Yap</button>
+    <button class="btn btn-primary" onclick="openModal('register')">Ücretsiz Başla →</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section style="padding-top:0; padding-bottom:0;">
+  <div class="hero">
+    <div class="hero-content">
+      <div class="badge">
+        <span class="badge-dot"></span>
+        Jira + Kolay İK entegrasyonu
+      </div>
+      <h1>Ekibinizin <em>nabzını</em> gerçek zamanlı takip edin</h1>
+      <p>Sprint yönetimi, yazılımcı performans takibi ve İK entegrasyonunu tek platformda birleştirin. Karar vermek için saatlerce rapor hazırlamayı bırakın.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary-lg" onclick="openModal('register')">Hemen Başla — Ücretsiz</button>
+        <button class="btn btn-ghost" style="padding:14px 24px; border-radius:10px;" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">Nasıl çalışır?</button>
+      </div>
+      <div class="hero-note" style="margin-top:16px;">
+        <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+        Kurulum yok · Kredi kartı yok · Dakikalar içinde hazır
+      </div>
+      <div class="integrations-label">Desteklenen entegrasyonlar</div>
+      <div class="integration-chips">
+        <div class="chip">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#2563EB"><path d="M11.571 11.513H0a5.218 5.218 0 005.232 5.215h2.13v2.057A5.215 5.215 0 0012.575 24V12.518a1.005 1.005 0 00-1.004-1.005zm5.723-5.756H5.757a5.215 5.215 0 005.215 5.214h2.129v2.058a5.218 5.218 0 005.215 5.214V6.762a1.005 1.005 0 00-1.022-1.005zM23.012 0H11.455a5.215 5.215 0 005.215 5.214h2.129v2.058A5.218 5.218 0 0024 12.487V1.005A1.005 1.005 0 0023.012 0z"/></svg>
+          Jira
+        </div>
+        <div class="chip">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#10B981"><rect width="24" height="24" rx="6" fill="#10B981"/><text x="12" y="17" text-anchor="middle" fill="white" font-size="11" font-weight="bold" font-family="sans-serif">İK</text></svg>
+          Kolay İK
+        </div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="floating-stat top-left">
+        <div class="stat-icon" style="background:#EEF3FF;">🚀</div>
+        <div>
+          <div class="stat-num" style="font-family:'Sora',sans-serif;font-weight:800;">Sprint 14</div>
+          <div class="stat-lbl">Aktif sprint</div>
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <div class="card-header">
+          <div class="card-title">Sprint Özeti</div>
+          <span class="sprint-badge">Aktif</span>
+        </div>
+        <div class="progress-section">
+          <div class="progress-label">
+            <span>Tamamlanma</span>
+            <span style="font-weight:600;color:var(--accent)">72%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:72%"></div>
+          </div>
+        </div>
+        <div class="dev-list">
+          <div class="dev-row">
+            <div class="avatar" style="background:#2563EB;">AK</div>
+            <div class="dev-info">
+              <div class="dev-name">Ahmet Kaya</div>
+              <div class="dev-task">AUTH-124: Login flow refactor</div>
+            </div>
+            <span class="dev-status status-done">Bitti</span>
+          </div>
+          <div class="dev-row">
+            <div class="avatar" style="background:#7C3AED;">SE</div>
+            <div class="dev-info">
+              <div class="dev-name">Selin Erdoğan</div>
+              <div class="dev-task">API-88: Rate limiting middleware</div>
+            </div>
+            <span class="dev-status status-progress">Devam</span>
+          </div>
+          <div class="dev-row">
+            <div class="avatar" style="background:#10B981;">MÇ</div>
+            <div class="dev-info">
+              <div class="dev-name">Mert Çelik</div>
+              <div class="dev-task">UI-201: Dashboard redesign</div>
+            </div>
+            <span class="dev-status status-review">Review</span>
+          </div>
+        </div>
+      </div>
+      <div class="floating-stat bottom-right">
+        <div class="stat-icon" style="background:#ECFDF5;">✅</div>
+        <div>
+          <div class="stat-num" style="font-family:'Sora',sans-serif;font-weight:800;">18/25</div>
+          <div class="stat-lbl">Görev tamamlandı</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PAIN -->
+<section class="pain-bg" id="problem">
+  <div style="max-width:1100px;margin:0 auto;" class="center fade-in">
+    <span class="section-tag">Tanıdık geldi mi?</span>
+    <h2 class="section-title">Her takımın yaşadığı 3 büyük sorun</h2>
+    <p class="section-sub">DevPulse, yazılım ekiplerinin sprint ve insan kaynakları süreçlerinde yaşadığı karmaşayı ortadan kaldırır.</p>
+  </div>
+  <div class="pain-grid fade-in">
+    <div class="pain-card">
+      <div class="pain-icon">🌀</div>
+      <h3>Dağınık Sprint Takibi</h3>
+      <p>Jira açık, Excel açık, Slack açık… Hangi bilgiye inanacağınızı bilemiyorsunuz. Toplantıdan önce manuel rapor hazırlamak saatlerinizi alıyor.</p>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">🔗</div>
+      <h3>İK ile Kopuk İletişim</h3>
+      <p>Yazılımcıların izin, mesai ve proje bilgilerini İK ile senkronize etmek için cepten cepte mesaj gidiyor. Hata payı yüksek, güncellik düşük.</p>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">📊</div>
+      <h3>Kör Performans Raporları</h3>
+      <p>Hangi developer ne kadar katkı sağladı? Bottleneck nerede? Cevaplar mevcut araçlarda gömülü, bulmak için araştırmacı olmak gerekiyor.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW -->
+<section id="how">
+  <div class="how-inner center fade-in">
+    <span class="section-tag">Nasıl Çalışır</span>
+    <h2 class="section-title">3 adımda çalışmaya başlayın</h2>
+    <p class="section-sub">Dakikalar içinde kurulumu tamamlayın, entegrasyonlarınızı bağlayın ve ekibinizi gerçek zamanlı takip etmeye başlayın.</p>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="step-num">1</div>
+        <h3>Hesap Oluşturun</h3>
+        <p>Jira API bilgilerinizi girerek hesabınızı oluşturun. Kolay İK entegrasyonu isteğe bağlıdır, sonradan eklenebilir.</p>
+      </div>
+      <div class="how-step">
+        <div class="step-num">2</div>
+        <h3>Entegrasyonları Bağlayın</h3>
+        <p>Tek tıkla Jira projelerinizi ve Kolay İK hesabınızı bağlayın. Veriler otomatik olarak senkronize olur.</p>
+      </div>
+      <div class="how-step">
+        <div class="step-num">3</div>
+        <h3>Takip & Analiz Edin</h3>
+        <p>Sprint ilerlemesini, developer katkılarını ve İK verilerini tek ekranda görün. Kararlarınızı verilerle alın.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);" id="features">
+  <div class="features-inner">
+    <div class="center fade-in">
+      <span class="section-tag">Özellikler</span>
+      <h2 class="section-title">Ekibinizi yönetmek için ihtiyacınız olan her şey</h2>
+      <p class="section-sub">Sprint yönetiminden İK entegrasyonuna, gerçek zamanlı veriden akıllı raporlamaya kadar.</p>
+    </div>
+    <div class="features-grid fade-in">
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Gerçek Zamanlı Sprint Takibi</h3>
+        <p>Jira'dan otomatik çekilen verilerle sprint ilerlemenizi canlı olarak izleyin. Görev durumları, tamamlanma yüzdeleri ve kalan süreler tek bakışta.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👥</div>
+        <h3>Developer Performans Analizi</h3>
+        <p>Her yazılımcının sprint bazında katkısını, tamamladığı görevleri ve çalışma hızını ölçün. Adil ve veriye dayalı değerlendirme yapın.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔗</div>
+        <h3>Jira Entegrasyonu</h3>
+        <p>Mevcut Jira projelerinizle tam entegrasyon. Ticket'lar, board'lar, sprint'ler — hepsi DevPulse'ta, hiçbir veri girilmesine gerek yok.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏢</div>
+        <h3>Kolay İK Entegrasyonu</h3>
+        <p>İzin ve mesai bilgilerini sprint planlamasına yansıtın. Kimin ne zaman uygun olduğunu tek platformdan görün, sürpriz kapasitesi sorunlarına son.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📈</div>
+        <h3>Akıllı Raporlama</h3>
+        <p>Otomatik oluşturulan sprint raporları ve trend analizleriyle paydaşlarınıza dakikalar içinde sunum yapın. Velocity, burndown ve daha fazlası.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔔</div>
+        <h3>Proaktif Uyarılar</h3>
+        <p>Sprint kapanmadan önce riskli görevleri fark edin. Gecikme ihtimali yüksek ticket'lar ve bottleneck noktaları için otomatik bildirim alın.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section style="padding: 60px 5%;">
+  <div class="stats-bg fade-in">
+    <div class="stats-inner">
+      <div class="center" style="margin-bottom:56px;">
+        <h2 style="color:white;font-size:clamp(1.6rem,2.5vw,2.2rem);font-weight:800;margin-bottom:12px;">Sayılar konuşuyor</h2>
+        <p style="color:rgba(255,255,255,0.6);font-size:1rem;">DevPulse kullanan ekipler ne kazanıyor?</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-big">%40</div>
+          <div class="stat-label">Daha az rapor hazırlama süresi</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-big">3×</div>
+          <div class="stat-label">Daha hızlı sprint kapanışı</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-big">%95</div>
+          <div class="stat-label">Veri doğruluk oranı</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-big">&lt;5dk</div>
+          <div class="stat-label">Kurulum ve entegrasyon süresi</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-inner fade-in">
+    <span class="section-tag">Başlamaya hazır mısınız?</span>
+    <h2>Ekibinizin potansiyelini bugün keşfedin</h2>
+    <p>Jira hesabınızla dakikalar içinde entegrasyon tamamlanır. Kolay İK bağlantısını istediğiniz zaman ekleyebilirsiniz.</p>
+    <div class="cta-actions">
+      <button class="btn btn-primary-lg" onclick="openModal('register')">Ücretsiz Hesap Oluştur →</button>
+      <button class="btn btn-ghost" style="padding:14px 24px;border-radius:10px;" onclick="openModal('login')">Zaten hesabım var</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">DevPulse</div>
+  <ul class="footer-links">
+    <li><a href="#">Gizlilik</a></li>
+    <li><a href="#">Kullanım Koşulları</a></li>
+    <li><a href="#">Destek</a></li>
+  </ul>
+  <p class="footer-copy">© 2025 DevPulse. Tüm hakları saklıdır.</p>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal-wrapper">
+    <div class="modal" id="modal">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+
+      <!-- LOGIN -->
+      <div class="login-only">
+        <div class="modal-header">
+          <div class="modal-title">Tekrar hoş geldiniz 👋</div>
+          <div class="modal-sub">DevPulse hesabınıza giriş yapın</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-posta</label>
+          <input class="form-input" type="email" placeholder="ornek@sirket.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şifre</label>
+          <input class="form-input" type="password" placeholder="••••••••">
+        </div>
+        <button class="modal-submit">Giriş Yap</button>
+        <div class="modal-footer">
+          Hesabınız yok mu? <a onclick="switchMode('register')">Ücretsiz kaydolun</a>
+        </div>
+      </div>
+
+      <!-- REGISTER -->
+      <div class="register-only">
+        <div class="modal-header">
+          <div class="modal-title">DevPulse'a Katılın 🚀</div>
+          <div class="modal-sub">Dakikalar içinde entegrasyonunuzu tamamlayın</div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">Hesap Bilgileri</div>
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Ad</label>
+              <input class="form-input" type="text" placeholder="Ahmet">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Soyad</label>
+              <input class="form-input" type="text" placeholder="Kaya">
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:14px;">
+            <label class="form-label">E-posta</label>
+            <input class="form-input" type="email" placeholder="ornek@sirket.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Şifre</label>
+            <input class="form-input" type="password" placeholder="En az 8 karakter">
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">Jira Entegrasyonu</div>
+          <div class="form-group">
+            <label class="form-label">Jira E-posta</label>
+            <input class="form-input" type="email" placeholder="jira-kullanici@sirket.com">
+            <div class="form-hint">Jira hesabınıza kayıtlı e-posta adresi</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Jira API Token</label>
+            <input class="form-input" type="password" placeholder="••••••••••••••••••••">
+            <div class="form-hint">
+              <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" style="color:var(--accent);text-decoration:none;">Atlassian hesabınızdan</a> token oluşturabilirsiniz
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Jira Base URL</label>
+            <input class="form-input" type="url" placeholder="https://sirketiniz.atlassian.net">
+            <div class="form-hint">Örn: https://acme.atlassian.net</div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">Kolay İK Entegrasyonu <span style="font-size:0.7rem;color:var(--ink-30);font-weight:400;text-transform:none;letter-spacing:0;margin-left:6px;">İsteğe bağlı</span></div>
+          <div class="form-group">
+            <label class="form-label">Kolay İK API Token <span class="opt">(opsiyonel)</span></label>
+            <input class="form-input" type="password" placeholder="••••••••••••••••••••">
+            <div class="form-hint">Kolay İK panel → Ayarlar → API bölümünden alabilirsiniz</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kolay İK Base URL <span class="opt">(opsiyonel)</span></label>
+            <input class="form-input" type="url" placeholder="https://api.kolayik.com/v2">
+            <div class="form-hint">Kolay İK API dökümantasyonunuzdan edinebilirsiniz</div>
+          </div>
+        </div>
+
+        <button class="modal-submit">Hesap Oluştur ve Başla →</button>
+        <div class="modal-footer">
+          Zaten hesabınız var mı? <a onclick="switchMode('login')">Giriş yapın</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // Modal
+  function openModal(mode) {
+    const overlay = document.getElementById('modalOverlay');
+    const modal = document.getElementById('modal');
+    overlay.classList.add('open');
+    modal.className = 'modal mode-' + mode;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function switchMode(mode) {
+    document.getElementById('modal').className = 'modal mode-' + mode;
+  }
+
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById('modalOverlay')) closeModal();
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  // Scroll animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

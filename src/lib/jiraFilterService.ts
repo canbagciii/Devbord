@@ -24,98 +24,65 @@ export interface SelectedDeveloper {
 
 class JiraFilterService {
   async getSelectedProjects(): Promise<SelectedProject[]> {
-    const { data: { user } } = await supabase.auth.getUser();
-    // JWT app_metadata'da olmayabilir (eski oturum); localStorage login sırasında set edilir
-    const companyId = user?.app_metadata?.company_id ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('companyId') : null);
-
-    console.log('🔍 getSelectedProjects - company_id:', companyId);
-
-    let query = supabase
+    const { data, error } = await supabase
       .from('selected_projects')
       .select('*')
       .eq('is_active', true)
       .order('project_name');
 
-    if (companyId) {
-      query = query.eq('company_id', companyId);
-    }
-
-    const { data, error } = await query;
-
     if (error) {
-      console.error('❌ Error fetching selected projects:', error);
+      console.error('Error fetching selected projects:', error);
       throw error;
     }
 
-    console.log(`📋 getSelectedProjects: Found ${data?.length || 0} active projects`, data?.map(p => p.project_key));
     return data || [];
   }
 
   async getSelectedDevelopers(): Promise<SelectedDeveloper[]> {
-    const { data: { user } } = await supabase.auth.getUser();
-    const companyId = user?.app_metadata?.company_id ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('companyId') : null);
-
-    console.log('🔍 getSelectedDevelopers - company_id:', companyId);
-
-    let query = supabase
+    const { data, error } = await supabase
       .from('selected_developers')
       .select('*')
       .eq('is_active', true)
       .order('developer_name');
 
-    if (companyId) {
-      query = query.eq('company_id', companyId);
-    }
-
-    const { data, error } = await query;
-
     if (error) {
-      console.error('❌ Error fetching selected developers:', error);
+      console.error('Error fetching selected developers:', error);
       throw error;
     }
 
-    console.log(`👥 getSelectedDevelopers: Found ${data?.length || 0} active developers`, data?.map(d => d.developer_name));
     return data || [];
   }
 
   async addProject(projectKey: string, projectName: string): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
 
-    console.log('🔍 addProject - User:', user?.email);
-    console.log('🔍 addProject - app_metadata:', user?.app_metadata);
-
     if (!user) {
       throw new Error('Kullanıcı oturum açmamış');
     }
 
-    const company_id = user.app_metadata?.company_id ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('companyId') : null);
-
-    console.log('🔍 addProject - company_id:', company_id);
+    const company_id = user.app_metadata?.company_id;
 
     if (!company_id) {
-      throw new Error('Kullanıcının company_id bilgisi bulunamadı. Lütfen çıkış yapıp tekrar giriş yapın.');
+      throw new Error('Kullanıcının company_id bilgisi bulunamadı');
     }
 
     const { data: existing } = await supabase
       .from('selected_projects')
       .select('*')
       .eq('project_key', projectKey)
-      .eq('company_id', company_id)
       .maybeSingle();
 
     if (existing) {
       const { error } = await supabase
         .from('selected_projects')
         .update({ is_active: true, updated_at: new Date().toISOString() })
-        .eq('id', existing.id);
+        .eq('project_key', projectKey);
 
       if (error) {
-        console.error('❌ Error activating project:', error);
-        throw new Error(`Proje aktifleştirilemedi: ${error.message}`);
+        console.error('Error activating project:', error);
+        throw error;
       }
-      console.log('✅ Project reactivated:', projectKey);
     } else {
-      console.log('📝 Inserting new project:', { projectKey, projectName, company_id });
       const { error } = await supabase
         .from('selected_projects')
         .insert({
@@ -127,10 +94,9 @@ class JiraFilterService {
         });
 
       if (error) {
-        console.error('❌ Error adding project:', error);
-        throw new Error(`Proje eklenemedi: ${error.message}`);
+        console.error('Error adding project:', error);
+        throw error;
       }
-      console.log('✅ Project added successfully:', projectKey);
     }
   }
 
@@ -143,19 +109,14 @@ class JiraFilterService {
   ): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
 
-    console.log('🔍 addDeveloper - User:', user?.email);
-    console.log('🔍 addDeveloper - app_metadata:', user?.app_metadata);
-
     if (!user) {
       throw new Error('Kullanıcı oturum açmamış');
     }
 
-    const company_id = user.app_metadata?.company_id ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('companyId') : null);
-
-    console.log('🔍 addDeveloper - company_id:', company_id);
+    const company_id = user.app_metadata?.company_id;
 
     if (!company_id) {
-      throw new Error('Kullanıcının company_id bilgisi bulunamadı. Lütfen çıkış yapıp tekrar giriş yapın.');
+      throw new Error('Kullanıcının company_id bilgisi bulunamadı');
     }
 
     if (projectKeys && projectKeys.length > 0 && allProjects) {
@@ -184,57 +145,33 @@ class JiraFilterService {
       }
     }
 
-    // Önce e-posta ile ara (UNIQUE kısıt company_id + developer_email üzerinde)
-    const emailToUse = email ?? '';
-    let existing: SelectedDeveloper | null = null;
-
-    if (emailToUse) {
-      const { data: byEmail } = await supabase
-        .from('selected_developers')
-        .select('*')
-        .eq('company_id', company_id)
-        .eq('developer_email', emailToUse)
-        .maybeSingle();
-      existing = byEmail as SelectedDeveloper | null;
-    }
-
-    // E-posta ile bulunamadıysa isim ile ara
-    if (!existing) {
-      const { data: byName } = await supabase
-        .from('selected_developers')
-        .select('*')
-        .eq('developer_name', developerName)
-        .eq('company_id', company_id)
-        .maybeSingle();
-      existing = byName as SelectedDeveloper | null;
-    }
+    const { data: existing } = await supabase
+      .from('selected_developers')
+      .select('*')
+      .eq('developer_name', developerName)
+      .maybeSingle();
 
     if (existing) {
       const { error } = await supabase
         .from('selected_developers')
         .update({
-          developer_name: developerName,
-          developer_email: emailToUse || existing.developer_email,
-          jira_account_id: jiraAccountId ?? existing.jira_account_id,
           is_active: true,
-          project_keys: projectKeys ?? existing.project_keys ?? [],
+          project_keys: projectKeys || existing.project_keys || [],
           updated_at: new Date().toISOString()
         })
-        .eq('id', existing.id);
+        .eq('developer_name', developerName);
 
       if (error) {
-        console.error('❌ Error updating developer:', error);
-        throw new Error(`Yazılımcı güncellenemedi: ${error.message}`);
+        console.error('Error activating developer:', error);
+        throw error;
       }
-      console.log('✅ Developer updated/reactivated:', developerName);
     } else {
-      console.log('📝 Inserting new developer:', { developerName, email: emailToUse || '(empty)', company_id, projectKeys });
       const { error } = await supabase
         .from('selected_developers')
         .insert({
           developer_name: developerName,
-          developer_email: emailToUse || null,
-          jira_account_id: jiraAccountId ?? null,
+          developer_email: email,
+          jira_account_id: jiraAccountId,
           project_keys: projectKeys || [],
           is_active: true,
           created_by: user.id,
@@ -242,10 +179,9 @@ class JiraFilterService {
         });
 
       if (error) {
-        console.error('❌ Error adding developer:', error);
-        throw new Error(`Yazılımcı eklenemedi: ${error.message}`);
+        console.error('Error adding developer:', error);
+        throw error;
       }
-      console.log('✅ Developer added successfully:', developerName);
     }
   }
 
@@ -314,34 +250,12 @@ class JiraFilterService {
 
   async getProjectKeys(): Promise<string[]> {
     const projects = await this.getSelectedProjects();
-    const projectKeys = projects.map(p => p.project_key);
-    console.log(`📋 getProjectKeys: ${projectKeys.length} projects:`, projectKeys);
-    return projectKeys;
+    return projects.map(p => p.project_key);
   }
 
   async getDeveloperNames(): Promise<string[]> {
     const developers = await this.getSelectedDevelopers();
-    const developerNames = developers.map(d => d.developer_name);
-    console.log(`👥 getDeveloperNames: ${developerNames.length} developers:`, developerNames);
-    return developerNames;
-  }
-
-  /**
-   * Yazılımcı ismi (normalize) -> e-posta eşlemesi. Kolay İK izin listesi vb. için kullanılır.
-   * selected_developers.developer_email kullanır; company_id filtresi getSelectedDevelopers ile aynı.
-   */
-  async getDeveloperEmailMap(): Promise<Map<string, string>> {
-    const developers = await this.getSelectedDevelopers();
-    const map = new Map<string, string>();
-    developers.forEach(dev => {
-      const name = dev.developer_name;
-      const email = dev.developer_email?.trim();
-      if (name) {
-        map.set(JiraFilterService.normalizeName(name), email || '');
-        map.set(name, email || '');
-      }
-    });
-    return map;
+    return developers.map(d => d.developer_name);
   }
 
   /** İsim normalizasyonu (JIRA ile users tablosu eşleşmesi için) */
