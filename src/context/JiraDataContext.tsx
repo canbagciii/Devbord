@@ -93,6 +93,7 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [developerActualHoursLoading, setDeveloperActualHoursLoading] = useState(false);
   const [developerActualHoursError, setDeveloperActualHoursError] = useState<string | null>(null);
   const [developerProjectMapFromUsers, setDeveloperProjectMapFromUsers] = useState<Map<string, string[]>>(new Map());
+  const [developerProjectMapFromJiraFilter, setDeveloperProjectMapFromJiraFilter] = useState<Map<string, string[]>>(new Map());
   const [developerProjectMapReady, setDeveloperProjectMapReady] = useState(false);
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
   const hasTriedRefreshForEmptyProjects = useRef(false);
@@ -155,17 +156,28 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Kullanıcı Yönetimi proje atamaları: database'den alınan bilgileri kullan
+  // Proje atamaları: Öncelik 1) users.assigned_projects, 2) selected_developers.project_keys
   const getDeveloperProjectKey = useCallback((developerName: string): string | undefined => {
     const n = normalizeName(developerName);
+
+    // Önce users tablosundan kontrol et
     const fromUsers = developerProjectMapFromUsers.get(n)?.[0];
-    return fromUsers;
-  }, [developerProjectMapFromUsers]);
+    if (fromUsers) return fromUsers;
+
+    // Yoksa JiraFilter'dan (selected_developers) kontrol et
+    const fromJiraFilter = developerProjectMapFromJiraFilter.get(n)?.[0];
+    return fromJiraFilter;
+  }, [developerProjectMapFromUsers, developerProjectMapFromJiraFilter]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    jiraFilterService.getDeveloperProjectMapFromUsers().then((map) => {
-      setDeveloperProjectMapFromUsers(map);
+
+    Promise.all([
+      jiraFilterService.getDeveloperProjectMapFromUsers(),
+      jiraFilterService.getDeveloperProjectMap()
+    ]).then(([usersMap, jiraFilterMap]) => {
+      setDeveloperProjectMapFromUsers(usersMap);
+      setDeveloperProjectMapFromJiraFilter(jiraFilterMap);
       setDeveloperProjectMapReady(true);
     });
   }, [isAuthenticated]);
