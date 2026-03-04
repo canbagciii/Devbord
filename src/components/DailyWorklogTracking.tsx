@@ -328,13 +328,22 @@ const DailyWorklogTracking: React.FC = () => {
   };
 
   const enrichWithStoryPoints = async (data: DeveloperWorklogData[]): Promise<DeveloperWorklogData[]> => {
+    console.log('🎯 enrichWithStoryPoints called');
+    console.log('  - estimationType:', estimationType);
+    console.log('  - selectedStoryPointField:', selectedStoryPointField);
+    console.log('  - selectedProject:', selectedProject);
+
     if (estimationType !== 'story_points' || !selectedStoryPointField || !selectedProject) {
+      console.log('⚠️ Skipping story point enrichment - conditions not met');
       return data;
     }
 
     try {
       const companyId = localStorage.getItem('companyId');
-      if (!companyId) return data;
+      if (!companyId) {
+        console.warn('⚠️ No company ID found, skipping enrichment');
+        return data;
+      }
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -343,18 +352,30 @@ const DailyWorklogTracking: React.FC = () => {
       data.forEach(dev => {
         dev.dailySummaries.forEach(day => {
           day.entries.forEach(entry => {
+            // Proje kontrolü - seçili proje ile eşleşen tüm issue'ları dahil et
             if (entry.project === selectedProject || entry.issueKey.startsWith(selectedProject + '-')) {
               issueKeys.add(entry.issueKey);
+              console.log(`  ✅ Including issue: ${entry.issueKey} (project: ${entry.project})`);
+            } else {
+              console.log(`  ⏭️ Skipping issue: ${entry.issueKey} (project: ${entry.project})`);
             }
           });
         });
       });
 
-      if (issueKeys.size === 0) return data;
+      if (issueKeys.size === 0) {
+        console.warn('⚠️ No matching issues found for project:', selectedProject);
+        console.log('Available entries:', data.flatMap(d => d.dailySummaries.flatMap(s => s.entries.map(e => ({ key: e.issueKey, project: e.project })))));
+        return data;
+      }
 
       console.log(`📊 Fetching story points for ${issueKeys.size} issues from project ${selectedProject}`);
+      console.log(`📋 Issue keys:`, Array.from(issueKeys));
 
       const jql = `key in (${Array.from(issueKeys).join(',')})`;
+      const endpoint = `/rest/api/3/search?jql=${encodeURIComponent(jql)}&fields=${selectedStoryPointField}&maxResults=1000`;
+      console.log('🔗 Jira API endpoint:', endpoint);
+
       const response = await fetch(`${supabaseUrl}/functions/v1/jira-proxy`, {
         method: 'POST',
         headers: {
@@ -363,34 +384,49 @@ const DailyWorklogTracking: React.FC = () => {
           'x-company-id': companyId,
         },
         body: JSON.stringify({
-          endpoint: `/rest/api/3/search?jql=${encodeURIComponent(jql)}&fields=${selectedStoryPointField}&maxResults=1000`,
+          endpoint,
           method: 'GET',
         }),
       });
 
       if (!response.ok) {
-        console.warn('Story point fetch failed:', response.statusText);
+        const errorText = await response.text();
+        console.error('❌ Story point fetch failed:', response.status, response.statusText, errorText);
         return data;
       }
 
       const result: { issues: Array<{ key: string; fields: Record<string, any> }> } = await response.json();
+      console.log(`📥 Received ${result.issues?.length || 0} issues from Jira`);
+
       const storyPointMap = new Map<string, number>();
 
-      result.issues.forEach(issue => {
+      result.issues?.forEach(issue => {
         const storyPoints = issue.fields[selectedStoryPointField];
+        console.log(`  📌 ${issue.key}: field[${selectedStoryPointField}] = ${storyPoints} (type: ${typeof storyPoints})`);
+
         if (typeof storyPoints === 'number' && storyPoints > 0) {
           storyPointMap.set(issue.key, storyPoints);
+          console.log(`    ✅ Added to map: ${issue.key} -> ${storyPoints} SP`);
+        } else {
+          console.log(`    ⚠️ Skipped (not a valid number or zero)`);
         }
       });
 
-      console.log(`✅ Fetched story points for ${storyPointMap.size} issues`);
+      console.log(`✅ Story point map created with ${storyPointMap.size} entries`);
+      console.log('📊 Story point map:', Object.fromEntries(storyPointMap));
 
       return data.map(dev => {
         const enrichedDailySummaries = dev.dailySummaries.map(day => {
-          const enrichedEntries = day.entries.map(entry => ({
-            ...entry,
-            storyPoints: storyPointMap.get(entry.issueKey)
-          }));
+          const enrichedEntries = day.entries.map(entry => {
+            const storyPoints = storyPointMap.get(entry.issueKey);
+            if (storyPoints) {
+              console.log(`  🎯 Enriching ${entry.issueKey} with ${storyPoints} SP`);
+            }
+            return {
+              ...entry,
+              storyPoints
+            };
+          });
 
           const totalStoryPoints = enrichedEntries.reduce((sum, entry) =>
             sum + (entry.storyPoints || 0), 0
@@ -407,6 +443,8 @@ const DailyWorklogTracking: React.FC = () => {
           sum + (day.totalStoryPoints || 0), 0
         );
 
+        console.log(`👤 ${dev.developerName}: ${weeklyTotalStoryPoints} SP total`);
+
         return {
           ...dev,
           dailySummaries: enrichedDailySummaries,
@@ -414,7 +452,7 @@ const DailyWorklogTracking: React.FC = () => {
         };
       });
     } catch (error) {
-      console.error('Error enriching with story points:', error);
+      console.error('❌ Error enriching with story points:', error);
       return data;
     }
   };
