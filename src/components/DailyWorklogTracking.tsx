@@ -20,7 +20,8 @@ import {
   ChevronUp,
   AlertTriangle,
   Info,
-  CalendarDays
+  CalendarDays,
+  Loader
 } from 'lucide-react';
 
 type ViewMode = 'weekly' | 'monthly';
