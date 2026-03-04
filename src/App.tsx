@@ -128,7 +128,7 @@ const [activeTab, setActiveTab] = useState<
   { id: 'dashboard', label: 'Ekip Analizi', icon: Users },
   { id: 'assignment', label: 'Kapasite', icon: Plus },
   { id: 'user-management', label: 'Kullanıcılar', icon: Settings },
-  ...(hasKolayIK ? [{ id: 'kolayik-employees' as const, label: 'Kolay IK', icon: Users }] : []),
+  ...(hasKolayIK ? [{ id: 'kolayik-employees' as const, label: 'İzin Takibi', icon: Users }] : []),
 ];
 
   const developerTabs = [
