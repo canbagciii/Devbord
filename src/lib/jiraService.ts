@@ -596,15 +596,58 @@ class JiraService {
     }
   }
 
-  async getStoryPointFields(): Promise<Array<{ id: string; name: string }>> {
+  async getStoryPointFields(projectKey?: string): Promise<Array<{ id: string; name: string }>> {
     try {
       const allFields = await this.getAllFields();
+
+      // İsminde story/point içeren tüm field'ları bul
       const storyPointFields = allFields.filter(field => {
         const nameLower = field.name.toLowerCase();
         return (nameLower.includes('story') && nameLower.includes('point')) ||
                nameLower.includes('storypoint') ||
-               nameLower.includes('story point');
+               nameLower.includes('story point') ||
+               (nameLower.includes('sp') && !nameLower.includes('response')) ||
+               nameLower.includes('estimate');
       });
+
+      console.log('📊 All field candidates found:', storyPointFields.length);
+      storyPointFields.forEach(f => console.log(`  - ${f.name} (${f.id})`));
+
+      // Eğer proje belirtilmişse, o projeden bir issue çekerek kullanılan field'ları doğrula
+      if (projectKey && storyPointFields.length > 0) {
+        try {
+          const searchUrl = `/search?jql=project=${projectKey}&maxResults=1&fields=${storyPointFields.map(f => f.id).join(',')}`;
+          console.log('🔍 Checking project:', projectKey);
+          const searchResult = await this.makeRequestWithRetry<{ issues: any[] }>(searchUrl);
+
+          if (searchResult.issues && searchResult.issues.length > 0) {
+            const issue = searchResult.issues[0];
+            console.log('📋 Sample issue fields:', Object.keys(issue.fields));
+
+            // Issue'da gerçekten dolu olan field'ları filtrele
+            const activeFields = storyPointFields.filter(field => {
+              const value = issue.fields[field.id];
+              const hasValue = value !== undefined && value !== null;
+              if (hasValue) {
+                console.log(`  ✅ ${field.name} (${field.id}) = ${value}`);
+              }
+              return hasValue;
+            });
+
+            if (activeFields.length > 0) {
+              console.log('✅ Active story point fields in project:', activeFields.length);
+              return activeFields.map(f => ({ id: f.id, name: f.name }));
+            } else {
+              console.warn('⚠️ No story point fields with values found in sample issue');
+            }
+          } else {
+            console.warn('⚠️ No issues found in project to verify fields');
+          }
+        } catch (projectError) {
+          console.warn('⚠️ Could not fetch project-specific fields, using all candidates:', projectError);
+        }
+      }
+
       return storyPointFields.map(f => ({ id: f.id, name: f.name }));
     } catch (error) {
       console.error('Error fetching story point fields:', error);

@@ -69,14 +69,25 @@ const DailyWorklogTracking: React.FC = () => {
   const loadStoryPointFields = async () => {
     setLoadingFields(true);
     try {
-      const fields = await jiraService.getStoryPointFields();
+      // Kullanıcının seçili projelerini al
+      const { jiraFilterService } = await import('../lib/jiraFilterService');
+      const selectedProjects = await jiraFilterService.getSelectedProjects();
+
+      // Aktif bir proje varsa onu kullan
+      const activeProject = selectedProjects.find(p => p.is_active);
+      const projectKey = activeProject?.project_key;
+
+      console.log('🎯 Loading story point fields for project:', projectKey || 'all');
+
+      const fields = await jiraService.getStoryPointFields(projectKey);
       setStoryPointFields(fields);
+
       if (fields.length === 0) {
-        alert('Jira\'da story point içeren field bulunamadı.');
+        alert('Jira\'da story point içeren field bulunamadı. Proje ayarlarınızı kontrol edin.');
       }
     } catch (error) {
       console.error('Story point fields yüklenirken hata:', error);
-      alert('Story point field\'ları yüklenirken hata oluştu.');
+      alert('Story point field\'ları yüklenirken hata oluştu: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
     } finally {
       setLoadingFields(false);
     }
