@@ -413,6 +413,28 @@ class JiraFilterService {
 
     return data?.project_keys || [];
   }
+
+  async getStoryPointFieldMappings(): Promise<Array<{ project_key: string; field_name: string }>> {
+    const { data: { user } } = await supabase.auth.getUser();
+    const companyId = user?.app_metadata?.company_id ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('companyId') : null);
+
+    if (!companyId) {
+      console.warn('⚠️ No company ID found');
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('story_point_field_mappings')
+      .select('project_key, field_name')
+      .eq('company_id', companyId);
+
+    if (error) {
+      console.error('❌ Error fetching story point field mappings:', error);
+      return [];
+    }
+
+    return data || [];
+  }
 }
 
 export const jiraFilterService = new JiraFilterService();

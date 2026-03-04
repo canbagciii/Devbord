@@ -48,31 +48,10 @@ const DailyWorklogTracking: React.FC = () => {
 
   useEffect(() => {
     const storedEstimationType = localStorage.getItem('estimationType') as 'hours' | 'story_points' | null;
-    const storedStoryPointField = localStorage.getItem('selectedStoryPointField');
-    const storedProject = localStorage.getItem('selectedStoryPointProject');
-
     if (storedEstimationType) {
       setEstimationType(storedEstimationType);
     }
-    if (storedStoryPointField) {
-      setSelectedStoryPointField(storedStoryPointField);
-    }
-    if (storedProject) {
-      setSelectedProject(storedProject);
-    }
-
-    loadAvailableProjects();
   }, []);
-
-  const loadAvailableProjects = async () => {
-    try {
-      const { jiraFilterService } = await import('../lib/jiraFilterService');
-      const projects = await jiraFilterService.getSelectedProjects();
-      setAvailableProjects(projects.map(p => ({ key: p.project_key, name: p.project_name })));
-    } catch (error) {
-      console.error('Projeler yüklenirken hata:', error);
-    }
-  };
 
   const handleEstimationTypeChange = (type: 'hours' | 'story_points') => {
     setEstimationType(type);
@@ -193,92 +172,81 @@ const DailyWorklogTracking: React.FC = () => {
   };
 
   const enrichWithStoryPoints = async (data: DeveloperWorklogData[]): Promise<DeveloperWorklogData[]> => {
-    console.log('🎯 enrichWithStoryPoints called');
-    console.log('  - estimationType:', estimationType);
-    console.log('  - selectedStoryPointField:', selectedStoryPointField);
-    console.log('  - selectedProject:', selectedProject);
-
-    if (estimationType !== 'story_points' || !selectedStoryPointField || !selectedProject) {
-      console.log('⚠️ Skipping story point enrichment - conditions not met');
+    if (estimationType !== 'story_points') {
       return data;
     }
 
     try {
       const companyId = localStorage.getItem('companyId');
       if (!companyId) {
-        console.warn('⚠️ No company ID found, skipping enrichment');
+        return data;
+      }
+
+      // Veritabanından field mapping'leri al
+      const { jiraFilterService } = await import('../lib/jiraFilterService');
+      const fieldMappings = await jiraFilterService.getStoryPointFieldMappings();
+
+      if (fieldMappings.length === 0) {
+        console.warn('⚠️ No story point field mappings configured');
         return data;
       }
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      const issueKeys = new Set<string>();
+      // Tüm issue'ları proje bazında grupla
+      const issuesByProject = new Map<string, Set<string>>();
       data.forEach(dev => {
         dev.dailySummaries.forEach(day => {
           day.entries.forEach(entry => {
-            // Proje kontrolü - seçili proje ile eşleşen tüm issue'ları dahil et
-            if (entry.project === selectedProject || entry.issueKey.startsWith(selectedProject + '-')) {
-              issueKeys.add(entry.issueKey);
-              console.log(`  ✅ Including issue: ${entry.issueKey} (project: ${entry.project})`);
-            } else {
-              console.log(`  ⏭️ Skipping issue: ${entry.issueKey} (project: ${entry.project})`);
+            if (!issuesByProject.has(entry.project)) {
+              issuesByProject.set(entry.project, new Set());
             }
+            issuesByProject.get(entry.project)!.add(entry.issueKey);
           });
         });
       });
 
-      if (issueKeys.size === 0) {
-        console.warn('⚠️ No matching issues found for project:', selectedProject);
-        console.log('Available entries:', data.flatMap(d => d.dailySummaries.flatMap(s => s.entries.map(e => ({ key: e.issueKey, project: e.project })))));
-        return data;
-      }
-
-      console.log(`📊 Fetching story points for ${issueKeys.size} issues from project ${selectedProject}`);
-      console.log(`📋 Issue keys:`, Array.from(issueKeys));
-
-      const jql = `key in (${Array.from(issueKeys).join(',')})`;
-      const endpoint = `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&fields=${selectedStoryPointField}&maxResults=1000`;
-      console.log('🔗 Jira API endpoint:', endpoint);
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/jira-proxy`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-          'x-company-id': companyId,
-        },
-        body: JSON.stringify({
-          endpoint,
-          method: 'GET',
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Story point fetch failed:', response.status, response.statusText, errorText);
-        return data;
-      }
-
-      const result: { issues: Array<{ key: string; fields: Record<string, any> }> } = await response.json();
-      console.log(`📥 Received ${result.issues?.length || 0} issues from Jira`);
-
       const storyPointMap = new Map<string, number>();
 
-      result.issues?.forEach(issue => {
-        const storyPoints = issue.fields[selectedStoryPointField];
-        console.log(`  📌 ${issue.key}: field[${selectedStoryPointField}] = ${storyPoints} (type: ${typeof storyPoints})`);
-
-        if (typeof storyPoints === 'number' && storyPoints > 0) {
-          storyPointMap.set(issue.key, storyPoints);
-          console.log(`    ✅ Added to map: ${issue.key} -> ${storyPoints} SP`);
-        } else {
-          console.log(`    ⚠️ Skipped (not a valid number or zero)`);
+      // Her proje için ayrı ayrı story point'leri çek
+      for (const [projectKey, issueKeys] of issuesByProject.entries()) {
+        const mapping = fieldMappings.find(m => m.project_key === projectKey);
+        if (!mapping || !mapping.field_name) {
+          console.warn(`⚠️ No field mapping for project: ${projectKey}`);
+          continue;
         }
-      });
 
-      console.log(`✅ Story point map created with ${storyPointMap.size} entries`);
-      console.log('📊 Story point map:', Object.fromEntries(storyPointMap));
+        const jql = `key in (${Array.from(issueKeys).join(',')})`;
+        const endpoint = `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&fields=${mapping.field_name}&maxResults=1000`;
+
+        const response = await fetch(`${supabaseUrl}/functions/v1/jira-proxy`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'x-company-id': companyId,
+          },
+          body: JSON.stringify({
+            endpoint,
+            method: 'GET',
+          }),
+        });
+
+        if (!response.ok) {
+          console.error(`❌ Story point fetch failed for ${projectKey}`);
+          continue;
+        }
+
+        const result: { issues: Array<{ key: string; fields: Record<string, any> }> } = await response.json();
+
+        result.issues?.forEach(issue => {
+          const storyPoints = issue.fields[mapping.field_name];
+          if (typeof storyPoints === 'number' && storyPoints > 0) {
+            storyPointMap.set(issue.key, storyPoints);
+          }
+        });
+      }
 
       return data.map(dev => {
         const enrichedDailySummaries = dev.dailySummaries.map(day => {
@@ -390,7 +358,7 @@ const DailyWorklogTracking: React.FC = () => {
     const needsMapForFilter = user?.role === 'analyst' || user?.role === 'developer';
     if (needsMapForFilter && !developerProjectMapReady) return;
     loadWorklogData();
-  }, [currentDate, viewMode, capacityAdjustmentEnabled, developerProjectMapReady, user?.role, lastRefreshAt, estimationType, selectedStoryPointField, selectedProject]);
+  }, [currentDate, viewMode, capacityAdjustmentEnabled, developerProjectMapReady, user?.role, lastRefreshAt, estimationType]);
 
   const navigateDate = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
