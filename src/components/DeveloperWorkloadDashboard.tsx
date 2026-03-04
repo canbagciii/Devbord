@@ -145,24 +145,9 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
   };
 
 
-  // Yazılımcının proje anahtarını getir (Kullanıcı Yönetimi öncelikli)
-  const getDeveloperProjectKey = (developerName: string): string => {
-    return getDeveloperProjectKeyFromContext(developerName) ?? 'UNKNOWN';
-  };
-
-  // Sprint tarih aralığı için proje haritası (workload'taki her geliştirici için context'ten)
-  const developerProjectKeyMapForUtil = React.useMemo(() => {
-    const m: Record<string, string> = {};
-    workload?.forEach(w => {
-      const k = getDeveloperProjectKeyFromContext(w.developer);
-      if (k) m[w.developer] = k;
-    });
-    return m;
-  }, [workload, getDeveloperProjectKeyFromContext]);
-
   // Yazılımcının sprint tarih aralığını getir
   const getDeveloperSprintDateRange = (developerName: string): { start: string; end: string; sprintNames: string[] } => {
-    return getDeveloperSprintDateRangeUtil(developerName, sprints, developerProjectKeyMapForUtil);
+    return getDeveloperSprintDateRangeUtil(developerName, sprints, developerProjectKeys);
   };
 
   // Genel sprint tarih aralığını hesapla (tüm sprintlerden)
