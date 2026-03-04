@@ -1,6 +1,3 @@
-
-
-
 import { KolayIKEmployee, KolayIKLeaveRequest, KolayIKLeaveType, DeveloperLeaveInfo, CapacityCalculation } from '../types/kolayik';
 import { supabase } from '../lib/supabase';
 import { jiraFilterService } from '../lib/jiraFilterService';
@@ -1012,7 +1009,7 @@ class KolayIKService {
           message = 'KOLAYIK_API_TOKEN environment variable eksik. Supabase Dashboard\'da Edge Functions ayarlarından ekleyin.';
         } else { 
           message = error.message;
-        } 
+        }
       }
       
       return {
