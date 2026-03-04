@@ -79,10 +79,99 @@ const DailyWorklogTracking: React.FC = () => {
 
       console.log('🎯 Loading story point fields for project:', projectKey || 'all');
 
-      const fields = await jiraService.getStoryPointFields(projectKey);
-      setStoryPointFields(fields);
+      // Company ID'yi al
+      const companyId = localStorage.getItem('companyId');
+      if (!companyId) {
+        throw new Error('Company ID bulunamadı');
+      }
 
-      if (fields.length === 0) {
+      // Edge function üzerinden tüm field'ları çek
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const fieldsResponse = await fetch(`${supabaseUrl}/functions/v1/jira-proxy`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'x-company-id': companyId,
+        },
+        body: JSON.stringify({
+          endpoint: '/rest/api/3/field',
+          method: 'GET',
+        }),
+      });
+
+      if (!fieldsResponse.ok) {
+        throw new Error('Field\'lar yüklenemedi');
+      }
+
+      const allFields: Array<{ id: string; name: string }> = await fieldsResponse.json();
+      console.log('📊 Total fields fetched:', allFields.length);
+
+      // Story point içerenleri filtrele
+      const storyPointFields = allFields.filter(field => {
+        const nameLower = field.name.toLowerCase();
+        return (nameLower.includes('story') && nameLower.includes('point')) ||
+               nameLower.includes('storypoint') ||
+               nameLower.includes('story point') ||
+               (nameLower.includes('sp') && !nameLower.includes('response')) ||
+               nameLower.includes('estimate');
+      });
+
+      console.log('📊 Story point field candidates:', storyPointFields.length);
+      storyPointFields.forEach(f => console.log(`  - ${f.name} (${f.id})`));
+
+      // Eğer proje varsa, o projeden sample issue çekerek doğrula
+      if (projectKey && storyPointFields.length > 0) {
+        try {
+          const searchResponse = await fetch(`${supabaseUrl}/functions/v1/jira-proxy`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseAnonKey}`,
+              'x-company-id': companyId,
+            },
+            body: JSON.stringify({
+              endpoint: `/rest/api/3/search?jql=project=${projectKey}&maxResults=1&fields=${storyPointFields.map(f => f.id).join(',')}`,
+              method: 'GET',
+            }),
+          });
+
+          if (searchResponse.ok) {
+            const searchResult: { issues: any[] } = await searchResponse.json();
+            if (searchResult.issues && searchResult.issues.length > 0) {
+              const issue = searchResult.issues[0];
+              console.log('📋 Sample issue fields:', Object.keys(issue.fields));
+
+              // Issue'da gerçekten dolu olan field'ları filtrele
+              const activeFields = storyPointFields.filter(field => {
+                const value = issue.fields[field.id];
+                const hasValue = value !== undefined && value !== null;
+                if (hasValue) {
+                  console.log(`  ✅ ${field.name} (${field.id}) = ${value}`);
+                }
+                return hasValue;
+              });
+
+              if (activeFields.length > 0) {
+                console.log('✅ Active story point fields in project:', activeFields.length);
+                setStoryPointFields(activeFields);
+                if (activeFields.length === 0) {
+                  alert('Jira\'da story point içeren field bulunamadı. Proje ayarlarınızı kontrol edin.');
+                }
+                return;
+              }
+            }
+          }
+        } catch (projectError) {
+          console.warn('⚠️ Proje bazlı kontrol yapılamadı, tüm field\'lar gösteriliyor:', projectError);
+        }
+      }
+
+      setStoryPointFields(storyPointFields);
+
+      if (storyPointFields.length === 0) {
         alert('Jira\'da story point içeren field bulunamadı. Proje ayarlarınızı kontrol edin.');
       }
     } catch (error) {
