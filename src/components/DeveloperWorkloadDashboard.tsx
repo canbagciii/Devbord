@@ -43,8 +43,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
   const [editingCapacity, setEditingCapacity] = useState<string | null>(null);
   const [capacityValue, setCapacityValue] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Actual hours yönetimi için custom hook
+
   const { actualHoursData, loading: actualHoursLoading, error: actualHoursError } = useDeveloperActualHours({
     workload,
     sprints,
@@ -57,35 +56,21 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
   const [customDateRange, setCustomDateRange] = useState<{ start: string; end: string } | null>(null);
   const [localLastRefreshAt, setLocalLastRefreshAt] = useState<number | null>(null);
 
-  // Tarih aralığını hesapla
   useEffect(() => {
     const dateRange = viewMode === 'weekly'
       ? getWeekRange(currentDate)
       : getMonthRange(currentDate);
-
-    setCustomDateRange({
-      start: dateRange.start,
-      end: dateRange.end
-    });
+    setCustomDateRange({ start: dateRange.start, end: dateRange.end });
   }, [currentDate, viewMode]);
 
-  // Global lastRefreshAt değiştiğinde local state'i güncelle
   useEffect(() => {
-    if (lastRefreshAt) {
-      setLocalLastRefreshAt(lastRefreshAt);
-    }
+    if (lastRefreshAt) setLocalLastRefreshAt(lastRefreshAt);
   }, [lastRefreshAt]);
 
   const formatLastRefresh = () => {
     if (!localLastRefreshAt) return 'Henüz yenilenmedi';
     const d = new Date(localLastRefreshAt);
-    return d.toLocaleString('tr-TR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return d.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   const handleRefreshClick = () => {
@@ -93,45 +78,27 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
     refresh();
   };
 
-  // Tarih navigasyonu
   const navigateDate = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
-
-    if (viewMode === 'weekly') {
-      newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
-    } else {
-      newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
-    }
-
+    if (viewMode === 'weekly') newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
+    else newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
     setCurrentDate(newDate);
   };
 
-  // Bugüne git
-  const goToToday = () => {
-    setCurrentDate(new Date());
-  };
+  const goToToday = () => setCurrentDate(new Date());
 
-  // Tarih formatı
   const formatDateRange = () => {
     if (!customDateRange) return '';
-
     const startDate = new Date(customDateRange.start);
     const endDate = new Date(customDateRange.end);
-
-    const formatDate = (date: Date) => {
-      return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    };
-
+    const formatDate = (date: Date) => date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     return `${formatDate(startDate)} - ${formatDate(endDate)}`;
   };
 
-
-  // Yazılımcının proje anahtarını getir (Kullanıcı Yönetimi öncelikli)
   const getDeveloperProjectKey = (developerName: string): string => {
     return getDeveloperProjectKeyFromContext(developerName) ?? 'UNKNOWN';
   };
 
-  // Sprint tarih aralığı için proje haritası (workload'taki her geliştirici için context'ten)
   const developerProjectKeyMapForUtil = React.useMemo(() => {
     const m: Record<string, string> = {};
     workload?.forEach(w => {
@@ -141,15 +108,14 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
     return m;
   }, [workload, getDeveloperProjectKeyFromContext]);
 
-  // Yazılımcının sprint tarih aralığını getir
   const getDeveloperSprintDateRange = (developerName: string): { start: string; end: string; sprintNames: string[] } => {
     return getDeveloperSprintDateRangeUtil(developerName, sprints, developerProjectKeyMapForUtil);
   };
 
-  // Genel sprint tarih aralığını hesapla (tüm sprintlerden)
   const getOverallSprintDateRangeLocal = (): { start: string; end: string } | null => {
     return getOverallSprintDateRange(sprints);
   };
+
   const handleCapacityEdit = (developerName: string) => {
     const currentCapacity = getCapacity(developerName);
     setEditingCapacity(developerName);
@@ -159,11 +125,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
   const handleCapacitySave = async (developerName: string) => {
     try {
       const newCapacity = parseInt(capacityValue);
-      if (isNaN(newCapacity) || newCapacity <= 0) {
-        alert('Geçerli bir kapasite değeri girin');
-        return;
-      }
-
+      if (isNaN(newCapacity) || newCapacity <= 0) { alert('Geçerli bir kapasite değeri girin'); return; }
       await updateCapacity(developerName, newCapacity);
       updateWorkloadStatus(developerName, newCapacity);
       setEditingCapacity(null);
@@ -183,29 +145,31 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
     .filter(dev => {
       if (!searchTerm) return true;
       const searchLower = searchTerm.toLowerCase();
-      return dev.developer.toLowerCase().includes(searchLower) ||
-             dev.email.toLowerCase().includes(searchLower);
+      return dev.developer.toLowerCase().includes(searchLower) || dev.email.toLowerCase().includes(searchLower);
     })
     .sort((a, b) => (actualHoursData[b.developer] || 0) - (actualHoursData[a.developer] || 0)) : [];
 
-  // Statistics
-  const stats = calculateWorkloadStats(
-    filteredWorkload,
-    actualHoursData,
-    capacityCalculations,
-    showKolayIKIntegration,
-    getCapacity
-  );
+  const stats = calculateWorkloadStats(filteredWorkload, actualHoursData, capacityCalculations, showKolayIKIntegration, getCapacity);
 
+  const avatarColors = [
+    'from-violet-500 to-purple-600',
+    'from-blue-500 to-cyan-600',
+    'from-emerald-500 to-teal-600',
+    'from-orange-500 to-amber-600',
+    'from-rose-500 to-pink-600',
+    'from-indigo-500 to-blue-600',
+  ];
+
+  const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-2 border-slate-100 border-t-blue-600 animate-spin" />
           <div className="text-center">
-            <p className="text-lg text-gray-700">Yazılımcı İş Yükü Analizi</p>
-            <p className="text-sm text-gray-500 mt-1">Jira verisi alınıyor, bu işlem 10 saniye sürebilir...</p>
+            <p className="text-slate-700 font-medium">Yazılımcı İş Yükü Analizi</p>
+            <p className="text-sm text-slate-400 mt-1">Jira verisi alınıyor, bu işlem 10 saniye sürebilir…</p>
           </div>
         </div>
       </div>
@@ -214,15 +178,12 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <div className="flex items-center space-x-2">
-          <AlertTriangle className="h-5 w-5 text-red-600" />
-          <p className="text-red-800">{error}</p>
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+        <div className="flex items-center gap-2 mb-3">
+          <AlertTriangle className="h-5 w-5 text-red-500" />
+          <p className="text-red-800 font-medium">{error}</p>
         </div>
-        <button
-          onClick={refresh}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-        >
+        <button onClick={refresh} className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
           Tekrar Dene
         </button>
       </div>
@@ -230,61 +191,60 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 p-1">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Yazılımcı İş Yükü Analizi</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Yazılımcı İş Yükü Analizi</h2>
+          <p className="text-slate-500 mt-0.5 text-sm">
             {viewMode === 'weekly' ? 'Haftalık' : 'Aylık'} görev dağılımı ve iş yükü analizi
           </p>
           {actualHoursLoading && (
-            <p className="text-sm text-blue-600 mt-1 flex items-center space-x-2">
-              <Loader className="h-4 w-4 animate-spin" />
-              <span>Sprint verileri yükleniyor 10 saniye sürebilir...</span>
+            <p className="text-xs text-blue-600 mt-1 flex items-center gap-1.5">
+              <Loader className="h-3.5 w-3.5 animate-spin" />
+              Sprint verileri yükleniyor, 10 saniye sürebilir…
             </p>
           )}
           {actualHoursError && (
-            <p className="text-sm text-red-600 mt-1">
-              ⚠️ Harcanan süre verisi yüklenemedi: {actualHoursError}
-            </p>
+            <p className="text-xs text-red-500 mt-1">⚠️ Harcanan süre verisi yüklenemedi: {actualHoursError}</p>
           )}
         </div>
-        <div className="flex items-center space-x-3">
-          <div className="text-xs text-gray-500 mr-2">
-            Son yenileme: {formatLastRefresh()}
-          </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400 mr-1">Son yenileme: {formatLastRefresh()}</span>
           <button
             onClick={() => exportDeveloperWorkloadToCSV(filteredWorkload)}
             disabled={filteredWorkload.length === 0}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-40 transition-all shadow-sm"
           >
             <Download className="h-4 w-4" />
-            <span>CSV İndir</span>
+            CSV İndir
           </button>
           {hasKolayIK && (
             <button
               onClick={() => setShowKolayIKIntegration(!showKolayIKIntegration)}
-              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all shadow-sm ${
+                showKolayIKIntegration
+                  ? 'bg-purple-600 text-white hover:bg-purple-700'
+                  : 'bg-white text-purple-600 border border-purple-200 hover:bg-purple-50'
+              }`}
             >
               <Calendar className="h-4 w-4" />
-              <span>{showKolayIKIntegration ? 'İzin Entegrasyonunu Gizle' : 'İzin Entegrasyonu'}</span>
+              {showKolayIKIntegration ? 'İzni Gizle' : 'İzin Entegrasyonu'}
             </button>
           )}
           <button
             onClick={handleRefreshClick}
             disabled={loading}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 disabled:opacity-40 transition-all shadow-sm"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Yenile</span>
+            Yenile
           </button>
         </div>
-      </div>  
+      </div>
 
- 
-
-      {/* Kolay İK Integration */}
+      {/* KolayIK Integration */}
       {hasKolayIK && showKolayIKIntegration && customDateRange && (
         <DeveloperCapacityAdjustment
           workload={filteredWorkload}
@@ -296,391 +256,316 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
           onCapacityCalculationsChange={setCapacityCalculations}
         />
       )}
-      {/* Search Filter */}
-      <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-        <div className="flex items-center justify-start">
-          <div className="relative w-80">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+
+      {/* Search */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Yazılımcı adı veya e-posta ile ara..."
+              placeholder="Yazılımcı adı veya e-posta ile ara…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
             />
           </div>
           {searchTerm && (
-            <div className="ml-3">
-              <button
-                onClick={() => setSearchTerm('')}
-                className="flex items-center space-x-2 px-3 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                <X className="h-4 w-4" />
-                <span>Temizle</span>
-              </button>
-            </div>
+            <button
+              onClick={() => setSearchTerm('')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+              Temizle
+            </button>
+          )}
+          {searchTerm && (
+            <span className="text-xs text-slate-400">{filteredWorkload.length} yazılımcı gösteriliyor</span>
           )}
         </div>
-        {searchTerm && (
-          <div className="mt-2 text-sm text-gray-600">
-            {filteredWorkload.length} yazılımcı gösteriliyor
-          </div>
-        )}
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Toplam Yazılımcı</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.totalDevelopers}</p>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {[
+          { label: 'Toplam Yazılımcı', value: stats.totalDevelopers, suffix: '', icon: Users, color: 'text-blue-600', iconBg: 'bg-blue-50' },
+          { label: 'Eksik Yük', value: stats.underloaded, suffix: '', icon: AlertTriangle, color: 'text-amber-500', iconBg: 'bg-amber-50' },
+          { label: 'Yeterli Yük', value: stats.adequate, suffix: '', icon: CheckCircle, color: 'text-emerald-600', iconBg: 'bg-emerald-50' },
+          { label: 'Aşırı Yük', value: stats.overloaded, suffix: '', icon: TrendingUp, color: 'text-red-600', iconBg: 'bg-red-50' },
+          { label: 'Toplam Harcanan', value: stats.totalActualHours, suffix: 'h', icon: Clock, color: 'text-violet-600', iconBg: 'bg-violet-50', sub: 'Sprint tarihleri' },
+        ].map((card) => (
+          <div key={card.label} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-3">
+            <div className={`w-10 h-10 ${card.iconBg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+              <card.icon className={`h-5 w-5 ${card.color}`} />
             </div>
-            <Users className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Eksik Yük</p>
-              <p className="text-2xl font-bold text-yellow-600">{stats.underloaded}</p>
+            <div className="min-w-0">
+              <p className="text-xs text-slate-500 font-medium truncate">{card.label}</p>
+              <p className={`text-xl font-bold ${card.color} leading-tight tabular-nums`}>{card.value}{card.suffix}</p>
+              {card.sub && <p className="text-[10px] text-slate-400 mt-0.5">{card.sub}</p>}
             </div>
-            <AlertTriangle className="h-8 w-8 text-yellow-600" />
           </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Yeterli Yük</p>
-              <p className="text-2xl font-bold text-green-600">{stats.adequate}</p>
-            </div>
-            <CheckCircle className="h-8 w-8 text-green-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Aşırı Yük</p>
-              <p className="text-2xl font-bold text-red-600">{stats.overloaded}</p>
-            </div>
-            <TrendingUp className="h-8 w-8 text-red-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Toplam Harcanan</p>
-              <p className="text-2xl font-bold text-purple-600">{stats.totalActualHours}h</p>
-              <p className="text-xs text-gray-500 mt-1">Sprint tarihleri </p>
-            </div>
-            <Clock className="h-8 w-8 text-purple-600" />
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Developer Workload Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Yazılımcı İş Yükü Detayları</h3>
-          <p className="text-sm text-gray-600 mt-1">
+      {/* Workload Table */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h3 className="text-base font-semibold text-slate-800">Yazılımcı İş Yükü Detayları</h3>
+          <p className="text-xs text-slate-400 mt-0.5">
             Tahmini süreler sprint görevlerinden, harcanan süreler yazılımcının kendi projesinin sprint tarihlerindeki worklog'larından hesaplanır
           </p>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Yazılımcı
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Görev Sayısı
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Analist Tahmini Süre
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Yazılımcı Harcanan Süre
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Kapasite
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Durum
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Detay
-                </th>
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                {['Yazılımcı', 'Görev Sayısı', 'Analist Tahmini', 'Harcanan Süre', 'Kapasite', 'Durum', 'Detay'].map((h, i) => (
+                  <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider ${i === 0 ? 'text-left' : 'text-center'}`}>
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-slate-100">
               {filteredWorkload.map((developer, index) => {
                 const capacity = getCapacity(developer.developer);
                 const actualHours = actualHoursData[developer.developer] || 0;
-                
+                const isExpanded = expandedDeveloper === developer.developer;
+                const avatarGradient = avatarColors[index % avatarColors.length];
+
+                const devCapacity = getDeveloperCapacity(
+                  developer.developer,
+                  getCapacity,
+                  hasKolayIK && showKolayIKIntegration,
+                  capacityCalculations
+                );
+                const currentStatus = calculateDeveloperStatus(actualHours, devCapacity);
+
                 return (
                   <React.Fragment key={developer.developer}>
-                    <tr className={`hover:bg-gray-50 transition-colors ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
-                    }`}>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-medium text-blue-800">
-                              {developer.developer.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                            </span>
+                    <tr className="hover:bg-slate-50/70 transition-colors">
+                      {/* Yazılımcı */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className={`flex-shrink-0 w-9 h-9 bg-gradient-to-br ${avatarGradient} rounded-full flex items-center justify-center shadow-sm`}>
+                            <span className="text-[11px] font-bold text-white">{getInitials(developer.developer)}</span>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-900">{developer.developer}</p>
-                            <p className="text-xs text-gray-500">{developer.email}</p>
+                            <p className="text-sm font-semibold text-slate-800 leading-tight">{developer.developer}</p>
+                            <p className="text-xs text-slate-400 leading-tight">{developer.email}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="text-lg font-semibold text-gray-900">{developer.totalTasks}</span>
+
+                      {/* Görev Sayısı */}
+                      <td className="px-5 py-3.5 text-center">
+                        <span className="text-base font-bold text-slate-700 tabular-nums">{developer.totalTasks}</span>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="text-lg font-semibold text-blue-600">{Math.round(developer.totalHours * 100) / 100}h</span>
+
+                      {/* Analist Tahmini */}
+                      <td className="px-5 py-3.5 text-center">
+                        <span className="text-base font-bold text-blue-600 tabular-nums">{Math.round(developer.totalHours * 100) / 100}h</span>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex flex-col items-center">
-                          {actualHoursLoading ? (
-                            <div className="flex items-center space-x-1">
-                              <Loader className="h-4 w-4 animate-spin text-blue-600" />
-                              <span className="text-sm text-gray-500">Sprint verileri bekleniyor...</span>
-                            </div>
-                          ) : actualHoursError ? (
-                            <span className="text-sm text-red-600">Hata</span>
-                          ) : (
-                            <>
-                              <span className="text-lg font-semibold text-purple-600">{actualHours}h</span>
-                              <div className="text-xs text-gray-500 mt-1">
-                                {getDeveloperProjectKey(developer.developer)} projesi
-                              </div>
-                            </>
-                          )}
-                        </div>
+
+                      {/* Harcanan Süre */}
+                      <td className="px-5 py-3.5 text-center">
+                        {actualHoursLoading ? (
+                          <div className="flex items-center justify-center gap-1.5 text-slate-400">
+                            <Loader className="h-3.5 w-3.5 animate-spin" />
+                            <span className="text-xs">Yükleniyor…</span>
+                          </div>
+                        ) : actualHoursError ? (
+                          <span className="text-xs text-red-500">Hata</span>
+                        ) : (
+                          <div>
+                            <p className="text-base font-bold text-violet-600 tabular-nums">{actualHours}h</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">{getDeveloperProjectKey(developer.developer)}</p>
+                          </div>
+                        )}
                       </td>
-                      <td className="px-6 py-4 text-center">
+
+                      {/* Kapasite */}
+                      <td className="px-5 py-3.5 text-center">
                         {editingCapacity === developer.developer ? (
-                          <div className="flex items-center justify-center space-x-2">
+                          <div className="flex items-center justify-center gap-1.5">
                             <input
                               type="number"
                               value={capacityValue}
                               onChange={(e) => setCapacityValue(e.target.value)}
-                              className="w-16 text-center border border-gray-300 rounded px-2 py-1 text-sm"
-                              min="1"
-                              max="200"
+                              className="w-14 text-center border border-slate-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              min="1" max="200"
                             />
-                            <button
-                              onClick={() => handleCapacitySave(developer.developer)}
-                              className="text-green-600 hover:text-green-800 p-1"
-                              title="Kaydet"
-                            >
+                            <button onClick={() => handleCapacitySave(developer.developer)} className="text-emerald-600 hover:text-emerald-700 p-1 rounded" title="Kaydet">
                               <Save className="h-4 w-4" />
                             </button>
-                            <button
-                              onClick={handleCapacityCancel}
-                              className="text-gray-600 hover:text-gray-800 p-1"
-                              title="İptal"
-                            >
+                            <button onClick={handleCapacityCancel} className="text-slate-400 hover:text-slate-600 p-1 rounded" title="İptal">
                               <X className="h-4 w-4" />
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center justify-center space-x-2">
-                            <span className="text-sm font-medium text-gray-900">
-                              {/* Kolay İK entegrasyonu aktifse ayarlanmış kapasiteyi göster */}
-                              {hasKolayIK && showKolayIKIntegration && capacityCalculations.length > 0 ? (
-                                (() => {
-                                  const calc = capacityCalculations.find(c => c.developerName === developer.developer);
-                                  return calc ? calc.adjustedCapacity : capacity;
-                                })()
-                              ) : capacity}h
+                          <div className="flex items-center justify-center gap-1.5">
+                            <span className="text-sm font-semibold text-slate-700 tabular-nums">
+                              {hasKolayIK && showKolayIKIntegration && capacityCalculations.length > 0
+                                ? (() => { const calc = capacityCalculations.find(c => c.developerName === developer.developer); return calc ? calc.adjustedCapacity : capacity; })()
+                                : capacity}h
                             </span>
                             {canEdit && (
-                              <button
-                                onClick={() => handleCapacityEdit(developer.developer)}
-                                className="text-gray-400 hover:text-blue-600 p-1"
-                                title="Kapasiteyi düzenle"
-                              >
-                                <Edit className="h-4 w-4" />
+                              <button onClick={() => handleCapacityEdit(developer.developer)} className="text-slate-300 hover:text-blue-500 transition-colors p-0.5 rounded" title="Kapasiteyi düzenle">
+                                <Edit className="h-3.5 w-3.5" />
                               </button>
                             )}
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center space-x-2">
-                          {(() => {
-                            const capacity = getDeveloperCapacity(
-                              developer.developer,
-                              getCapacity,
-                              hasKolayIK && showKolayIKIntegration,
-                              capacityCalculations
-                            );
-                            const actualHours = actualHoursData[developer.developer] || 0;
-                            const currentStatus = calculateDeveloperStatus(actualHours, capacity);
-                            
-                            return (
-                              <>
-                                {getStatusIcon(currentStatus)}
-                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(currentStatus)}`}>
-                                  {currentStatus}
-                                </span>
-                              </>
-                            );
-                          })()}
+
+                      {/* Durum */}
+                      <td className="px-5 py-3.5 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {getStatusIcon(currentStatus)}
+                          <span className={`inline-flex px-2.5 py-0.5 text-[11px] font-semibold rounded-full border ${getStatusColor(currentStatus)}`}>
+                            {currentStatus}
+                          </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center">
+
+                      {/* Detay toggle */}
+                      <td className="px-5 py-3.5 text-center">
                         <button
-                          onClick={() => setExpandedDeveloper(
-                            expandedDeveloper === developer.developer ? null : developer.developer
-                          )}
-                          className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 transition-colors mx-auto"
+                          onClick={() => setExpandedDeveloper(isExpanded ? null : developer.developer)}
+                          className={`inline-flex items-center gap-1 text-sm font-medium transition-colors ${
+                            isExpanded ? 'text-blue-700' : 'text-blue-500 hover:text-blue-700'
+                          }`}
                         >
-                          <span className="text-sm">Detaylar</span>
-                          {expandedDeveloper === developer.developer ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
+                          Detaylar
+                          {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                         </button>
                       </td>
                     </tr>
 
                     {/* Expanded Details */}
-                    {expandedDeveloper === developer.developer && (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-4 bg-gray-50">
+                    {isExpanded && (
+                      <tr className="bg-slate-50/50">
+                        <td colSpan={7} className="px-6 py-5">
                           <div className="space-y-4">
-                            <h4 className="font-medium text-gray-900">
-                              {developer.developer} - Proje Detayları
+                            <h4 className="text-sm font-semibold text-slate-700">
+                              {developer.developer} — Proje Detayları
                             </h4>
-                            
-                            {developer.details.length > 0 ? (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {developer.details.map((detail, detailIndex) => (
-                                  <div key={detailIndex} className="bg-white rounded-lg border border-gray-200 p-4">
-                                    <div className="flex items-center justify-between mb-3">
-                                      <div>
-                                        <h5 className="font-medium text-gray-900">{detail.project}</h5>
-                                        <p className="text-sm text-gray-600">{detail.sprint}</p>
-                                        <p className="text-xs text-blue-600">
-                                          Proje: {getDeveloperProjectKey(developer.developer)}
-                                        </p>
-                                      </div>
-                                      <div className="text-right">
-                                        <p className="text-sm font-medium text-blue-600">{detail.taskCount} görev</p>
-                                        <p className="text-xs text-gray-500">{Math.round(detail.hours * 100) / 100}h tahmini</p>
-                                        <p className="text-xs text-purple-600">{Math.round(detail.actualHours * 100) / 100}h harcanan</p>
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Progress Bar */}
-                                    <div className="space-y-2">
-                                      <div className="flex justify-between text-xs text-gray-600">
-                                        <span>İlerleme</span>
-                                        <span>
-                                          {detail.hours > 0 ? Math.round((detail.actualHours / detail.hours) * 100) : 
-                                           detail.actualHours > 0 ? '∞' : 0}%
-                                        </span>
-                                      </div>
-                                      <div className="w-full bg-gray-200 rounded-full h-2">
-                                        <div 
-                                          className={`h-2 rounded-full transition-all duration-300 ${
-                                            detail.hours > 0 ? 'bg-blue-600' : 'bg-purple-600'
-                                          }`}
-                                          style={{ 
-                                            width: `${detail.hours > 0 ? 
-                                              Math.min((detail.actualHours / detail.hours) * 100, 100) : 
-                                              detail.actualHours > 0 ? 100 : 0}%` 
-                                          }}
-                                        />
-                                      </div>
-                                    </div>
 
-                                    {/* Task List veya Worklog Bilgisi */}
-                                    {detail.tasks && detail.tasks.length > 0 ? (
-                                      <div className="mt-3 pt-3 border-t border-gray-100">
-                                        <p className="text-xs font-medium text-gray-700 mb-2">
-                                          {detail.sprint === 'Sprint Dışı Görevler' ? 'Sprint Dışı Görevler:' : 'Sprint Görevleri:'}
-                                        </p>
-                                        <div className="space-y-1 max-h-32 overflow-y-auto">
-                                          {detail.tasks.map((task, taskIndex) => (
-                                            <div key={taskIndex} className="flex items-center justify-between text-xs">
-                                              <div className="flex-1 min-w-0">
-                                                <p className="text-blue-600 font-medium truncate">{task.key}</p>
-                                                <p className="text-gray-600 truncate">{task.summary}</p>
-                                                <div className="flex items-center space-x-2 mt-1">
-                                                  <span className={`text-xs px-1.5 py-0.5 rounded ${
-                                                    task.status === 'Sprint Dışı' ? 'bg-purple-100 text-purple-700' :
-                                                    task.status.toLowerCase().includes('done') || task.status.toLowerCase().includes('tamam') ? 'bg-green-100 text-green-700' :
-                                                    'bg-blue-100 text-blue-700'
-                                                  }`}>
-                                                    {task.status}
-                                                  </span>
-                                                  {task.issueType && (
-                                                    <span className="text-xs text-gray-500">
-                                                      {task.issueType}
+                            {developer.details.length > 0 ? (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {developer.details.map((detail, detailIndex) => {
+                                  const progressPct = detail.hours > 0
+                                    ? Math.min((detail.actualHours / detail.hours) * 100, 100)
+                                    : detail.actualHours > 0 ? 100 : 0;
+                                  const progressLabel = detail.hours > 0
+                                    ? `${Math.round((detail.actualHours / detail.hours) * 100)}%`
+                                    : detail.actualHours > 0 ? '∞' : '0%';
+
+                                  return (
+                                    <div key={detailIndex} className="bg-white rounded-xl border border-slate-200 p-4">
+                                      {/* Kart başlık */}
+                                      <div className="flex items-start justify-between mb-3">
+                                        <div>
+                                          <h5 className="text-sm font-semibold text-slate-800 leading-tight">{detail.project}</h5>
+                                          <p className="text-xs text-slate-500 mt-0.5">{detail.sprint}</p>
+                                          <span className="inline-block mt-1 text-[11px] font-medium text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                                            {getDeveloperProjectKey(developer.developer)}
+                                          </span>
+                                        </div>
+                                        <div className="text-right flex-shrink-0 ml-3">
+                                          <p className="text-sm font-bold text-slate-700">{detail.taskCount} görev</p>
+                                          <p className="text-[11px] text-blue-600 mt-0.5">Tahmini: {Math.round(detail.hours * 100) / 100}h</p>
+                                          <p className="text-[11px] text-violet-600">Harcanan: {Math.round(detail.actualHours * 100) / 100}h</p>
+                                        </div>
+                                      </div>
+
+                                      {/* Progress bar */}
+                                      <div className="mb-3">
+                                        <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                                          <span>İlerleme</span>
+                                          <span className="font-semibold text-slate-600">{progressLabel}</span>
+                                        </div>
+                                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                          <div
+                                            className={`h-full rounded-full transition-all duration-500 ${detail.hours > 0 ? 'bg-blue-500' : 'bg-violet-500'}`}
+                                            style={{ width: `${progressPct}%` }}
+                                          />
+                                        </div>
+                                      </div>
+
+                                      {/* Task list */}
+                                      {detail.tasks && detail.tasks.length > 0 ? (
+                                        <div className="border-t border-slate-100 pt-3">
+                                          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                                            {detail.sprint === 'Sprint Dışı Görevler' ? 'Sprint Dışı Görevler' : 'Sprint Görevleri'}
+                                          </p>
+                                          <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                                            {detail.tasks.map((task, taskIndex) => (
+                                              <div key={taskIndex} className="flex items-start justify-between gap-2 bg-slate-50 rounded-lg px-2.5 py-2 border border-slate-100">
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="text-[11px] font-bold text-blue-600">{task.key}</span>
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                                      task.status === 'Sprint Dışı' ? 'bg-violet-100 text-violet-700' :
+                                                      task.status.toLowerCase().includes('done') || task.status.toLowerCase().includes('tamam') ? 'bg-emerald-100 text-emerald-700' :
+                                                      'bg-blue-100 text-blue-700'
+                                                    }`}>
+                                                      {task.status}
                                                     </span>
-                                                  )}
+                                                    {task.issueType && (
+                                                      <span className="text-[10px] text-slate-400">{task.issueType}</span>
+                                                    )}
+                                                  </div>
+                                                  <p className="text-[11px] text-slate-600 truncate mt-0.5">{task.summary}</p>
                                                 </div>
-                                              </div>
-                                              <div className="text-right ml-2">
-                                                <div className="text-right">
+                                                <div className="text-right flex-shrink-0">
                                                   {task.estimatedHours > 0 && (
-                                                    <p className="text-blue-600 text-xs">Tahmini: {task.estimatedHours}h</p>
+                                                    <p className="text-[11px] text-blue-600 tabular-nums">{task.estimatedHours}h</p>
                                                   )}
                                                   {task.actualHours > 0 && (
-                                                    <p className="text-purple-600 text-xs font-medium">Harcanan: {task.actualHours}h</p>
+                                                    <p className="text-[11px] font-semibold text-violet-600 tabular-nums">{task.actualHours}h</p>
                                                   )}
                                                 </div>
                                               </div>
-                                            </div>
-                                          ))}
+                                            ))}
+                                          </div>
                                         </div>
-                                      </div>
-                                    ) : detail.actualHours > 0 ? (
-                                      <div className="mt-3 pt-3 border-t border-gray-100">
-                                        <p className="text-xs font-medium text-gray-700 mb-2">Süre Bilgisi:</p>
-                                        <div className="bg-purple-50 rounded p-2">
-                                          <p className="text-xs text-purple-700">
-                                            Bu proje/sprint'te görev detayı bulunamadı, ancak {Math.round(detail.actualHours * 100) / 100}h süre harcamış
-                                          </p>
+                                      ) : detail.actualHours > 0 ? (
+                                        <div className="border-t border-slate-100 pt-3">
+                                          <div className="bg-violet-50 border border-violet-100 rounded-lg px-3 py-2">
+                                            <p className="text-xs text-violet-700">
+                                              Görev detayı bulunamadı, ancak <span className="font-semibold">{Math.round(detail.actualHours * 100) / 100}h</span> süre harcamış.
+                                            </p>
+                                          </div>
                                         </div>
-                                      </div>
-                                    ) : null}
-                                    
-                                    {/* Sprint Tarih Bilgisi - Her detay için göster */}
-                                    <div className="mt-3 pt-3 border-t border-gray-100">
-                                      <div className="text-xs text-gray-500">
-                                        <p className="font-medium">Sprint Tarihleri:</p>
+                                      ) : null}
+
+                                      {/* Sprint Tarih Bilgisi */}
+                                      <div className="border-t border-slate-100 pt-3 mt-3">
                                         {(() => {
                                           const dateRange = getDeveloperSprintDateRange(developer.developer);
                                           return (
-                                            <div className="mt-1">
-                                              <p>{dateRange.start} - {dateRange.end}</p>
-                                              <p className="mt-1">Sprintler: {dateRange.sprintNames.join(', ')}</p>
+                                            <div className="flex items-start gap-2">
+                                              <Calendar className="h-3.5 w-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                                              <div className="text-[11px] text-slate-400">
+                                                <span className="font-medium text-slate-500">Sprint tarihleri:</span>{' '}
+                                                {dateRange.start} – {dateRange.end}
+                                                <div className="mt-0.5 text-[10px]">{dateRange.sprintNames.join(', ')}</div>
+                                              </div>
                                             </div>
                                           );
                                         })()}
                                       </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             ) : (
-                              <div className="text-center py-4">
-                                <p className="text-gray-500">Bu yazılımcı için sprint görevi bulunamadı.</p>
+                              <div className="text-center py-8">
+                                <p className="text-slate-500 text-sm">Bu yazılımcı için sprint görevi bulunamadı.</p>
                                 {actualHoursData[developer.developer] > 0 && (
-                                  <p className="text-sm text-purple-600 mt-2">
+                                  <p className="text-xs text-violet-600 mt-1.5">
                                     Ancak {actualHoursData[developer.developer]}h worklog kaydı mevcut
                                   </p>
                                 )}
@@ -695,22 +580,23 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
               })}
             </tbody>
           </table>
-        </div> 
+        </div>
       </div>
 
+      {/* Empty State */}
       {filteredWorkload.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 text-lg">Yazılımcı verisi bulunamadı.</p>
-          <p className="text-gray-400 text-sm mt-2">
-            {user?.role === 'developer' 
-              ? 'Size atanmış aktif görev bulunamadı.' 
-              : 'Aktif sprint veya görev bulunamadı.'
-            }
+        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
+          <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Users className="h-7 w-7 text-slate-400" />
+          </div>
+          <p className="text-slate-600 font-medium">Yazılımcı verisi bulunamadı.</p>
+          <p className="text-slate-400 text-sm mt-1">
+            {user?.role === 'developer'
+              ? 'Size atanmış aktif görev bulunamadı.'
+              : 'Aktif sprint veya görev bulunamadı.'}
           </p>
         </div>
       )}
     </div>
   );
 };
-
