@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CapacityMetricProvider } from './context/CapacityMetricContext';
 import { LandingPage } from './components/LandingPage';
 import { Header } from './components/Header';
 import { DeveloperWorkloadDashboard } from './components/DeveloperWorkloadDashboard';
@@ -257,9 +258,11 @@ const [activeTab, setActiveTab] = useState<
 function App() {
   return (
     <AuthProvider>
-      <JiraDataProvider>
-        <AppContent />
-      </JiraDataProvider>
+      <CapacityMetricProvider>
+        <JiraDataProvider>
+          <AppContent />
+        </JiraDataProvider>
+      </CapacityMetricProvider>
     </AuthProvider>
   );
 }
