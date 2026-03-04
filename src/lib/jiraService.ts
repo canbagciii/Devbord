@@ -585,6 +585,32 @@ class JiraService {
       .replace(/[^a-zA-Z0-9\s]/g, '') // özel karakterleri kaldır
       .trim();
   }
+
+  async getAllFields(): Promise<Array<{ id: string; name: string; schema?: any }>> {
+    try {
+      const fields = await this.makeRequestWithRetry<Array<{ id: string; name: string; schema?: any }>>('/field');
+      return fields;
+    } catch (error) {
+      console.error('Error fetching Jira fields:', error);
+      throw error;
+    }
+  }
+
+  async getStoryPointFields(): Promise<Array<{ id: string; name: string }>> {
+    try {
+      const allFields = await this.getAllFields();
+      const storyPointFields = allFields.filter(field => {
+        const nameLower = field.name.toLowerCase();
+        return (nameLower.includes('story') && nameLower.includes('point')) ||
+               nameLower.includes('storypoint') ||
+               nameLower.includes('story point');
+      });
+      return storyPointFields.map(f => ({ id: f.id, name: f.name }));
+    } catch (error) {
+      console.error('Error fetching story point fields:', error);
+      throw error;
+    }
+  }
 }
 
 export const jiraService = new JiraService();
