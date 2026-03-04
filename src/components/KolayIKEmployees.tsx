@@ -250,7 +250,7 @@ export const KolayIKEmployees: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Kolay IK</h2>
+          <h2 className="text-2xl font-bold text-gray-900">İzin Takibi</h2>
           <p className="text-gray-600 mt-1">Seçilen ayda izni olan çalışanlar</p>
         </div>
         <div className="flex items-center space-x-3">
