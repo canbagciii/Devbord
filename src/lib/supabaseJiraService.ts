@@ -24,6 +24,14 @@ class SupabaseJiraService {
     return null;
   }
 
+  private addToCache<T>(key: string, data: T): void {
+    cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      expiry: Date.now() + CACHE_DURATION
+    });
+  }
+
   private toLocalYMD(isoString: string): string {
     const d = new Date(isoString);
     const y = d.getFullYear();

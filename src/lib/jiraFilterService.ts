@@ -424,8 +424,8 @@ class JiraFilterService {
     }
 
     const { data, error } = await supabase
-      .from('story_point_field_mappings')
-      .select('project_key, field_name')
+      .from('project_story_point_config')
+      .select('project_key, story_point_field')
       .eq('company_id', companyId);
 
     if (error) {
@@ -433,7 +433,10 @@ class JiraFilterService {
       return [];
     }
 
-    return data || [];
+    return (data || []).map(item => ({
+      project_key: item.project_key,
+      field_name: item.story_point_field
+    }));
   }
 }
 
