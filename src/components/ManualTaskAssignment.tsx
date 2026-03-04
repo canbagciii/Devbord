@@ -10,22 +10,13 @@ import { exportManualAssignmentsToCSV } from '../utils/csvExport';
 import { DeveloperCapacityAdjustment } from './DeveloperCapacityAdjustment';
 import { getOverallSprintDateRange } from '../utils/sprintDateUtils';
 
-// Sayfa bazlı cache: kapasite + sprint aralığı bazında eksik yükteki geliştiricileri sakla
 const underloadedDevelopersCache = new Map<string, DeveloperWorkload[]>();
 
 export const ManualTaskAssignment: React.FC = () => {
   const {
-    workload,
-    projects,
-    sprints,
-    loading,
-    error,
-    refresh,
-    updateWorkloadStatus,
-    capacityCalculations,
-    setCapacityCalculations,
-    capacityReady,
-    capacityCacheKey
+    workload, projects, sprints, loading, error, refresh,
+    updateWorkloadStatus, capacityCalculations, setCapacityCalculations,
+    capacityReady, capacityCacheKey
   } = useJiraData();
   const { hasRole, canAccessProject, getAccessibleProjects, hasKolayIK } = useAuth();
   const { getCapacity } = useDeveloperCapacities();
@@ -38,17 +29,9 @@ export const ManualTaskAssignment: React.FC = () => {
   const [componentError, setComponentError] = useState<string | null>(null);
   const [fallbackDeveloperNames, setFallbackDeveloperNames] = useState<string[]>([]);
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    assignee: '',
-    projectKey: '',
-    projectName: '',
-    sprint: '',
-    sprintId: '',
-    estimatedHours: '',
-    priority: 'Medium' as const,
-    dueDate: '',
-    issueType: 'Task'
+    title: '', description: '', assignee: '', projectKey: '', projectName: '',
+    sprint: '', sprintId: '', estimatedHours: '', priority: 'Medium' as const,
+    dueDate: '', issueType: 'Task'
   });
 
   const allProjectOptions = [
@@ -66,21 +49,18 @@ export const ManualTaskAssignment: React.FC = () => {
     { key: 'HF', name: 'Hayat Finans' }
   ];
 
-  // Kullanıcının erişebileceği projeleri filtrele
-  const projectOptions = hasRole('admin') 
-    ? allProjectOptions 
+  const projectOptions = hasRole('admin')
+    ? allProjectOptions
     : allProjectOptions.filter(project => canAccessProject(project.key));
 
   useEffect(() => {
-    try {
-      loadAssignments();
-    } catch (err) {
+    try { loadAssignments(); }
+    catch (err) {
       console.error('Error in useEffect:', err);
       setComponentError(err instanceof Error ? err.message : 'Component initialization error');
     }
   }, []);
 
-  // Workload boşsa seçili yazılımcıları filtre servisinden al (assignee dropdown için)
   useEffect(() => {
     if (workload && workload.length > 0) return;
     let cancelled = false;
@@ -130,83 +110,38 @@ export const ManualTaskAssignment: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     setComponentError(null);
     setCreatingJiraIssue(true);
-    
     try {
       let jiraIssueKey = '';
-      
-      // Jira'da issue oluştur
       if (jiraCreationOption === 'jira' || jiraCreationOption === 'both') {
         try {
           const jiraIssue = await supabaseJiraService.createIssue({
-            projectKey: formData.projectKey,
-            summary: formData.title,
-            description: formData.description,
-            assignee: formData.assignee,
-            priority: formData.priority,
-            estimatedHours: parseInt(formData.estimatedHours),
-            issueType: formData.issueType,
-            sprintId: formData.sprintId
+            projectKey: formData.projectKey, summary: formData.title,
+            description: formData.description, assignee: formData.assignee,
+            priority: formData.priority, estimatedHours: parseInt(formData.estimatedHours),
+            issueType: formData.issueType, sprintId: formData.sprintId
           });
-          
           jiraIssueKey = jiraIssue.key;
-          
-          // Success notification
           alert(`✅ Jira'da görev oluşturuldu: ${jiraIssueKey}`);
         } catch (jiraError) {
           console.error('Jira issue oluşturma hatası:', jiraError);
           alert(`❌ Jira'da görev oluşturulamadı: ${jiraError instanceof Error ? jiraError.message : 'Bilinmeyen hata'}`);
-          
-          if (jiraCreationOption === 'jira') {
-            // Sadece Jira seçilmişse ve hata varsa işlemi durdur
-            return;
-          }
+          if (jiraCreationOption === 'jira') return;
         }
       }
-      
-      // Yerel kayıt oluştur
       if (jiraCreationOption === 'local' || jiraCreationOption === 'both') {
         const newAssignment: TaskAssignment = {
-          id: Date.now().toString(),
-          title: formData.title,
-          description: formData.description,
-          assignee: formData.assignee,
-          project: formData.projectName,
-          sprint: formData.sprint,
-          estimatedHours: parseInt(formData.estimatedHours),
-          priority: formData.priority,
-          dueDate: formData.dueDate,
-          createdBy: 'Sistem Yöneticisi',
-          createdAt: new Date().toISOString()
+          id: Date.now().toString(), title: formData.title, description: formData.description,
+          assignee: formData.assignee, project: formData.projectName, sprint: formData.sprint,
+          estimatedHours: parseInt(formData.estimatedHours), priority: formData.priority,
+          dueDate: formData.dueDate, createdBy: 'Sistem Yöneticisi', createdAt: new Date().toISOString()
         };
-
-        const updatedAssignments = [...assignments, newAssignment];
-        saveAssignments(updatedAssignments);
+        saveAssignments([...assignments, newAssignment]);
       }
-      
-      // Form'u temizle ve kapat
-      setFormData({
-        title: '',
-        description: '',
-        assignee: '',
-        projectKey: '',
-        projectName: '',
-        sprint: '',
-        sprintId: '',
-        estimatedHours: '',
-        priority: 'Medium',
-        dueDate: '',
-        issueType: 'Task'
-      });
+      setFormData({ title: '', description: '', assignee: '', projectKey: '', projectName: '', sprint: '', sprintId: '', estimatedHours: '', priority: 'Medium', dueDate: '', issueType: 'Task' });
       setShowForm(false);
-      
-      // Cache'i temizle ki yeni görev listede görünsün
-      if (jiraCreationOption === 'jira' || jiraCreationOption === 'both') {
-        refresh();
-      }
-      
+      if (jiraCreationOption === 'jira' || jiraCreationOption === 'both') refresh();
     } catch (error) {
       console.error('Görev oluşturma hatası:', error);
       alert(`❌ Görev oluşturulamadı: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
@@ -218,35 +153,19 @@ export const ManualTaskAssignment: React.FC = () => {
   const handleProjectChange = (value: string) => {
     try {
       const selectedProject = projectOptions.find(p => p.key === value);
-      setFormData(prev => ({
-        ...prev,
-        projectKey: value,
-        projectName: selectedProject?.name || '',
-        sprint: '',
-        sprintId: ''
-      }));
-      
-      // Load active sprints for selected project
-      if (value) {
-        loadActiveSprintsForProject(value);
-      } else {
-        setAvailableSprints([]);
-      }
+      setFormData(prev => ({ ...prev, projectKey: value, projectName: selectedProject?.name || '', sprint: '', sprintId: '' }));
+      if (value) loadActiveSprintsForProject(value);
+      else setAvailableSprints([]);
     } catch (err) {
       console.error('Error in handleProjectChange:', err);
       setComponentError('Proje değiştirme hatası: ' + (err instanceof Error ? err.message : 'Bilinmeyen hata'));
     }
   };
-    
 
   const handleSprintChange = (sprintId: string) => {
     try {
       const selectedSprint = availableSprints.find(s => s.id === sprintId);
-      setFormData(prev => ({
-        ...prev,
-        sprintId,
-        sprint: selectedSprint?.name || ''
-      }));
+      setFormData(prev => ({ ...prev, sprintId, sprint: selectedSprint?.name || '' }));
     } catch (err) {
       console.error('Error in handleSprintChange:', err);
       setComponentError('Sprint değiştirme hatası: ' + (err instanceof Error ? err.message : 'Bilinmeyen hata'));
@@ -256,8 +175,7 @@ export const ManualTaskAssignment: React.FC = () => {
   const handleDelete = (id: string) => {
     try {
       if (window.confirm('Bu görevi silmek istediğinizden emin misiniz?')) {
-        const updatedAssignments = assignments.filter(a => a.id !== id);
-        saveAssignments(updatedAssignments);
+        saveAssignments(assignments.filter(a => a.id !== id));
       }
     } catch (err) {
       console.error('Error in handleDelete:', err);
@@ -265,125 +183,83 @@ export const ManualTaskAssignment: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'Eksik Yük': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Yeterli': return 'bg-green-100 text-green-800 border-green-200';
-      case 'Aşırı Yük': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Eksik Yük': return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' };
+      case 'Yeterli': return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' };
+      case 'Aşırı Yük': return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' };
+      default: return { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200' };
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Eksik Yük': return <AlertTriangle className="h-4 w-4" />;
-      case 'Yeterli': return <CheckCircle className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
+  const getPriorityConfig = (priority: string) => {
     switch (priority) {
-      case 'Critical': return 'bg-red-100 text-red-800';
-      case 'High': return 'bg-orange-100 text-orange-800';
-      case 'Medium': return 'bg-blue-100 text-blue-800';
-      case 'Low': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Critical': return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' };
+      case 'High': return { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' };
+      case 'Medium': return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' };
+      case 'Low': return { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200', dot: 'bg-slate-400' };
+      default: return { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200', dot: 'bg-slate-400' };
     }
   };
 
-  const getAdjustedCapacity = (developerName: string): number => {
-    // Kapasiteyi her zaman global günlük kapasite ayarına göre hesaplayan
-    // useDeveloperCapacities.getCapacity üzerinden alıyoruz.
-    // Kolay İK entegrasyonu sadece izin düşürmelerini etkiler; baz kapasite ayarı buradan gelir.
-    return getCapacity(developerName);
-  };
+  const getAdjustedCapacity = (developerName: string): number => getCapacity(developerName);
 
-  // Tüm sprintler için genel tarih aralığı (kapasite hesaplamasını tetiklemek için kullanılır)
   const overallSprintRange = getOverallSprintDateRange(sprints);
-
   const workloadReady = !!workload && workload.length > 0;
-  // DeveloperCapacityAdjustment ile aynı cache key mantığını kullan
   const developerNameKey = workloadReady ? workload!.map(w => w.developer).sort().join('-') : '';
-  const localCacheKey =
-    workloadReady && overallSprintRange
-      ? `leave-calculations-${developerNameKey}-${overallSprintRange.start}-${overallSprintRange.end}`
-      : null;
-  const capacitiesReadyForPage =
-    capacityReady &&
-    !!localCacheKey &&
-    capacityCacheKey === localCacheKey;
-  // Sayfa sadece Jira context yüklenirken bloklansın; workload/sprint boşsa veya
-  // kapasite henüz hazır değilse sayfa açılsın, eksik yük listesi opsiyonel olarak gelsin
+  const localCacheKey = workloadReady && overallSprintRange
+    ? `leave-calculations-${developerNameKey}-${overallSprintRange.start}-${overallSprintRange.end}` : null;
+  const capacitiesReadyForPage = capacityReady && !!localCacheKey && capacityCacheKey === localCacheKey;
   const pageLoading = loading;
 
-  // Yetki kontrolü - sadece admin ve analist görev atayabilir
+  const avatarColors = [
+    'from-violet-500 to-purple-600', 'from-blue-500 to-cyan-600',
+    'from-emerald-500 to-teal-600', 'from-orange-500 to-amber-600',
+    'from-rose-500 to-pink-600', 'from-indigo-500 to-blue-600',
+  ];
+  const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+  const inputClass = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors bg-white";
+  const labelClass = "block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5";
+
+  // Yetki kontrolü
   if (!hasRole('admin') && !hasRole('analyst')) {
     return (
-      <div className="space-y-6">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-          <div className="flex items-center space-x-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-600" />
-            <p className="text-yellow-800">Bu sayfaya erişim yetkiniz bulunmuyor.</p>
-          </div>
-          <p className="text-yellow-700 text-sm mt-2">
-            Manuel görev atama işlemi sadece Yönetici ve Analist rolleri tarafından yapılabilir.
-          </p>
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <AlertTriangle className="h-5 w-5 text-amber-500" />
+          <p className="text-amber-800 font-medium">Bu sayfaya erişim yetkiniz bulunmuyor.</p>
         </div>
+        <p className="text-amber-700 text-sm">Manuel görev atama işlemi sadece Yönetici ve Analist rolleri tarafından yapılabilir.</p>
       </div>
     );
   }
 
-  // Component error display
   if (componentError) {
     return (
-      <div className="space-y-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <div className="flex items-center space-x-2">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
-            <p className="text-red-800">{componentError}</p>
-          </div>
-          <div className="mt-4 flex space-x-3">
-            <button
-              onClick={() => {
-                setComponentError(null);
-                loadAssignments();
-              }}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Tekrar Dene
-            </button>
-            <button
-              onClick={() => setComponentError(null)}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              Hatayı Gizle
-            </button>
-          </div>
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+        <div className="flex items-center gap-2 mb-3">
+          <AlertTriangle className="h-5 w-5 text-red-500" />
+          <p className="text-red-800 font-medium">{componentError}</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => { setComponentError(null); loadAssignments(); }} className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">Tekrar Dene</button>
+          <button onClick={() => setComponentError(null)} className="px-4 py-2 bg-slate-600 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors">Hatayı Gizle</button>
         </div>
       </div>
     );
   }
 
-  // Kapasite / workload verileri hazırlanırken bekleme ekranı göster
   if (pageLoading) {
-    const shouldBootstrapCapacities =
-      workloadReady &&
-      overallSprintRange &&
-      (!localCacheKey || capacityCacheKey !== localCacheKey);
-
+    const shouldBootstrapCapacities = workloadReady && overallSprintRange && (!localCacheKey || capacityCacheKey !== localCacheKey);
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-2 border-slate-100 border-t-blue-600 animate-spin" />
           <div className="text-center">
-            <p className="text-lg text-gray-700">Veriler hazırlanıyor...</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Yazılımcıların izinlerle düşürülmüş kapasiteleri hesaplanıyor. Bu işlem tamamlandığında eksik yükü olan yazılımcılar otomatik olarak listelenecektir.
-            </p>
+            <p className="text-slate-700 font-medium">Veriler hazırlanıyor…</p>
+            <p className="text-sm text-slate-400 mt-1 max-w-sm">Yazılımcıların izinlerle düşürülmüş kapasiteleri hesaplanıyor.</p>
           </div>
-
-          {/* Kapasite hesaplamasını, Yazılımcı Analizi sayfasını açmaya gerek kalmadan otomatik tetikle */}
           {shouldBootstrapCapacities && (
             <div className="hidden">
               <DeveloperCapacityAdjustment
@@ -392,9 +268,7 @@ export const ManualTaskAssignment: React.FC = () => {
                 sprintEndDate={overallSprintRange!.end}
                 onCapacityUpdate={updateWorkloadStatus}
                 updateWorkloadStatus={updateWorkloadStatus}
-                onCapacityCalculationsChange={(calculations, cacheKey) => {
-                  setCapacityCalculations(calculations, cacheKey);
-                }}
+                onCapacityCalculationsChange={(calculations, cacheKey) => setCapacityCalculations(calculations, cacheKey)}
               />
             </div>
           )}
@@ -403,15 +277,11 @@ export const ManualTaskAssignment: React.FC = () => {
     );
   }
 
-  // Workload ve sprint varsa arka planda kapasite hesaplamasını tetikle (eksik yük listesi için)
-  const shouldBootstrapCapacities =
-    workloadReady &&
-    overallSprintRange &&
-    (!localCacheKey || capacityCacheKey !== localCacheKey);
+  const shouldBootstrapCapacities = workloadReady && overallSprintRange && (!localCacheKey || capacityCacheKey !== localCacheKey);
 
   return (
-    <div className="space-y-6">
-      {/* Arka planda kapasite hesaplaması - eksik yük listesini doldurmak için */}
+    <div className="space-y-5 p-1">
+      {/* Hidden bootstrap */}
       {shouldBootstrapCapacities && (
         <div className="hidden">
           <DeveloperCapacityAdjustment
@@ -420,72 +290,94 @@ export const ManualTaskAssignment: React.FC = () => {
             sprintEndDate={overallSprintRange!.end}
             onCapacityUpdate={updateWorkloadStatus}
             updateWorkloadStatus={updateWorkloadStatus}
-            onCapacityCalculationsChange={(calculations, cacheKey) => {
-              setCapacityCalculations(calculations, cacheKey);
-            }}
+            onCapacityCalculationsChange={(calculations, cacheKey) => setCapacityCalculations(calculations, cacheKey)}
           />
         </div>
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Jirada İş Açma</h2>
-          <p className="text-gray-600 mt-1">
-            Yazılımcının izinlerle düşürülmüş kapasitesi ile, ona atanan işlerin analist tahmin toplamı kıyaslanarak
-            eksik yükü olan yazılımcılar listelenir.
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Jira'da İş Açma</h2>
+          <p className="text-slate-500 mt-0.5 text-sm max-w-xl">
+            Yazılımcının izinlerle düşürülmüş kapasitesi ile atanan işlerin analist tahmin toplamı kıyaslanarak eksik yükü olan yazılımcılar listelenir.
           </p>
         </div>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Yeni Görev</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setShowForm(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all shadow-sm hover:shadow"
+        >
+          <Plus className="h-4 w-4" />
+          Yeni Görev
+        </button>
       </div>
 
-      {/* Veri yoksa bilgilendirme */}
+      {/* Info banner - veri yoksa */}
       {!workloadReady && !loading && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl p-4">
+          <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-blue-600 text-xs font-bold">i</span>
+          </div>
           <p className="text-blue-800 text-sm">
             Eksik yük listesi için Jira projeleri ve yazılımcı seçimi yapılmış olmalı. Kullanıcı & Filtre Yönetimi sayfasından proje ve yazılımcı seçin.
           </p>
         </div>
       )}
 
-      {/* Yazılımcı Özeti: Tahmini süre + Kapasite (Kolay İK varsa izin düşürülmüş, yoksa günlük kapasite üzerinden) */}
+      {/* Kapasite Özeti Tablosu */}
       {workloadReady && workload && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Yazılımcı Kapasite Özeti</h3>
-            <p className="text-sm text-gray-500 mt-1">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100">
+            <h3 className="text-base font-semibold text-slate-800">Yazılımcı Kapasite Özeti</h3>
+            <p className="text-xs text-slate-400 mt-0.5">
               Tahmini süre (Jira) ve kapasite (saat) — Kolay İK varsa izinler düşülerek hesaplanır
             </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Yazılımcı</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tahmini Süre</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">İzin Düşürülmüş Kapasite</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  {['Yazılımcı', 'Tahmini Süre', 'İzin Düşürülmüş Kapasite', 'Durum'].map((h, i) => (
+                    <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider ${i === 0 ? 'text-left' : i < 3 ? 'text-right' : 'text-center'}`}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {workload.map(dev => {
+              <tbody className="divide-y divide-slate-100">
+                {workload.map((dev, index) => {
                   const capacity = getAdjustedCapacity(dev.developer);
                   const estimatedHours = Math.round((dev.totalHours || 0) * 100) / 100;
+                  const statusCfg = getStatusConfig(dev.status);
+                  const avatarGradient = avatarColors[index % avatarColors.length];
+                  const fillPct = capacity > 0 ? Math.min(100, (estimatedHours / capacity) * 100) : 0;
+
                   return (
-                    <tr key={dev.developer} className="hover:bg-gray-50">
-                      <td className="px-6 py-3 text-sm font-medium text-gray-900">{dev.developer}</td>
-                      <td className="px-6 py-3 text-sm text-right text-gray-700">{estimatedHours}h</td>
-                      <td className="px-6 py-3 text-sm text-right text-gray-700">{capacity}h</td>
-                      <td className="px-6 py-3 text-center">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(dev.status)}`}>
+                    <tr key={dev.developer} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 bg-gradient-to-br ${avatarGradient} rounded-full flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                            <span className="text-[11px] font-bold text-white">{getInitials(dev.developer)}</span>
+                          </div>
+                          <span className="text-sm font-semibold text-slate-800">{dev.developer}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <span className="text-sm font-bold text-blue-600 tabular-nums">{estimatedHours}h</span>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${dev.status === 'Aşırı Yük' ? 'bg-red-500' : dev.status === 'Yeterli' ? 'bg-emerald-500' : 'bg-amber-400'}`}
+                              style={{ width: `${fillPct}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-semibold text-slate-700 tabular-nums">{capacity}h</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-center">
+                        <span className={`inline-flex px-2.5 py-0.5 text-[11px] font-semibold rounded-full border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
                           {dev.status}
                         </span>
                       </td>
@@ -498,150 +390,130 @@ export const ManualTaskAssignment: React.FC = () => {
         </div>
       )}
 
-      {/* Assignment Form Modal */}
+      {/* Modal Form */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-900">Yeni Manuel Görev</h3>
-              <button
-                onClick={() => setShowForm(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="h-6 w-6" />
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center px-6 py-5 border-b border-slate-100">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Yeni Manuel Görev</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Jira'da veya yerel olarak görev oluşturun</p>
+              </div>
+              <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {/* Jira Creation Option */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <ExternalLink className="inline h-4 w-4 mr-1" />
+            <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
+              {/* Oluşturma Seçeneği */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                  <ExternalLink className="h-3.5 w-3.5" />
                   Görev Oluşturma Seçeneği
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="creationOption"
-                      value="local"
-                      checked={jiraCreationOption === 'local'}
-                      onChange={(e) => setJiraCreationOption(e.target.value as any)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Sadece yerel kayıt</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="creationOption"
-                      value="jira"
-                      checked={jiraCreationOption === 'jira'}
-                      onChange={(e) => setJiraCreationOption(e.target.value as any)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Sadece Jira'da oluştur</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="creationOption"
-                      value="both"
-                      checked={jiraCreationOption === 'both'}
-                      onChange={(e) => setJiraCreationOption(e.target.value as any)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Her ikisinde de oluştur</span>
-                  </label>
+                </p>
+                <div className="flex gap-3">
+                  {[
+                    { value: 'local', label: 'Sadece Yerel' },
+                    { value: 'jira', label: "Sadece Jira'da" },
+                    { value: 'both', label: 'Her İkisinde' },
+                  ].map(opt => (
+                    <label key={opt.value} className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg border-2 cursor-pointer transition-all text-sm font-medium ${
+                      jiraCreationOption === opt.value
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="creationOption"
+                        value={opt.value}
+                        checked={jiraCreationOption === opt.value}
+                        onChange={(e) => setJiraCreationOption(e.target.value as any)}
+                        className="sr-only"
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
                 </div>
               </div>
 
+              {/* Başlık */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Görev Başlığı *
-                </label>
+                <label className={labelClass}>Görev Başlığı <span className="text-red-400">*</span></label>
                 <input
-                  type="text"
-                  required
-                  value={formData.title}
+                  type="text" required value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Görev başlığını girin"
+                  className={inputClass} placeholder="Görev başlığını girin"
                 />
               </div>
 
+              {/* Açıklama */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Açıklama
-                </label>
+                <label className={labelClass}>Açıklama</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Görev açıklamasını girin"
+                  rows={3} className={inputClass} placeholder="Görev açıklamasını girin"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Atanan + Proje */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Atanan Kişi *
-                  </label>
-                  <select
-                    required
-                    value={formData.assignee}
-                    onChange={(e) => setFormData(prev => ({ ...prev, assignee: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
+                  <label className={labelClass}>Atanan Kişi <span className="text-red-400">*</span></label>
+                  <select required value={formData.assignee} onChange={(e) => setFormData(prev => ({ ...prev, assignee: e.target.value }))} className={inputClass}>
                     <option value="">Seçiniz</option>
                     {workload && workload.length > 0
                       ? workload.map(dev => {
                           const capacity = getAdjustedCapacity(dev.developer);
                           const estimatedHours = Math.round((dev.totalHours || 0) * 100) / 100;
-                          return (
-                            <option key={dev.developer} value={dev.developer}>
-                              {dev.developer} ({estimatedHours}h / {capacity}h - {dev.status})
-                            </option>
-                          );
+                          return <option key={dev.developer} value={dev.developer}>{dev.developer} ({estimatedHours}h / {capacity}h)</option>;
                         })
-                      : fallbackDeveloperNames.map(name => (
-                          <option key={name} value={name}>{name}</option>
-                        ))}
+                      : fallbackDeveloperNames.map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Proje/Banka *
-                  </label>
-                  <select
-                    required
-                    value={formData.projectKey}
-                    onChange={(e) => handleProjectChange(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
+                  <label className={labelClass}>Proje / Banka <span className="text-red-400">*</span></label>
+                  <select required value={formData.projectKey} onChange={(e) => handleProjectChange(e.target.value)} className={inputClass}>
                     <option value="">Seçiniz</option>
                     {projectOptions.map(project => (
-                      <option key={project.key} value={project.key}>
-                        {project.name} ({project.key})
-                      </option>
+                      <option key={project.key} value={project.key}>{project.name} ({project.key})</option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Sprint + Issue Tipi + Tahmini Süre + Öncelik */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>Sprint</label>
+                  <select
+                    value={formData.sprintId} onChange={(e) => handleSprintChange(e.target.value)}
+                    className={inputClass} disabled={!formData.projectKey || loadingSprints}
+                  >
+                    <option value="">
+                      {!formData.projectKey ? 'Önce proje seçin' :
+                       loadingSprints ? 'Yükleniyor…' :
+                       availableSprints.length === 0 ? 'Aktif sprint yok' : 'Sprint seçin'}
+                    </option>
+                    {availableSprints.map(sprint => (
+                      <option key={sprint.id} value={sprint.id}>
+                        {sprint.name}{sprint.startDate && sprint.endDate && ` (${new Date(sprint.startDate).toLocaleDateString('tr-TR')} – ${new Date(sprint.endDate).toLocaleDateString('tr-TR')})`}
+                      </option>
+                    ))}
+                  </select>
+                  {loadingSprints && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <Loader className="h-3 w-3 animate-spin text-blue-500" />
+                      <span className="text-[11px] text-slate-400">Sprintler yükleniyor…</span>
+                    </div>
+                  )}
+                </div>
+
                 {(jiraCreationOption === 'jira' || jiraCreationOption === 'both') && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Issue Tipi
-                    </label>
-                    <select
-                      value={formData.issueType}
-                      onChange={(e) => setFormData(prev => ({ ...prev, issueType: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
+                    <label className={labelClass}>Issue Tipi</label>
+                    <select value={formData.issueType} onChange={(e) => setFormData(prev => ({ ...prev, issueType: e.target.value }))} className={inputClass}>
                       <option value="Task">Task</option>
                       <option value="Bug">Bug</option>
                       <option value="Story">Story</option>
@@ -651,61 +523,17 @@ export const ManualTaskAssignment: React.FC = () => {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Sprint
-                  </label>
-                  <select
-                    value={formData.sprintId}
-                    onChange={(e) => handleSprintChange(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled={!formData.projectKey || loadingSprints}
-                  >
-                    <option value="">
-                      {!formData.projectKey ? 'Önce proje seçin' : 
-                       loadingSprints ? 'Sprintler yükleniyor...' : 
-                       availableSprints.length === 0 ? 'Aktif sprint bulunamadı' : 'Sprint seçin'}
-                    </option>
-                    {availableSprints.map(sprint => (
-                      <option key={sprint.id} value={sprint.id}>
-                        {sprint.name}
-                        {sprint.startDate && sprint.endDate && (
-                          ` (${new Date(sprint.startDate).toLocaleDateString('tr-TR')} - ${new Date(sprint.endDate).toLocaleDateString('tr-TR')})`
-                        )}
-                      </option>
-                    ))}
-                  </select>
-                  {loadingSprints && (
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Loader className="h-3 w-3 animate-spin text-blue-600" />
-                      <span className="text-xs text-gray-500">Aktif sprintler yükleniyor...</span>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tahmini Süre (saat) *
-                  </label>
+                  <label className={labelClass}>Tahmini Süre (saat) <span className="text-red-400">*</span></label>
                   <input
-                    type="number"
-                    required
-                    min="1"
-                    value={formData.estimatedHours}
+                    type="number" required min="1" value={formData.estimatedHours}
                     onChange={(e) => setFormData(prev => ({ ...prev, estimatedHours: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="0"
+                    className={inputClass} placeholder="0"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Öncelik
-                  </label>
-                  <select
-                    value={formData.priority}
-                    onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as any }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
+                  <label className={labelClass}>Öncelik</label>
+                  <select value={formData.priority} onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as any }))} className={inputClass}>
                     <option value="Low">Düşük</option>
                     <option value="Medium">Orta</option>
                     <option value="High">Yüksek</option>
@@ -714,47 +542,22 @@ export const ManualTaskAssignment: React.FC = () => {
                 </div>
               </div>
 
+              {/* Teslim Tarihi */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Teslim Tarihi
-                </label>
-                <input
-                  type="date"
-                  value={formData.dueDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                <label className={labelClass}>Teslim Tarihi</label>
+                <input type="date" value={formData.dueDate} onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))} className={inputClass} />
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                   İptal
                 </button>
-                <button
-                  type="submit"
-                  disabled={creatingJiraIssue}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center space-x-2"
-                >
+                <button type="submit" disabled={creatingJiraIssue} className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
                   {creatingJiraIssue ? (
-                    <>
-                      <Loader className="h-4 w-4 animate-spin" />
-                      <span>
-                        {jiraCreationOption === 'jira' ? 'Jira\'da Oluşturuluyor...' : 
-                         jiraCreationOption === 'both' ? 'Oluşturuluyor...' : 'Kaydediliyor...'}
-                      </span>
-                    </>
+                    <><Loader className="h-4 w-4 animate-spin" /><span>{jiraCreationOption === 'jira' ? "Jira'da Oluşturuluyor…" : jiraCreationOption === 'both' ? 'Oluşturuluyor…' : 'Kaydediliyor…'}</span></>
                   ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      <span>
-                        {jiraCreationOption === 'jira' ? 'Jira\'da Oluştur' : 
-                         jiraCreationOption === 'both' ? 'Her İkisinde Oluştur' : 'Kaydet'}
-                      </span>
-                    </>
+                    <><Save className="h-4 w-4" /><span>{jiraCreationOption === 'jira' ? "Jira'da Oluştur" : jiraCreationOption === 'both' ? 'Her İkisinde Oluştur' : 'Kaydet'}</span></>
                   )}
                 </button>
               </div>
@@ -763,115 +566,117 @@ export const ManualTaskAssignment: React.FC = () => {
         </div>
       )}
 
-      {/* Assignments List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Manuel Atanan Görevler</h3>
+      {/* Assignments Listesi */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-slate-800">Manuel Atanan Görevler</h3>
+          {assignments.length > 0 && (
+            <span className="text-xs text-slate-400 font-medium">{assignments.length} görev</span>
+          )}
         </div>
-        
+
         {assignments.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Görev
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Atanan
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Proje
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Süre
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Öncelik
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Teslim
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    İşlem
-                  </th>
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  {['Görev', 'Atanan', 'Proje', 'Süre', 'Öncelik', 'Teslim', ''].map((h, i) => (
+                    <th key={i} className={`px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider ${i === 0 || i === 1 || i === 2 ? 'text-left' : 'text-center'}`}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {assignments.map((assignment, index) => (
-                  <tr key={assignment.id} className={`hover:bg-gray-50 transition-colors ${
-                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
-                  }`}>
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{assignment.title}</p>
+              <tbody className="divide-y divide-slate-100">
+                {assignments.map((assignment, index) => {
+                  const priorityCfg = getPriorityConfig(assignment.priority);
+                  const avatarGradient = avatarColors[index % avatarColors.length];
+
+                  return (
+                    <tr key={assignment.id} className="hover:bg-slate-50/70 transition-colors">
+                      {/* Görev */}
+                      <td className="px-5 py-3.5 max-w-xs">
+                        <p className="text-sm font-semibold text-slate-800 leading-tight">{assignment.title}</p>
                         {assignment.description && (
-                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{assignment.description}</p>
+                          <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{assignment.description}</p>
                         )}
                         {assignment.sprint && (
-                          <p className="text-xs text-blue-600 mt-1">{assignment.sprint}</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="flex-shrink-0 h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-xs font-medium text-blue-800">
-                            {assignment.assignee.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          <span className="inline-block mt-1 text-[11px] text-blue-600 font-medium bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">
+                            {assignment.sprint}
                           </span>
+                        )}
+                      </td>
+
+                      {/* Atanan */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-7 h-7 bg-gradient-to-br ${avatarGradient} rounded-full flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                            <span className="text-[10px] font-bold text-white">{getInitials(assignment.assignee)}</span>
+                          </div>
+                          <span className="text-sm text-slate-700 font-medium">{assignment.assignee}</span>
                         </div>
-                        <span className="text-sm text-gray-900">{assignment.assignee}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-900">{assignment.project}</span>
-                        {assignment.project && projectOptions.find(p => p.name === assignment.project) && (
-                          <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">
-                            {projectOptions.find(p => p.name === assignment.project)?.key}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center space-x-1">
-                        <Clock className="h-3 w-3 text-gray-400" />
-                        <span className="text-sm font-medium">{assignment.estimatedHours}h</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(assignment.priority)}`}>
-                        {assignment.priority}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {assignment.dueDate ? (
-                        <span className="text-sm text-gray-900">
-                          {new Date(assignment.dueDate).toLocaleDateString('tr-TR')}
+                      </td>
+
+                      {/* Proje */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-slate-700">{assignment.project}</span>
+                          {assignment.project && projectOptions.find(p => p.name === assignment.project) && (
+                            <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">
+                              {projectOptions.find(p => p.name === assignment.project)?.key}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Süre */}
+                      <td className="px-5 py-3.5 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Clock className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="text-sm font-semibold text-slate-700 tabular-nums">{assignment.estimatedHours}h</span>
+                        </div>
+                      </td>
+
+                      {/* Öncelik */}
+                      <td className="px-5 py-3.5 text-center">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-semibold rounded-full border ${priorityCfg.bg} ${priorityCfg.text} ${priorityCfg.border}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${priorityCfg.dot}`} />
+                          {assignment.priority}
                         </span>
-                      ) : (
-                        <span className="text-sm text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => handleDelete(assignment.id)}
-                        className="text-red-600 hover:text-red-800 transition-colors"
-                        title="Sil"
-                      >
-                        <X className="h-4 w-4" />
-                      </button> 
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      {/* Teslim */}
+                      <td className="px-5 py-3.5 text-center">
+                        {assignment.dueDate ? (
+                          <span className="text-sm text-slate-600 tabular-nums">{new Date(assignment.dueDate).toLocaleDateString('tr-TR')}</span>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                      </td>
+
+                      {/* Sil */}
+                      <td className="px-5 py-3.5 text-center">
+                        <button
+                          onClick={() => handleDelete(assignment.id)}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors mx-auto"
+                          title="Sil"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         ) : (
-          <div className="text-center py-12">
-            <Plus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">Henüz manuel görev atanmamış.</p>
-            <p className="text-gray-400 text-sm mt-2">Eksik yükü olan yazılımcılara görev atamak için "Yeni Görev" butonunu kullanın.</p>
+          <div className="text-center py-16">
+            <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Plus className="h-7 w-7 text-slate-400" />
+            </div>
+            <p className="text-slate-600 font-medium">Henüz manuel görev atanmamış.</p>
+            <p className="text-slate-400 text-sm mt-1">Eksik yükü olan yazılımcılara görev atamak için "Yeni Görev" butonunu kullanın.</p>
           </div>
         )}
       </div>
