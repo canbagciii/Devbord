@@ -258,7 +258,14 @@ export const ManualTaskAssignment: React.FC = () => {
   }
 
   if (pageLoading) {
-    const shouldBootstrapCapacities = workloadReady && overallSprintRange && (!localCacheKey || capacityCacheKey !== localCacheKey);
+    // KolayIK varsa: cache eşleşmiyorsa VEYA capacityCalculations henüz boşsa bootstrap çalıştır
+  const shouldBootstrapCapacities = workloadReady && overallSprintRange && (
+    !localCacheKey ||
+    capacityCacheKey !== localCacheKey ||
+    (hasKolayIK && (!capacityCalculations || capacityCalculations.length === 0))
+  );
+  // Kapasite hesaplaması hâlâ devam ediyorsa tablo "yükleniyor" göstermeli
+  const capacityStillLoading = hasKolayIK && workloadReady && (!capacityCalculations || capacityCalculations.length === 0);
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-4">
@@ -284,7 +291,14 @@ export const ManualTaskAssignment: React.FC = () => {
     );
   }
 
-  const shouldBootstrapCapacities = workloadReady && overallSprintRange && (!localCacheKey || capacityCacheKey !== localCacheKey);
+  // KolayIK varsa: cache eşleşmiyorsa VEYA capacityCalculations henüz boşsa bootstrap çalıştır
+  const shouldBootstrapCapacities = workloadReady && overallSprintRange && (
+    !localCacheKey ||
+    capacityCacheKey !== localCacheKey ||
+    (hasKolayIK && (!capacityCalculations || capacityCalculations.length === 0))
+  );
+  // Kapasite hesaplaması hâlâ devam ediyorsa tablo "yükleniyor" göstermeli
+  const capacityStillLoading = hasKolayIK && workloadReady && (!capacityCalculations || capacityCalculations.length === 0);
 
   return (
     <div className="space-y-5 p-1">
@@ -340,6 +354,12 @@ export const ManualTaskAssignment: React.FC = () => {
               Tahmini süre (Jira) ve kapasite (saat) — Kolay İK varsa izinler düşülerek hesaplanır
             </p>
           </div>
+          {capacityStillLoading ? (
+            <div className="flex items-center justify-center gap-3 py-8 text-slate-400">
+              <Loader className="h-4 w-4 animate-spin text-blue-500" />
+              <span className="text-sm">İzin kapasiteleri hesaplanıyor…</span>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -394,6 +414,7 @@ export const ManualTaskAssignment: React.FC = () => {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 
