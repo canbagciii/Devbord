@@ -5,7 +5,6 @@ import { supabase } from "../lib/supabase";
 import { jiraFilterService } from "../lib/jiraFilterService";
 import { useAuth } from "./AuthContext";
 import type { JiraProject, JiraBoard, DeveloperWorkload, JiraSprint, JiraTask } from "../types";
-import { developerProjectKeyMap } from "../data/developerProjectMap";
 import { worklogService } from "../services/worklogService";
 
 // Cache interface
@@ -156,12 +155,11 @@ export const JiraDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Kullanıcı Yönetimi proje atamaları: öncelik users.assigned_projects, yoksa statik harita
+  // Kullanıcı Yönetimi proje atamaları: database'den alınan bilgileri kullan
   const getDeveloperProjectKey = useCallback((developerName: string): string | undefined => {
     const n = normalizeName(developerName);
     const fromUsers = developerProjectMapFromUsers.get(n)?.[0];
-    if (fromUsers) return fromUsers;
-    return developerProjectKeyMap[developerName];
+    return fromUsers;
   }, [developerProjectMapFromUsers]);
 
   useEffect(() => {
