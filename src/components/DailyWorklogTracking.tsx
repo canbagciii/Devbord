@@ -525,7 +525,7 @@ const DailyWorklogTracking: React.FC = () => {
     const needsMapForFilter = user?.role === 'analyst' || user?.role === 'developer';
     if (needsMapForFilter && !developerProjectMapReady) return;
     loadWorklogData();
-  }, [currentDate, viewMode, capacityAdjustmentEnabled, developerProjectMapReady, user?.role, lastRefreshAt]);
+  }, [currentDate, viewMode, capacityAdjustmentEnabled, developerProjectMapReady, user?.role, lastRefreshAt, estimationType, selectedStoryPointField, selectedProject]);
 
   const navigateDate = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
