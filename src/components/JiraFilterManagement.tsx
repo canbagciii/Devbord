@@ -5,6 +5,7 @@ import { jiraFilterService, SelectedProject, SelectedDeveloper } from '../lib/ji
 import { JiraProject } from '../types';
 import { supabase } from '../lib/supabase';
 import { useJiraData } from '../context/JiraDataContext';
+import { useCapacityMetric } from '../context/CapacityMetricContext';
 import { worklogService } from '../services/worklogService';
 
 interface JiraFilterManagementProps {
@@ -38,6 +39,14 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
   onOnboardingComplete
 }) => {
   const { refresh } = useJiraData();
+  const {
+    capacityMetric: globalCapacityMetric,
+    setCapacityMetric: setGlobalCapacityMetric,
+    dailyHours: contextDailyHours,
+    dailyStoryPoints: contextDailyStoryPoints,
+    setDailyHours: setContextDailyHours,
+    setDailyStoryPoints: setContextDailyStoryPoints
+  } = useCapacityMetric();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [refreshing, setRefreshing] = useState(false);
@@ -60,9 +69,9 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
   const [expandedProjectKey, setExpandedProjectKey] = useState<string | null>(null);
   const [userSearchTerm, setUserSearchTerm] = useState('');
 
-  const [dailyHours, setDailyHours] = useState(8);
-  const [capacityMetric, setCapacityMetric] = useState<'hours' | 'storyPoints' | 'both'>('hours');
-  const [dailyStoryPoints, setDailyStoryPoints] = useState(8);
+  const [dailyHours, setDailyHours] = useState(contextDailyHours);
+  const [capacityMetric, setCapacityMetric] = useState<'hours' | 'storyPoints' | 'both'>(globalCapacityMetric);
+  const [dailyStoryPoints, setDailyStoryPoints] = useState(contextDailyStoryPoints);
   const [storyPointFieldConfigs, setStoryPointFieldConfigs] = useState<StoryPointFieldConfig[]>([]);
   const [availableStoryPointFields, setAvailableStoryPointFields] = useState<Array<{ id: string; name: string }>>([]);
   const [loadingFields, setLoadingFields] = useState(false);
@@ -72,9 +81,15 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
 
   useEffect(() => { loadData(); }, []);
 
+  useEffect(() => {
+    setDailyHours(contextDailyHours);
+    setDailyStoryPoints(contextDailyStoryPoints);
+    setCapacityMetric(globalCapacityMetric);
+  }, [contextDailyHours, contextDailyStoryPoints, globalCapacityMetric]);
+
   // Story Point seçildiğinde field'ları yükle
   useEffect(() => {
-    if (capacityMetric === 'storyPoints' && availableStoryPointFields.length === 0 && !loadingFields) {
+    if ((capacityMetric === 'storyPoints' || capacityMetric === 'both') && availableStoryPointFields.length === 0 && !loadingFields) {
       loadStoryPointFields();
     }
   }, [capacityMetric]);
@@ -292,8 +307,8 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
             });
         }
 
-        // Story Point field configs kaydet (sadece story point modunda)
-        if (capacityMetric === 'storyPoints') {
+        // Story Point field configs kaydet (story point veya both modunda)
+        if (capacityMetric === 'storyPoints' || capacityMetric === 'both') {
           // Önce mevcut kayıtları sil
           await supabase
             .from('project_story_point_config')
@@ -316,6 +331,11 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
           }
         }
       }
+
+      // Context'i güncelle
+      setGlobalCapacityMetric(capacityMetric);
+      setContextDailyHours(dailyHours);
+      setContextDailyStoryPoints(dailyStoryPoints);
 
       // LocalStorage'a da yaz (backward compatibility)
       try {
