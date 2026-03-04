@@ -57,7 +57,6 @@ export const DeveloperCapacityAdjustment: React.FC<DeveloperCapacityAdjustmentPr
   const [autoApplyEnabled, setAutoApplyEnabled] = useState(true);
   const [sprintBasedCalculations, setSprintBasedCalculations] = useState<any[]>([]);
   const [forceUpdateTrigger, setForceUpdateTrigger] = useState(0);
-  const [developerProjectKeys, setDeveloperProjectKeys] = useState<Record<string, string>>({});
 
   // Cache helper functions
   const getFromCache = <T,>(key: string): T | null => {
@@ -88,31 +87,9 @@ export const DeveloperCapacityAdjustment: React.FC<DeveloperCapacityAdjustmentPr
     testConnection();
   }, []);
 
-  // Developer'ların proje anahtarlarını yükle (async fonksiyonu senkron kullanmamak için)
+  // Sprint tarihleri değiştiğinde yazılımcı bazlı izin verilerini yükle
   useEffect(() => {
-    if (!workload || workload.length === 0) return;
-
-    const loadProjectKeys = async () => {
-      const keys: Record<string, string> = {};
-      for (const dev of workload) {
-        try {
-          const key = await getDeveloperProjectKeyFromContext(dev.developer);
-          if (key) {
-            keys[dev.developer] = key;
-          }
-        } catch (e) {
-          console.warn('Developer project key yüklenemedi:', dev.developer, e);
-        }
-      }
-      setDeveloperProjectKeys(keys);
-    };
-
-    loadProjectKeys();
-  }, [workload, getDeveloperProjectKeyFromContext]);
-
-  // Sprint tarihleri veya proje anahtarları değiştiğinde yazılımcı bazlı izin verilerini yükle
-  useEffect(() => {
-    if (workload.length > 0 && sprintStartDate && sprintEndDate && Object.keys(developerProjectKeys).length > 0) {
+    if (workload.length > 0 && sprintStartDate && sprintEndDate) {
       console.log('🔄 Sprint tarihleri veya workload değişti, izin verileri yenileniyor...');
       console.log('📅 Yeni tarih aralığı:', sprintStartDate, '-', sprintEndDate);
 
@@ -128,7 +105,7 @@ export const DeveloperCapacityAdjustment: React.FC<DeveloperCapacityAdjustmentPr
         }
       }, 100);
     }
-  }, [workload.length, sprintStartDate, sprintEndDate, developerProjectKeys]);
+  }, [workload.length, sprintStartDate, sprintEndDate]);
 
   // İş günü hesaplama
   const calculateWorkingDays = (startDate: string, endDate: string): number => {
@@ -148,7 +125,7 @@ export const DeveloperCapacityAdjustment: React.FC<DeveloperCapacityAdjustmentPr
 
   // Yazılımcının proje anahtarını getir
   const getDeveloperProjectKey = (developerName: string): string => {
-    return developerProjectKeys[developerName] ?? 'UNKNOWN';
+    return getDeveloperProjectKeyFromContext(developerName) ?? 'UNKNOWN';
   };
 
   // Yazılımcının sprint tarih aralığını getir (kendi projesinden)
