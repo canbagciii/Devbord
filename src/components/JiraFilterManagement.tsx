@@ -64,11 +64,32 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
   const [capacityMetric, setCapacityMetric] = useState<'hours' | 'storyPoints'>('hours');
   const [dailyStoryPoints, setDailyStoryPoints] = useState(8);
   const [storyPointFieldConfigs, setStoryPointFieldConfigs] = useState<StoryPointFieldConfig[]>([]);
+  const [availableStoryPointFields, setAvailableStoryPointFields] = useState<Array<{ id: string; name: string }>>([]);
+  const [loadingFields, setLoadingFields] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
   const [planSaveMessage, setPlanSaveMessage] = useState<string | null>(null);
   const [planSaveError, setPlanSaveError] = useState<string | null>(null);
 
   useEffect(() => { loadData(); }, []);
+
+  // Story Point seçildiğinde field'ları yükle
+  useEffect(() => {
+    if (capacityMetric === 'storyPoints' && availableStoryPointFields.length === 0 && !loadingFields) {
+      loadStoryPointFields();
+    }
+  }, [capacityMetric]);
+
+  const loadStoryPointFields = async () => {
+    setLoadingFields(true);
+    try {
+      const fields = await supabaseJiraService.getStoryPointFields();
+      setAvailableStoryPointFields(fields);
+    } catch (error) {
+      console.error('Error loading story point fields:', error);
+    } finally {
+      setLoadingFields(false);
+    }
+  };
 
   // DB'den mevcut verileri yukle ve draft'a kopyala - sadece bir kez calisir
   const loadData = async () => {
@@ -573,7 +594,17 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
 
                 {draftProjects.filter(p => p.is_active).length > 0 && (
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-3">Story Point Field Eşleştirme <span className="font-normal text-gray-400">(her proje için)</span></label>
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-xs font-semibold text-gray-700">
+                        Story Point Field Eşleştirme <span className="font-normal text-gray-400">(her proje için)</span>
+                      </label>
+                      {loadingFields && (
+                        <div className="flex items-center gap-2 text-xs text-indigo-600">
+                          <div className="animate-spin rounded-full h-3 w-3 border-2 border-indigo-200 border-t-indigo-600"></div>
+                          <span>Field'lar yükleniyor...</span>
+                        </div>
+                      )}
+                    </div>
                     <div className="space-y-3">
                       {draftProjects.filter(p => p.is_active).map(project => {
                         const currentConfig = storyPointFieldConfigs.find(c => c.project_key === project.project_key);
@@ -584,29 +615,59 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
                             </div>
                             <div className="flex-1">
                               <div className="text-xs font-semibold text-gray-900 mb-1">{project.project_key}</div>
-                              <input
-                                type="text"
-                                placeholder="örn: customfield_10016 veya Story Points"
-                                value={currentConfig?.field_name || ''}
-                                onChange={e => {
-                                  const newFieldName = e.target.value;
-                                  setStoryPointFieldConfigs(prev => {
-                                    const existing = prev.find(c => c.project_key === project.project_key);
-                                    if (existing) {
-                                      return prev.map(c => c.project_key === project.project_key ? { ...c, field_name: newFieldName } : c);
-                                    } else {
-                                      return [...prev, { project_key: project.project_key, field_name: newFieldName }];
-                                    }
-                                  });
-                                }}
-                                className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:border-indigo-500 focus:outline-none"
-                              />
+                              {availableStoryPointFields.length > 0 ? (
+                                <select
+                                  value={currentConfig?.field_name || ''}
+                                  onChange={e => {
+                                    const newFieldName = e.target.value;
+                                    setStoryPointFieldConfigs(prev => {
+                                      const existing = prev.find(c => c.project_key === project.project_key);
+                                      if (existing) {
+                                        return prev.map(c => c.project_key === project.project_key ? { ...c, field_name: newFieldName } : c);
+                                      } else {
+                                        return [...prev, { project_key: project.project_key, field_name: newFieldName }];
+                                      }
+                                    });
+                                  }}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:border-indigo-500 focus:outline-none bg-white"
+                                >
+                                  <option value="">Field seçin...</option>
+                                  {availableStoryPointFields.map(field => (
+                                    <option key={field.id} value={field.id}>
+                                      {field.name} ({field.id})
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  placeholder="Field'lar yükleniyor..."
+                                  disabled={loadingFields}
+                                  value={currentConfig?.field_name || ''}
+                                  onChange={e => {
+                                    const newFieldName = e.target.value;
+                                    setStoryPointFieldConfigs(prev => {
+                                      const existing = prev.find(c => c.project_key === project.project_key);
+                                      if (existing) {
+                                        return prev.map(c => c.project_key === project.project_key ? { ...c, field_name: newFieldName } : c);
+                                      } else {
+                                        return [...prev, { project_key: project.project_key, field_name: newFieldName }];
+                                      }
+                                    });
+                                  }}
+                                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:border-indigo-500 focus:outline-none disabled:bg-gray-100"
+                                />
+                              )}
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                    <p className="text-xs text-gray-400 mt-2">Jira'da Story Point değerini tutan field adını girin (örn: "customfield_10016" veya "Story Points").</p>
+                    <p className="text-xs text-gray-400 mt-2">
+                      {availableStoryPointFields.length > 0
+                        ? 'Jira\'dan otomatik olarak Story Point field\'ları yüklendi. Her proje için uygun field\'ı seçin.'
+                        : 'Story Point field\'ları Jira\'dan yükleniyor...'}
+                    </p>
                   </div>
                 )}
               </>

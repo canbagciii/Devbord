@@ -101,6 +101,44 @@ class SupabaseJiraService {
     return mapping;
   }
 
+  async getStoryPointFields(): Promise<Array<{ id: string; name: string }>> {
+    const cacheKey = 'story-point-fields';
+    const cached = this.getFromCache<Array<{ id: string; name: string }>>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const response = await this.callEdgeFunction<any[]>('jira-proxy', {
+        body: {
+          endpoint: '/rest/api/3/field',
+          method: 'GET'
+        }
+      });
+
+      if (!Array.isArray(response)) {
+        return [];
+      }
+
+      // Story Point ile ilgili field'ları filtrele
+      const storyPointFields = response
+        .filter((field: any) => {
+          const name = field.name?.toLowerCase() || '';
+          return (
+            name.includes('story') && name.includes('point')
+          ) || name.includes('storypoint');
+        })
+        .map((field: any) => ({
+          id: field.id,
+          name: field.name
+        }));
+
+      this.addToCache(cacheKey, storyPointFields);
+      return storyPointFields;
+    } catch (error) {
+      console.error('Error fetching Jira fields:', error);
+      return [];
+    }
+  }
+
   private async callEdgeFunction<T>(functionName: string, options: any = {}): Promise<T> {
     try {
       // Development mode check - console.log only in dev
