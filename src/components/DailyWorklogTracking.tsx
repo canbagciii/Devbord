@@ -485,7 +485,7 @@ const DailyWorklogTracking: React.FC = () => {
             { label: 'Toplam Yazılımcı', value: analytics.totalDevelopers, suffix: '', icon: Users, color: 'text-violet-600', bg: 'bg-violet-50', iconBg: 'bg-violet-100' },
             { label: 'Toplam Süre', value: analytics.totalHours, suffix: 'h', icon: Clock, color: 'text-emerald-600', bg: 'bg-emerald-50', iconBg: 'bg-emerald-100' },
             { label: 'Ortalama Günlük', value: analytics.averageDailyHours, suffix: 'h', icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50', iconBg: 'bg-blue-100' },
-            { label: 'Worklog Kayıt', value: analytics.totalWorklogEntries, suffix: '', icon: Calendar, color: 'text-orange-600', bg: 'bg-orange-50', iconBg: 'bg-orange-100' },
+            { label: 'Çalışılan İş', value: analytics.totalWorklogEntries, suffix: '', icon: Calendar, color: 'text-orange-600', bg: 'bg-orange-50', iconBg: 'bg-orange-100' },
           ].map((card) => (
             <div key={card.label} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-4">
               <div className={`w-11 h-11 ${card.iconBg} rounded-xl flex items-center justify-center flex-shrink-0`}>
@@ -668,23 +668,27 @@ const DailyWorklogTracking: React.FC = () => {
                         )}
                       </tr>
 
-                      {/* Expanded Details — Timeline View */}
+                      {/* Expanded Details */}
                       {isExpanded && (
-                        <tr className="bg-slate-50/40">
-                          <td colSpan={dateRange.dates.length + 4 + (viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK ? 1 : 0)} className="px-6 py-5">
+                        <tr className="bg-slate-50/60">
+                          <td colSpan={dateRange.dates.length + 4 + (viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK ? 1 : 0)} className="px-6 py-4">
                             <div className="space-y-4">
-
-                              {/* Leave Details Banner */}
+                              {/* Leave Details */}
                               {hasLeave && viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && (
-                                <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                                  <CalendarDays className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                                  <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <CalendarDays className="h-4 w-4 text-amber-600" />
+                                    <span className="text-sm font-semibold text-amber-800">İzin Detayları</span>
+                                  </div>
+                                  <div className="space-y-1">
                                     {developerLeave.leaveDetails.map((leave, idx) => (
-                                      <span key={idx} className="text-xs text-amber-800">
+                                      <div key={idx} className="text-xs text-amber-700">
                                         <span className="font-semibold">{leave.leaveType}:</span>{' '}
-                                        {new Date(leave.startDate).toLocaleDateString('tr-TR')} – {new Date(leave.endDate).toLocaleDateString('tr-TR')} ({leave.days} gün)
+                                        {new Date(leave.startDate).toLocaleDateString('tr-TR')} –{' '}
+                                        {new Date(leave.endDate).toLocaleDateString('tr-TR')}{' '}
+                                        ({leave.days} gün)
                                         {leave.description && <span className="italic text-amber-600"> – {leave.description}</span>}
-                                      </span>
+                                      </div>
                                     ))}
                                   </div>
                                 </div>
@@ -692,8 +696,8 @@ const DailyWorklogTracking: React.FC = () => {
 
                               {/* Monthly Project Summary */}
                               {viewMode === 'monthly' && (
-                                <div className="bg-white border border-slate-200 rounded-xl p-4">
-                                  <div className="flex items-center gap-2 mb-4">
+                                <div className="bg-white border border-slate-200 rounded-lg p-4">
+                                  <div className="flex items-center gap-2 mb-3">
                                     <Briefcase className="h-4 w-4 text-blue-600" />
                                     <h4 className="text-sm font-semibold text-slate-800">Proje Bazlı Özet</h4>
                                   </div>
@@ -705,171 +709,61 @@ const DailyWorklogTracking: React.FC = () => {
                                       return acc;
                                     }, {} as Record<string, number>);
                                     const sortedProjects = Object.entries(projectHours).sort(([, a], [, b]) => b - a);
-                                    const maxHours = sortedProjects[0]?.[1] || 1;
 
                                     if (sortedProjects.length === 0) {
                                       return <p className="text-sm text-slate-500 text-center py-3">Bu dönemde kayıtlı proje çalışması bulunamadı.</p>;
                                     }
 
                                     return (
-                                      <div className="space-y-2.5">
-                                        {sortedProjects.map(([project, hours], pi) => {
-                                          const projectColors = ['bg-blue-500','bg-violet-500','bg-emerald-500','bg-orange-500','bg-rose-500','bg-cyan-500'];
-                                          const barColor = projectColors[pi % projectColors.length];
-                                          return (
-                                            <div key={project} className="flex items-center gap-3">
-                                              <span className="text-xs text-slate-600 font-medium w-36 truncate flex-shrink-0">{project}</span>
-                                              <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
-                                                <div className={`h-full rounded-full ${barColor} transition-all duration-500`} style={{ width: `${(hours / maxHours) * 100}%` }} />
-                                              </div>
-                                              <span className="text-xs font-bold text-slate-700 tabular-nums w-12 text-right">{Math.round(hours * 10) / 10}h</span>
-                                              <span className="text-[11px] text-slate-400 w-10 text-right">{Math.round((hours / developer.weeklyTotal) * 100)}%</span>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {sortedProjects.map(([project, hours]) => (
+                                          <div key={project} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                                            <div className="flex items-center justify-between mb-2">
+                                              <span className="text-sm font-medium text-slate-700 truncate flex-1 mr-2">{project}</span>
+                                              <span className="text-sm font-bold text-blue-600 whitespace-nowrap tabular-nums">{Math.round(hours * 100) / 100}h</span>
                                             </div>
-                                          );
-                                        })}
+                                            <div className="w-full bg-slate-200 rounded-full h-1.5">
+                                              <div className="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style={{ width: `${(hours / developer.weeklyTotal) * 100}%` }} />
+                                            </div>
+                                            <p className="mt-1 text-[11px] text-slate-400">{Math.round((hours / developer.weeklyTotal) * 100)}% toplam</p>
+                                          </div>
+                                        ))}
                                       </div>
                                     );
                                   })()}
                                 </div>
                               )}
 
-                              {/* Weekly — Daily Timeline */}
-                              {viewMode === 'weekly' && (() => {
-                                const daysWithEntries = developer.dailySummaries.filter(day => day.entries.length > 0);
-                                const maxDayHours = Math.max(...developer.dailySummaries.map(d => d.totalHours), 1);
-
-                                if (daysWithEntries.length === 0) {
-                                  return (
-                                    <div className="text-center py-8 text-slate-400 text-sm">Bu hafta kayıtlı worklog girişi bulunamadı.</div>
-                                  );
-                                }
-
-                                // Tüm unique proje isimlerini topla, her birine renk ata
-                                const allProjects = Array.from(new Set(
-                                  developer.dailySummaries.flatMap(d => d.entries.map(e => e.project || 'Diğer'))
-                                ));
-                                const projectColorPalette = [
-                                  { bg: 'bg-blue-100', text: 'text-blue-700', bar: 'bg-blue-400', border: 'border-blue-200' },
-                                  { bg: 'bg-violet-100', text: 'text-violet-700', bar: 'bg-violet-400', border: 'border-violet-200' },
-                                  { bg: 'bg-emerald-100', text: 'text-emerald-700', bar: 'bg-emerald-400', border: 'border-emerald-200' },
-                                  { bg: 'bg-orange-100', text: 'text-orange-700', bar: 'bg-orange-400', border: 'border-orange-200' },
-                                  { bg: 'bg-rose-100', text: 'text-rose-700', bar: 'bg-rose-400', border: 'border-rose-200' },
-                                  { bg: 'bg-cyan-100', text: 'text-cyan-700', bar: 'bg-cyan-400', border: 'border-cyan-200' },
-                                  { bg: 'bg-amber-100', text: 'text-amber-700', bar: 'bg-amber-400', border: 'border-amber-200' },
-                                  { bg: 'bg-indigo-100', text: 'text-indigo-700', bar: 'bg-indigo-400', border: 'border-indigo-200' },
-                                ];
-                                const projectColorMap: Record<string, typeof projectColorPalette[0]> = {};
-                                allProjects.forEach((proj, i) => {
-                                  projectColorMap[proj] = projectColorPalette[i % projectColorPalette.length];
-                                });
-
-                                return (
-                                  <div className="space-y-2">
-                                    {/* Proje renk açıklaması */}
-                                    {allProjects.length > 1 && (
-                                      <div className="flex flex-wrap gap-2 mb-3">
-                                        {allProjects.map(proj => {
-                                          const c = projectColorMap[proj];
-                                          return (
-                                            <span key={proj} className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full ${c.bg} ${c.text} border ${c.border}`}>
-                                              <span className={`w-1.5 h-1.5 rounded-full ${c.bar}`} />
-                                              {proj}
-                                            </span>
-                                          );
-                                        })}
+                              {/* Weekly Daily Entries */}
+                              {viewMode === 'weekly' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+                                  {developer.dailySummaries.filter(day => day.entries.length > 0).map((day) => (
+                                    <div key={day.date} className="bg-white border border-slate-200 rounded-lg p-3">
+                                      <div className="flex items-center justify-between mb-2.5">
+                                        <h5 className="text-xs font-semibold text-slate-600">
+                                          {new Date(day.date).toLocaleDateString('tr-TR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                        </h5>
+                                        <span className={`text-xs font-bold tabular-nums ${
+                                          day.totalHours >= 7 ? 'text-emerald-600' :
+                                          day.totalHours >= 5 ? 'text-amber-500' : 'text-red-500'
+                                        }`}>{day.totalHours}h</span>
                                       </div>
-                                    )}
-
-                                    {/* Her gün için timeline satırı */}
-                                    {developer.dailySummaries.map((day) => {
-                                      const dayTotalHours = day.totalHours;
-                                      const isEmpty = day.entries.length === 0;
-                                      const isLeaveDay = hasLeave && developerLeave?.leaveDetails?.some(l => {
-                                        const d = new Date(day.date);
-                                        return d >= new Date(l.startDate) && d <= new Date(l.endDate);
-                                      });
-
-                                      const hourColor = dayTotalHours === 0 ? 'text-slate-300' :
-                                        dayTotalHours >= 7 ? 'text-emerald-600' :
-                                        dayTotalHours >= 5 ? 'text-amber-500' : 'text-red-500';
-
-                                      const dayLabel = new Date(day.date).toLocaleDateString('tr-TR', { weekday: 'short' });
-                                      const dateLabel = new Date(day.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
-
-                                      return (
-                                        <div key={day.date} className="flex items-stretch gap-4 group">
-                                          {/* Gün etiketi */}
-                                          <div className="w-16 flex-shrink-0 flex flex-col items-center justify-start pt-2">
-                                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{dayLabel}</span>
-                                            <span className="text-xs text-slate-500 mt-0.5">{dateLabel}</span>
-                                            {dayTotalHours > 0 && (
-                                              <span className={`text-sm font-bold mt-1 tabular-nums ${hourColor}`}>{dayTotalHours}h</span>
-                                            )}
+                                      <div className="space-y-1.5">
+                                        {day.entries.map((entry, entryIndex) => (
+                                          <div key={entryIndex} className="bg-slate-50 rounded-md p-2 border border-slate-100">
+                                            <div className="text-[11px] font-semibold text-blue-600 mb-0.5">{entry.issueKey}</div>
+                                            <div className="text-[11px] text-slate-600 line-clamp-2 leading-tight">{entry.issueSummary}</div>
+                                            <div className="flex items-center justify-between mt-1">
+                                              <span className="text-[10px] text-slate-400 truncate">{entry.project}</span>
+                                              <span className="text-[11px] font-semibold text-slate-700 tabular-nums ml-1">{entry.timeSpentHours}h</span>
+                                            </div>
                                           </div>
-
-                                          {/* Zaman çizelgesi alanı */}
-                                          <div className="flex-1 min-w-0">
-                                            {isEmpty ? (
-                                              <div className={`h-10 rounded-lg border-2 border-dashed flex items-center px-3 ${isLeaveDay ? 'border-amber-200 bg-amber-50' : 'border-slate-150 bg-slate-50'}`}>
-                                                {isLeaveDay
-                                                  ? <span className="text-xs text-amber-500 font-medium flex items-center gap-1.5"><CalendarDays className="h-3 w-3" />İzin günü</span>
-                                                  : <span className="text-xs text-slate-300">Worklog yok</span>
-                                                }
-                                              </div>
-                                            ) : (
-                                              <div className="space-y-1.5">
-                                                {/* Kapasiteye göre doluluk barı */}
-                                                <div className="flex gap-0.5 h-1.5 rounded-full overflow-hidden mb-2">
-                                                  {day.entries.map((entry, ei) => {
-                                                    const proj = entry.project || 'Diğer';
-                                                    const c = projectColorMap[proj];
-                                                    const widthPct = (entry.timeSpentHours / maxDayHours) * 100;
-                                                    return (
-                                                      <div
-                                                        key={ei}
-                                                        className={`h-full ${c.bar} first:rounded-l-full last:rounded-r-full`}
-                                                        style={{ width: `${widthPct}%` }}
-                                                        title={`${entry.issueKey} – ${entry.timeSpentHours}h`}
-                                                      />
-                                                    );
-                                                  })}
-                                                  {/* Boş kalan kısım */}
-                                                  <div className="h-full flex-1 bg-slate-100 last:rounded-r-full" />
-                                                </div>
-
-                                                {/* Issue listesi */}
-                                                <div className="space-y-1">
-                                                  {day.entries.map((entry, ei) => {
-                                                    const proj = entry.project || 'Diğer';
-                                                    const c = projectColorMap[proj];
-                                                    const barWidthPct = Math.max(8, (entry.timeSpentHours / maxDayHours) * 100);
-                                                    return (
-                                                      <div key={ei} className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${c.bg} ${c.border}`}>
-                                                        {/* Süre barı */}
-                                                        <div className="w-20 flex-shrink-0">
-                                                          <div className="bg-white/60 rounded-full h-1.5 overflow-hidden">
-                                                            <div className={`h-full rounded-full ${c.bar}`} style={{ width: `${barWidthPct}%` }} />
-                                                          </div>
-                                                        </div>
-                                                        {/* Issue key */}
-                                                        <span className={`text-[11px] font-bold ${c.text} flex-shrink-0 w-20 truncate`}>{entry.issueKey}</span>
-                                                        {/* Açıklama */}
-                                                        <span className={`text-xs ${c.text} opacity-80 flex-1 truncate`}>{entry.issueSummary}</span>
-                                                        {/* Süre */}
-                                                        <span className={`text-xs font-bold ${c.text} flex-shrink-0 tabular-nums`}>{entry.timeSpentHours}h</span>
-                                                      </div>
-                                                    );
-                                                  })}
-                                                </div>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                );
-                              })()}
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -909,7 +803,7 @@ const DailyWorklogTracking: React.FC = () => {
           <p className="text-slate-600 font-medium">{viewMode === 'weekly' ? 'Bu hafta' : 'Bu ay'} için worklog verisi bulunamadı.</p>
           <p className="text-slate-400 text-sm mt-1">Farklı bir {viewMode === 'weekly' ? 'hafta' : 'ay'} seçin veya Jira bağlantısını kontrol edin.</p>
         </div>
-      )}
+      )} 
 
       {/* Filtered Empty State */}
       {!loading && worklogData.length > 0 && filteredWorklogData.length === 0 && (
