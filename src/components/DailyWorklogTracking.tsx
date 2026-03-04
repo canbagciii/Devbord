@@ -217,11 +217,20 @@ const DailyWorklogTracking: React.FC = () => {
   const getCapacityTarget = (): number => {
     try {
       if (typeof localStorage !== 'undefined') {
-        const metric = localStorage.getItem('capacityMetric');
-        if (metric === 'hours') {
+        if (estimationType === 'hours') {
           const stored = localStorage.getItem('dailyHours');
           const parsed = stored ? parseFloat(stored) : NaN;
           const daily = Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
+          if (viewMode === 'weekly') return Math.round(daily * 5);
+          const workingDays = dateRange.dates.filter(date => {
+            const dayOfWeek = new Date(date).getDay();
+            return dayOfWeek >= 1 && dayOfWeek <= 5;
+          }).length;
+          return Math.round(daily * workingDays);
+        } else {
+          const stored = localStorage.getItem('dailyStoryPoints');
+          const parsed = stored ? parseFloat(stored) : NaN;
+          const daily = Number.isFinite(parsed) && parsed > 0 ? parsed : 8;
           if (viewMode === 'weekly') return Math.round(daily * 5);
           const workingDays = dateRange.dates.filter(date => {
             const dayOfWeek = new Date(date).getDay();
@@ -233,12 +242,21 @@ const DailyWorklogTracking: React.FC = () => {
     } catch (e) {
       console.warn('Günlük kapasite konfigürasyonu okunamadı, varsayılan hedef kullanılacak:', e);
     }
-    if (viewMode === 'weekly') return 35;
-    const workingDays = dateRange.dates.filter(date => {
-      const dayOfWeek = new Date(date).getDay();
-      return dayOfWeek >= 1 && dayOfWeek <= 5;
-    }).length;
-    return workingDays * 7;
+    if (estimationType === 'hours') {
+      if (viewMode === 'weekly') return 35;
+      const workingDays = dateRange.dates.filter(date => {
+        const dayOfWeek = new Date(date).getDay();
+        return dayOfWeek >= 1 && dayOfWeek <= 5;
+      }).length;
+      return workingDays * 7;
+    } else {
+      if (viewMode === 'weekly') return 40;
+      const workingDays = dateRange.dates.filter(date => {
+        const dayOfWeek = new Date(date).getDay();
+        return dayOfWeek >= 1 && dayOfWeek <= 5;
+      }).length;
+      return workingDays * 8;
+    }
   };
 
   const applyLeaveAdjustments = (data: DeveloperWorklogData[], leaveInfo: DeveloperLeaveInfo[]): DeveloperWorklogData[] => {
@@ -261,22 +279,34 @@ const DailyWorklogTracking: React.FC = () => {
 
       if (!developerLeave || developerLeave.leaveDays === 0) return developer;
 
-      let originalTarget = 35;
+      let originalTarget = estimationType === 'hours' ? 35 : 40;
+      let dailyRate = estimationType === 'hours' ? 7 : 8;
+
       try {
-        const metric = typeof localStorage !== 'undefined' ? localStorage.getItem('capacityMetric') : null;
-        if (metric === 'hours') {
-          const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('dailyHours') : null;
-          const parsed = stored ? parseFloat(stored) : NaN;
-          const daily = Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
-          originalTarget = Math.round(daily * 5);
+        if (typeof localStorage !== 'undefined') {
+          if (estimationType === 'hours') {
+            const stored = localStorage.getItem('dailyHours');
+            const parsed = stored ? parseFloat(stored) : NaN;
+            dailyRate = Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
+            originalTarget = Math.round(dailyRate * 5);
+          } else {
+            const stored = localStorage.getItem('dailyStoryPoints');
+            const parsed = stored ? parseFloat(stored) : NaN;
+            dailyRate = Number.isFinite(parsed) && parsed > 0 ? parsed : 8;
+            originalTarget = Math.round(dailyRate * 5);
+          }
         }
-      } catch (e) { console.warn('Günlük kapasite konfigürasyonu okunamadı, 35h varsayılan kullanılacak:', e); }
+      } catch (e) {
+        console.warn('Günlük kapasite konfigürasyonu okunamadı, varsayılan kullanılacak:', e);
+      }
 
       const leaveDays = developerLeave.leaveDays;
-      const adjustedTarget = Math.max(0, originalTarget - (leaveDays * 7));
+      const adjustedTarget = Math.max(0, originalTarget - (leaveDays * dailyRate));
+
+      const actualValue = estimationType === 'hours' ? developer.weeklyTotal : (developer.weeklyTotalStoryPoints || 0);
       let newWeeklyStatus: 'sufficient' | 'insufficient' | 'excessive';
-      if (developer.weeklyTotal < adjustedTarget * 0.9) newWeeklyStatus = 'insufficient';
-      else if (developer.weeklyTotal <= adjustedTarget * 1.1) newWeeklyStatus = 'sufficient';
+      if (actualValue < adjustedTarget * 0.9) newWeeklyStatus = 'insufficient';
+      else if (actualValue <= adjustedTarget * 1.1) newWeeklyStatus = 'sufficient';
       else newWeeklyStatus = 'excessive';
 
       return { ...developer, weeklyTarget: adjustedTarget, weeklyStatus: newWeeklyStatus };
@@ -472,10 +502,11 @@ const DailyWorklogTracking: React.FC = () => {
     const dataToExport = selectedDeveloper === 'all' ? worklogData : filteredWorklogData;
     if (dataToExport.length === 0) { alert('İndirilecek veri bulunamadı.'); return; }
 
+    const unit = estimationType === 'hours' ? 'saat' : 'SP';
     const csvHeaders = [
       'Yazılımcı', 'E-posta',
-      viewMode === 'weekly' ? 'Haftalık Toplam (saat)' : 'Aylık Toplam (saat)',
-      viewMode === 'weekly' ? 'Haftalık Hedef (saat)' : 'Aylık Hedef (saat)',
+      viewMode === 'weekly' ? `Haftalık Toplam (${unit})` : `Aylık Toplam (${unit})`,
+      viewMode === 'weekly' ? `Haftalık Hedef (${unit})` : `Aylık Hedef (${unit})`,
       'Durum', 'İzin Günleri', 'Kapasite Ayarlaması',
       ...dateRange.dates.map(date => new Date(date).toLocaleDateString('tr-TR'))
     ];
@@ -484,27 +515,51 @@ const DailyWorklogTracking: React.FC = () => {
       const developerLeave = leaveData.find(leave => leave.developerName === dev.developerName);
       const leaveDays = developerLeave?.leaveDays || 0;
       let originalTarget: number;
+      let dailyRate: number;
+
       try {
-        const metric = typeof localStorage !== 'undefined' ? localStorage.getItem('capacityMetric') : null;
-        if (metric === 'hours') {
+        if (estimationType === 'hours') {
           const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('dailyHours') : null;
           const parsed = stored ? parseFloat(stored) : NaN;
-          const daily = Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
-          if (viewMode === 'weekly') originalTarget = Math.round(daily * 5);
+          dailyRate = Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
+          if (viewMode === 'weekly') originalTarget = Math.round(dailyRate * 5);
           else {
             const workingDays = dateRange.dates.filter(date => { const d = new Date(date).getDay(); return d >= 1 && d <= 5; }).length;
-            originalTarget = Math.round(daily * workingDays);
+            originalTarget = Math.round(dailyRate * workingDays);
           }
         } else {
-          originalTarget = viewMode === 'weekly' ? 35 : dateRange.dates.filter(date => { const d = new Date(date).getDay(); return d >= 1 && d <= 5; }).length * 7;
+          const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('dailyStoryPoints') : null;
+          const parsed = stored ? parseFloat(stored) : NaN;
+          dailyRate = Number.isFinite(parsed) && parsed > 0 ? parsed : 8;
+          if (viewMode === 'weekly') originalTarget = Math.round(dailyRate * 5);
+          else {
+            const workingDays = dateRange.dates.filter(date => { const d = new Date(date).getDay(); return d >= 1 && d <= 5; }).length;
+            originalTarget = Math.round(dailyRate * workingDays);
+          }
         }
       } catch (e) {
-        originalTarget = viewMode === 'weekly' ? 35 : dateRange.dates.filter(date => { const d = new Date(date).getDay(); return d >= 1 && d <= 5; }).length * 7;
+        if (estimationType === 'hours') {
+          dailyRate = 7;
+          originalTarget = viewMode === 'weekly' ? 35 : dateRange.dates.filter(date => { const d = new Date(date).getDay(); return d >= 1 && d <= 5; }).length * 7;
+        } else {
+          dailyRate = 8;
+          originalTarget = viewMode === 'weekly' ? 40 : dateRange.dates.filter(date => { const d = new Date(date).getDay(); return d >= 1 && d <= 5; }).length * 8;
+        }
       }
-      const capacityAdjustment = leaveDays > 0 ? `${originalTarget}h → ${dev.weeklyTarget}h (-${leaveDays * 7}h)` : 'Ayarlama yok';
-      return [dev.developerName, dev.email, dev.weeklyTotal, dev.weeklyTarget,
+
+      const unitSuffix = estimationType === 'hours' ? 'h' : ' SP';
+      const capacityAdjustment = leaveDays > 0
+        ? `${originalTarget}${unitSuffix} → ${dev.weeklyTarget}${unitSuffix} (-${leaveDays * dailyRate}${unitSuffix})`
+        : 'Ayarlama yok';
+
+      const totalValue = estimationType === 'hours' ? dev.weeklyTotal : (dev.weeklyTotalStoryPoints || 0);
+      const dailyValues = dev.dailySummaries.map(day =>
+        estimationType === 'hours' ? day.totalHours : (day.totalStoryPoints || 0)
+      );
+
+      return [dev.developerName, dev.email, totalValue, dev.weeklyTarget,
         dev.weeklyStatus === 'sufficient' ? 'Yeterli' : dev.weeklyStatus === 'insufficient' ? 'Eksik' : 'Fazla',
-        leaveDays, capacityAdjustment, ...dev.dailySummaries.map(day => day.totalHours)];
+        leaveDays, capacityAdjustment, ...dailyValues];
     });
 
     const csvContent = [csvHeaders.join(','), ...csvData.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))].join('\n');
@@ -929,22 +984,31 @@ const DailyWorklogTracking: React.FC = () => {
       {/* Analytics Cards */}
       {analytics && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: 'Toplam Yazılımcı', value: analytics.totalDevelopers, suffix: '', icon: Users, color: 'text-violet-600', bg: 'bg-violet-50', iconBg: 'bg-violet-100' },
-            { label: 'Toplam Süre', value: analytics.totalHours, suffix: 'h', icon: Clock, color: 'text-emerald-600', bg: 'bg-emerald-50', iconBg: 'bg-emerald-100' },
-            { label: 'Ortalama Günlük', value: analytics.averageDailyHours, suffix: 'h', icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50', iconBg: 'bg-blue-100' },
-            { label: 'Çalışılan İş', value: analytics.totalWorklogEntries, suffix: '', icon: Calendar, color: 'text-orange-600', bg: 'bg-orange-50', iconBg: 'bg-orange-100' },
-          ].map((card) => (
-            <div key={card.label} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-4">
-              <div className={`w-11 h-11 ${card.iconBg} rounded-xl flex items-center justify-center flex-shrink-0`}>
-                <card.icon className={`h-5 w-5 ${card.color}`} />
+          {(() => {
+            const totalStoryPoints = worklogData.reduce((sum, dev) => sum + (dev.weeklyTotalStoryPoints || 0), 0);
+            const avgStoryPoints = worklogData.length > 0 ? totalStoryPoints / worklogData.length : 0;
+
+            return [
+              { label: 'Toplam Yazılımcı', value: analytics.totalDevelopers, suffix: '', icon: Users, color: 'text-violet-600', bg: 'bg-violet-50', iconBg: 'bg-violet-100' },
+              estimationType === 'hours'
+                ? { label: 'Toplam Süre', value: analytics.totalHours, suffix: 'h', icon: Clock, color: 'text-emerald-600', bg: 'bg-emerald-50', iconBg: 'bg-emerald-100' }
+                : { label: 'Toplam Story Point', value: Math.round(totalStoryPoints), suffix: ' SP', icon: Clock, color: 'text-emerald-600', bg: 'bg-emerald-50', iconBg: 'bg-emerald-100' },
+              estimationType === 'hours'
+                ? { label: 'Ortalama Günlük', value: analytics.averageDailyHours, suffix: 'h', icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50', iconBg: 'bg-blue-100' }
+                : { label: 'Ortalama SP', value: Math.round(avgStoryPoints), suffix: ' SP', icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50', iconBg: 'bg-blue-100' },
+              { label: 'Çalışılan İş', value: analytics.totalWorklogEntries, suffix: '', icon: Calendar, color: 'text-orange-600', bg: 'bg-orange-50', iconBg: 'bg-orange-100' },
+            ].map((card) => (
+              <div key={card.label} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-4">
+                <div className={`w-11 h-11 ${card.iconBg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                  <card.icon className={`h-5 w-5 ${card.color}`} />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 font-medium">{card.label}</p>
+                  <p className={`text-2xl font-bold ${card.color} leading-tight`}>{card.value}{card.suffix}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-slate-500 font-medium">{card.label}</p>
-                <p className={`text-2xl font-bold ${card.color} leading-tight`}>{card.value}{card.suffix}</p>
-              </div>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
       )}
 
@@ -1031,7 +1095,8 @@ const DailyWorklogTracking: React.FC = () => {
 
                   const statusConfig = getStatusConfig(developer.weeklyStatus);
                   const avatarGradient = avatarColors[index % avatarColors.length];
-                  const progressPct = Math.min(100, (developer.weeklyTotal / developer.weeklyTarget) * 100);
+                  const actualValue = estimationType === 'hours' ? developer.weeklyTotal : (developer.weeklyTotalStoryPoints || 0);
+                  const progressPct = Math.min(100, (actualValue / developer.weeklyTarget) * 100);
 
                   return (
                     <React.Fragment key={developer.developerName}>
@@ -1060,10 +1125,10 @@ const DailyWorklogTracking: React.FC = () => {
                           </div>
                         </td>
 
-                        {/* Daily Hours */}
+                        {/* Daily Values */}
                         {developer.dailySummaries.map((day) => (
                           <td key={day.date} className="px-3 py-3.5 text-center">
-                            <div className="flex flex-col items-center gap-0.5">
+                            {estimationType === 'hours' ? (
                               <span className={`text-sm font-semibold tabular-nums ${
                                 day.totalHours === 0 ? 'text-slate-300' :
                                 day.totalHours >= 7 ? 'text-emerald-600' :
@@ -1071,32 +1136,38 @@ const DailyWorklogTracking: React.FC = () => {
                               }`}>
                                 {day.totalHours > 0 ? `${day.totalHours}h` : '–'}
                               </span>
-                              {estimationType === 'story_points' && day.totalStoryPoints !== undefined && day.totalStoryPoints > 0 && (
-                                <span className="text-[10px] font-medium text-blue-600">
-                                  {day.totalStoryPoints} SP
-                                </span>
-                              )}
-                            </div>
+                            ) : (
+                              <span className={`text-sm font-semibold tabular-nums ${
+                                !day.totalStoryPoints || day.totalStoryPoints === 0 ? 'text-slate-300' :
+                                day.totalStoryPoints >= 8 ? 'text-emerald-600' :
+                                day.totalStoryPoints >= 5 ? 'text-amber-500' : 'text-red-500'
+                              }`}>
+                                {day.totalStoryPoints && day.totalStoryPoints > 0 ? `${day.totalStoryPoints} SP` : '–'}
+                              </span>
+                            )}
                           </td>
                         ))}
 
                         {/* Total */}
                         <td className="px-4 py-3.5 text-center">
-                          <div className="flex flex-col items-center gap-0.5">
+                          {estimationType === 'hours' ? (
                             <span className="text-sm font-bold text-slate-800 tabular-nums">{developer.weeklyTotal}h</span>
-                            {estimationType === 'story_points' && developer.weeklyTotalStoryPoints !== undefined && developer.weeklyTotalStoryPoints > 0 && (
-                              <span className="text-xs font-semibold text-blue-600">
-                                {developer.weeklyTotalStoryPoints} SP
-                              </span>
-                            )}
-                          </div>
+                          ) : (
+                            <span className="text-sm font-bold text-slate-800 tabular-nums">
+                              {developer.weeklyTotalStoryPoints || 0} SP
+                            </span>
+                          )}
                         </td>
 
                         {/* Target */}
                         <td className="px-4 py-3.5 text-center">
-                          <span className="text-sm font-medium text-slate-600 tabular-nums">{developer.weeklyTarget}h</span>
+                          <span className="text-sm font-medium text-slate-600 tabular-nums">
+                            {estimationType === 'hours' ? `${developer.weeklyTarget}h` : `${developer.weeklyTarget} SP`}
+                          </span>
                           {hasLeave && viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && (
-                            <p className="text-[11px] text-amber-500 mt-0.5">(orijinal: {originalTarget}h)</p>
+                            <p className="text-[11px] text-amber-500 mt-0.5">
+                              (orijinal: {estimationType === 'hours' ? `${originalTarget}h` : `${originalTarget} SP`})
+                            </p>
                           )}
                         </td>
 
@@ -1165,29 +1236,37 @@ const DailyWorklogTracking: React.FC = () => {
                                   </div>
                                   {(() => {
                                     const allEntries = developer.dailySummaries.flatMap(day => day.entries);
-                                    const projectHours = allEntries.reduce((acc, entry) => {
+                                    const projectValues = allEntries.reduce((acc, entry) => {
                                       const project = entry.project || 'Bilinmeyen Proje';
-                                      acc[project] = (acc[project] || 0) + entry.timeSpentHours;
+                                      if (estimationType === 'hours') {
+                                        acc[project] = (acc[project] || 0) + entry.timeSpentHours;
+                                      } else {
+                                        acc[project] = (acc[project] || 0) + (entry.storyPoints || 0);
+                                      }
                                       return acc;
                                     }, {} as Record<string, number>);
-                                    const sortedProjects = Object.entries(projectHours).sort(([, a], [, b]) => b - a);
+                                    const sortedProjects = Object.entries(projectValues).sort(([, a], [, b]) => b - a);
 
                                     if (sortedProjects.length === 0) {
                                       return <p className="text-sm text-slate-500 text-center py-3">Bu dönemde kayıtlı proje çalışması bulunamadı.</p>;
                                     }
 
+                                    const totalValue = estimationType === 'hours' ? developer.weeklyTotal : (developer.weeklyTotalStoryPoints || 0);
+
                                     return (
                                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                        {sortedProjects.map(([project, hours]) => (
+                                        {sortedProjects.map(([project, value]) => (
                                           <div key={project} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
                                             <div className="flex items-center justify-between mb-2">
                                               <span className="text-sm font-medium text-slate-700 truncate flex-1 mr-2">{project}</span>
-                                              <span className="text-sm font-bold text-blue-600 whitespace-nowrap tabular-nums">{Math.round(hours * 100) / 100}h</span>
+                                              <span className="text-sm font-bold text-blue-600 whitespace-nowrap tabular-nums">
+                                                {estimationType === 'hours' ? `${Math.round(value * 100) / 100}h` : `${Math.round(value)} SP`}
+                                              </span>
                                             </div>
                                             <div className="w-full bg-slate-200 rounded-full h-1.5">
-                                              <div className="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style={{ width: `${(hours / developer.weeklyTotal) * 100}%` }} />
+                                              <div className="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style={{ width: `${totalValue > 0 ? (value / totalValue) * 100 : 0}%` }} />
                                             </div>
-                                            <p className="mt-1 text-[11px] text-slate-400">{Math.round((hours / developer.weeklyTotal) * 100)}% toplam</p>
+                                            <p className="mt-1 text-[11px] text-slate-400">{totalValue > 0 ? Math.round((value / totalValue) * 100) : 0}% toplam</p>
                                           </div>
                                         ))}
                                       </div>
@@ -1205,17 +1284,18 @@ const DailyWorklogTracking: React.FC = () => {
                                         <h5 className="text-xs font-semibold text-slate-600">
                                           {new Date(day.date).toLocaleDateString('tr-TR', { weekday: 'short', day: 'numeric', month: 'short' })}
                                         </h5>
-                                        <div className="flex items-center gap-2">
+                                        {estimationType === 'hours' ? (
                                           <span className={`text-xs font-bold tabular-nums ${
                                             day.totalHours >= 7 ? 'text-emerald-600' :
                                             day.totalHours >= 5 ? 'text-amber-500' : 'text-red-500'
                                           }`}>{day.totalHours}h</span>
-                                          {estimationType === 'story_points' && day.totalStoryPoints !== undefined && day.totalStoryPoints > 0 && (
-                                            <span className="text-xs font-bold text-blue-600">
-                                              {day.totalStoryPoints} SP
-                                            </span>
-                                          )}
-                                        </div>
+                                        ) : (
+                                          <span className={`text-xs font-bold tabular-nums ${
+                                            !day.totalStoryPoints || day.totalStoryPoints === 0 ? 'text-slate-300' :
+                                            day.totalStoryPoints >= 8 ? 'text-emerald-600' :
+                                            day.totalStoryPoints >= 5 ? 'text-amber-500' : 'text-red-500'
+                                          }`}>{day.totalStoryPoints && day.totalStoryPoints > 0 ? `${day.totalStoryPoints} SP` : '–'}</span>
+                                        )}
                                       </div>
                                       <div className="space-y-1.5">
                                         {day.entries.map((entry, entryIndex) => (
@@ -1224,14 +1304,15 @@ const DailyWorklogTracking: React.FC = () => {
                                             <div className="text-[11px] text-slate-600 line-clamp-2 leading-tight">{entry.issueSummary}</div>
                                             <div className="flex items-center justify-between mt-1">
                                               <span className="text-[10px] text-slate-400 truncate">{entry.project}</span>
-                                              <div className="flex items-center gap-1.5 ml-1">
+                                              {estimationType === 'hours' ? (
                                                 <span className="text-[11px] font-semibold text-slate-700 tabular-nums">{entry.timeSpentHours}h</span>
-                                                {estimationType === 'story_points' && entry.storyPoints !== undefined && entry.storyPoints > 0 && (
-                                                  <span className="text-[10px] font-semibold text-blue-600">
-                                                    {entry.storyPoints} SP
-                                                  </span>
-                                                )}
-                                              </div>
+                                              ) : entry.storyPoints !== undefined && entry.storyPoints > 0 ? (
+                                                <span className="text-[11px] font-semibold text-blue-600 tabular-nums">
+                                                  {entry.storyPoints} SP
+                                                </span>
+                                              ) : (
+                                                <span className="text-[11px] font-medium text-slate-400">–</span>
+                                              )}
                                             </div>
                                           </div>
                                         ))}
