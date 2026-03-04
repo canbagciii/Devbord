@@ -51,8 +51,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Dinamik yetki güncellemeleri: Mevcut kullanıcının satırı değişirse authState.user'ı güncelle
   useEffect(() => {
-    if (!authState.user) return;
+    if (!authState.user?.email) return;
     const email = authState.user.email;
+    const companyName = authState.user.companyName;
+
     const channel = supabase
       .channel('auth-user-changes')
       .on(
@@ -68,11 +70,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               role: row.role,
               assignedProjects: row.assigned_projects || [],
               companyId: row.company_id,
-              companyName: authState.user?.companyName || '',
+              companyName: companyName || '',
               onboardingCompleted: row.onboarding_completed ?? false
             };
-            setAuthState(prev => ({ ...prev, user: updatedUser }));
-            localStorage.setItem('user', JSON.stringify(updatedUser));
+            setAuthState(prev => {
+              if (JSON.stringify(prev.user) !== JSON.stringify(updatedUser)) {
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                return { ...prev, user: updatedUser };
+              }
+              return prev;
+            });
           } catch (e) {
             console.error('Error updating auth user from realtime:', e);
           }

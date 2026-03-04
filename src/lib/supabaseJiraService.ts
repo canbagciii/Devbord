@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { developerProjectKeyMap } from '../data/developerProjectMap';
+import { developerProjectMapService } from '../data/developerProjectMap';
 import { DeveloperWorkload, JiraTask, JiraProject, JiraSprint, JiraBoard, ProjectSprintDetail } from '../types';
 import { jiraFilterService } from './jiraFilterService';
 
@@ -33,8 +33,9 @@ class SupabaseJiraService {
     return `${y}-${m}-${day}`;
   }
 
-  // Harici yapılandırılabilir geliştirici -> proje anahtarı eşlemesi
-  private static DEFAULT_DEVELOPER_PROJECT: { [name: string]: string } = developerProjectKeyMap;
+  private async getDefaultDeveloperProjectMap(): Promise<Map<string, string[]>> {
+    return await developerProjectMapService.getDeveloperProjectMap();
+  }
 
   // Proje adından proje anahtarını bul (ters eşleme)
   private getProjectKeyFromName(name: string): string {
@@ -65,6 +66,7 @@ class SupabaseJiraService {
 
   clearCache(): void {
     cache.clear();
+    developerProjectMapService.clearCache();
   }
 
   private async callEdgeFunction<T>(functionName: string, options: any = {}): Promise<T> {
@@ -1247,7 +1249,7 @@ class SupabaseJiraService {
         this.getAllSprints(sprintType)
       ]);
 
-      // Proje ataması önceliği: 1) Kullanıcı Yönetimi (users.assigned_projects), 2) Jira Filtre (selected_developers), 3) Statik harita
+      // Proje ataması önceliği: 1) Kullanıcı Yönetimi (users.assigned_projects), 2) Jira Filtre (selected_developers), 3) Dinamik harita
       const normalizedDeveloperProjectMap = new Map<string, Set<string>>();
       developerProjectMapFromUsers.forEach((projects, normalizedKey) => {
         normalizedDeveloperProjectMap.set(normalizedKey, new Set(projects));
@@ -1258,10 +1260,11 @@ class SupabaseJiraService {
           normalizedDeveloperProjectMap.set(n, new Set(projects));
         }
       });
-      Object.entries(SupabaseJiraService.DEFAULT_DEVELOPER_PROJECT).forEach(([name, key]) => {
-        const n = this.normalizeName(name);
-        if (!normalizedDeveloperProjectMap.has(n)) {
-          normalizedDeveloperProjectMap.set(n, new Set([key]));
+
+      const defaultMap = await this.getDefaultDeveloperProjectMap();
+      defaultMap.forEach((projects, normalizedKey) => {
+        if (!normalizedDeveloperProjectMap.has(normalizedKey)) {
+          normalizedDeveloperProjectMap.set(normalizedKey, new Set(projects));
         }
       });
       

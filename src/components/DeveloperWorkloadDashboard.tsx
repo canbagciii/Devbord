@@ -18,7 +18,6 @@ import {
   calculateWorkloadStats,
   getDeveloperCapacity
 } from '../utils/workloadUtils';
-import { useDeveloperActualHours } from '../hooks/useDeveloperActualHours';
 
 type ViewMode = 'weekly' | 'monthly';
 
@@ -35,7 +34,10 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
     capacityCalculations,
     setCapacityCalculations,
     getDeveloperProjectKey: getDeveloperProjectKeyFromContext,
-    lastRefreshAt
+    lastRefreshAt,
+    developerActualHours,
+    developerActualHoursLoading,
+    developerActualHoursError
   } = useJiraData();
   const { canViewDeveloperData, user, hasKolayIK } = useAuth();
   const { getCapacity, updateCapacity, canEdit } = useDeveloperCapacities();
@@ -43,19 +45,12 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
   const [editingCapacity, setEditingCapacity] = useState<string | null>(null);
   const [capacityValue, setCapacityValue] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Actual hours yönetimi için custom hook
-  const { actualHoursData, loading: actualHoursLoading, error: actualHoursError } = useDeveloperActualHours({
-    workload,
-    sprints,
-    sprintType,
-    cacheStatus
-  });
   const [showKolayIKIntegration, setShowKolayIKIntegration] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [customDateRange, setCustomDateRange] = useState<{ start: string; end: string } | null>(null);
   const [localLastRefreshAt, setLocalLastRefreshAt] = useState<number | null>(null);
+  const [developerProjectKeys, setDeveloperProjectKeys] = useState<Record<string, string>>({});
 
   // Tarih aralığını hesapla
   useEffect(() => {
@@ -75,6 +70,24 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
       setLocalLastRefreshAt(lastRefreshAt);
     }
   }, [lastRefreshAt]);
+
+  // Developer'ların proje anahtarlarını yükle
+  useEffect(() => {
+    if (!workload || workload.length === 0) return;
+
+    const loadProjectKeys = async () => {
+      const keys: Record<string, string> = {};
+      for (const dev of workload) {
+        const key = await getDeveloperProjectKeyFromContext(dev.developer);
+        if (key) {
+          keys[dev.developer] = key;
+        }
+      }
+      setDeveloperProjectKeys(keys);
+    };
+
+    loadProjectKeys();
+  }, [workload, getDeveloperProjectKeyFromContext]);
 
   const formatLastRefresh = () => {
     if (!localLastRefreshAt) return 'Henüz yenilenmedi';
@@ -126,24 +139,9 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
   };
 
 
-  // Yazılımcının proje anahtarını getir (Kullanıcı Yönetimi öncelikli)
-  const getDeveloperProjectKey = (developerName: string): string => {
-    return getDeveloperProjectKeyFromContext(developerName) ?? 'UNKNOWN';
-  };
-
-  // Sprint tarih aralığı için proje haritası (workload'taki her geliştirici için context'ten)
-  const developerProjectKeyMapForUtil = React.useMemo(() => {
-    const m: Record<string, string> = {};
-    workload?.forEach(w => {
-      const k = getDeveloperProjectKeyFromContext(w.developer);
-      if (k) m[w.developer] = k;
-    });
-    return m;
-  }, [workload, getDeveloperProjectKeyFromContext]);
-
   // Yazılımcının sprint tarih aralığını getir
   const getDeveloperSprintDateRange = (developerName: string): { start: string; end: string; sprintNames: string[] } => {
-    return getDeveloperSprintDateRangeUtil(developerName, sprints, developerProjectKeyMapForUtil);
+    return getDeveloperSprintDateRangeUtil(developerName, sprints, developerProjectKeys);
   };
 
   // Genel sprint tarih aralığını hesapla (tüm sprintlerden)
@@ -186,12 +184,16 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
       return dev.developer.toLowerCase().includes(searchLower) ||
              dev.email.toLowerCase().includes(searchLower);
     })
-    .sort((a, b) => (actualHoursData[b.developer] || 0) - (actualHoursData[a.developer] || 0)) : [];
+    .sort((a, b) => {
+      const aHours = developerActualHours?.[a.developer] ?? 0;
+      const bHours = developerActualHours?.[b.developer] ?? 0;
+      return bHours - aHours;
+    }) : [];
 
-  // Statistics
+  // Statistics (actual hours sprint tarih aralığındaki worklog'lara göre hesaplanır)
   const stats = calculateWorkloadStats(
     filteredWorkload,
-    actualHoursData,
+    developerActualHours || {},
     capacityCalculations,
     showKolayIKIntegration,
     getCapacity
@@ -238,15 +240,15 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
           <p className="text-gray-600 mt-1">
             {viewMode === 'weekly' ? 'Haftalık' : 'Aylık'} görev dağılımı ve iş yükü analizi
           </p>
-          {actualHoursLoading && (
+          {developerActualHoursLoading && (
             <p className="text-sm text-blue-600 mt-1 flex items-center space-x-2">
               <Loader className="h-4 w-4 animate-spin" />
-              <span>Sprint verileri yükleniyor 10 saniye sürebilir...</span>
+              <span>Sprint worklog verileri yükleniyor, birkaç saniye sürebilir...</span>
             </p>
           )}
-          {actualHoursError && (
+          {developerActualHoursError && (
             <p className="text-sm text-red-600 mt-1">
-              ⚠️ Harcanan süre verisi yüklenemedi: {actualHoursError}
+              ⚠️ Harcanan süre verisi yüklenemedi: {developerActualHoursError}
             </p>
           )}
         </div>
@@ -421,7 +423,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredWorkload.map((developer, index) => {
                 const capacity = getCapacity(developer.developer);
-                const actualHours = actualHoursData[developer.developer] || 0;
+                const actualHours = Math.round(((developerActualHours?.[developer.developer] ?? 0) as number) * 100) / 100;
                 
                 return (
                   <React.Fragment key={developer.developer}>
@@ -449,21 +451,10 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex flex-col items-center">
-                          {actualHoursLoading ? (
-                            <div className="flex items-center space-x-1">
-                              <Loader className="h-4 w-4 animate-spin text-blue-600" />
-                              <span className="text-sm text-gray-500">Sprint verileri bekleniyor...</span>
-                            </div>
-                          ) : actualHoursError ? (
-                            <span className="text-sm text-red-600">Hata</span>
-                          ) : (
-                            <>
-                              <span className="text-lg font-semibold text-purple-600">{actualHours}h</span>
-                              <div className="text-xs text-gray-500 mt-1">
-                                {getDeveloperProjectKey(developer.developer)} projesi
-                              </div>
-                            </>
-                          )}
+                          <span className="text-lg font-semibold text-purple-600">{actualHours}h</span>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {developerProjectKeys[developer.developer] || 'Yükleniyor...'} projesi
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -518,14 +509,14 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center space-x-2">
                           {(() => {
-                            const capacity = getDeveloperCapacity(
+                            const capacityValue = getDeveloperCapacity(
                               developer.developer,
                               getCapacity,
                               hasKolayIK && showKolayIKIntegration,
                               capacityCalculations
                             );
-                            const actualHours = actualHoursData[developer.developer] || 0;
-                            const currentStatus = calculateDeveloperStatus(actualHours, capacity);
+                            const actualHoursValue = Math.round(((developerActualHours?.[developer.developer] ?? 0) as number) * 100) / 100;
+                            const currentStatus = calculateDeveloperStatus(actualHoursValue, capacityValue);
                             
                             return (
                               <>
@@ -573,7 +564,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
                                         <h5 className="font-medium text-gray-900">{detail.project}</h5>
                                         <p className="text-sm text-gray-600">{detail.sprint}</p>
                                         <p className="text-xs text-blue-600">
-                                          Proje: {getDeveloperProjectKey(developer.developer)}
+                                          Proje: {developerProjectKeys[developer.developer] || 'Yükleniyor...'}
                                         </p>
                                       </div>
                                       <div className="text-right">
@@ -679,9 +670,9 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
                             ) : (
                               <div className="text-center py-4">
                                 <p className="text-gray-500">Bu yazılımcı için sprint görevi bulunamadı.</p>
-                                {actualHoursData[developer.developer] > 0 && (
+                                {((developerActualHours?.[developer.developer] ?? 0) as number) > 0 && (
                                   <p className="text-sm text-purple-600 mt-2">
-                                    Ancak {actualHoursData[developer.developer]}h worklog kaydı mevcut
+                                    Ancak {Math.round(((developerActualHours?.[developer.developer] ?? 0) as number) * 100) / 100}h worklog kaydı mevcut
                                   </p>
                                 )}
                               </div>
