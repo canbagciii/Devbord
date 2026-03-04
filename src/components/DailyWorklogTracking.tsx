@@ -21,7 +21,8 @@ import {
   AlertTriangle,
   Info,
   CalendarDays,
-  Loader
+  Loader,
+  CheckCircle
 } from 'lucide-react';
 
 type ViewMode = 'weekly' | 'monthly';
