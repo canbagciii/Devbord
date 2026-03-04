@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Clock, TrendingUp, AlertTriangle, CheckCircle, Download, RefreshCw, ChevronDown, ChevronUp, CreditCard as Edit, Save, X, Loader, Search, Calendar } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
 import { useAuth } from '../context/AuthContext';
+import { useCapacityMetric } from '../context/CapacityMetricContext';
 import { useDeveloperCapacities } from '../hooks/useDeveloperCapacities';
 import { exportDeveloperWorkloadToCSV } from '../utils/csvExport';
 import { worklogService } from '../services/worklogService';
@@ -38,6 +39,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
     lastRefreshAt
   } = useJiraData();
   const { canViewDeveloperData, user, hasKolayIK } = useAuth();
+  const { capacityMetric } = useCapacityMetric();
   const { getCapacity, updateCapacity, canEdit } = useDeveloperCapacities();
   const [expandedDeveloper, setExpandedDeveloper] = useState<string | null>(null);
   const [editingCapacity, setEditingCapacity] = useState<string | null>(null);
@@ -320,8 +322,16 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {['Yazılımcı', 'Görev Sayısı', 'Analist Tahmini', 'Harcanan Süre', 'Kapasite', 'Durum', 'Detay'].map((h, i) => (
-                  <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider ${i === 0 ? 'text-left' : 'text-center'}`}>
+                {[
+                  'Yazılımcı',
+                  'Görev Sayısı',
+                  capacityMetric === 'storyPoints' ? 'Tahmini (SP)' : capacityMetric === 'both' ? 'Tahmini' : 'Tahmini (h)',
+                  capacityMetric === 'storyPoints' ? 'Harcanan (SP)' : capacityMetric === 'both' ? 'Harcanan' : 'Harcanan (h)',
+                  'Kapasite',
+                  'Durum',
+                  'Detay'
+                ].map((h, i) => (
+                  <th key={i} className={`px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider ${i === 0 ? 'text-left' : 'text-center'}`}>
                     {h}
                   </th>
                 ))}
@@ -365,7 +375,16 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
 
                       {/* Analist Tahmini */}
                       <td className="px-5 py-3.5 text-center">
-                        <span className="text-base font-bold text-blue-600 tabular-nums">{Math.round(developer.totalHours * 100) / 100}h</span>
+                        {capacityMetric === 'both' ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm font-bold text-blue-600 tabular-nums">{Math.round(developer.totalHours * 100) / 100}h</span>
+                            <span className="text-sm font-bold text-blue-600 tabular-nums">{Math.round(developer.totalHours * 100) / 100} SP</span>
+                          </div>
+                        ) : capacityMetric === 'storyPoints' ? (
+                          <span className="text-base font-bold text-blue-600 tabular-nums">{Math.round(developer.totalHours * 100) / 100} SP</span>
+                        ) : (
+                          <span className="text-base font-bold text-blue-600 tabular-nums">{Math.round(developer.totalHours * 100) / 100}h</span>
+                        )}
                       </td>
 
                       {/* Harcanan Süre */}
@@ -377,6 +396,13 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
                           </div>
                         ) : actualHoursError ? (
                           <span className="text-xs text-red-500">Hata</span>
+                        ) : capacityMetric === 'both' ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm font-semibold text-slate-700 tabular-nums">{Math.round(actualHours * 100) / 100}h</span>
+                            <span className="text-sm font-semibold text-slate-700 tabular-nums">{Math.round(actualHours * 100) / 100} SP</span>
+                          </div>
+                        ) : capacityMetric === 'storyPoints' ? (
+                          <span className="text-sm font-semibold text-slate-700 tabular-nums">{Math.round(actualHours * 100) / 100} SP</span>
                         ) : (
                           <div>
                             <p className="text-base font-bold text-violet-600 tabular-nums">{actualHours}h</p>

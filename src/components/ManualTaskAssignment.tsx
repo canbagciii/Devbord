@@ -5,6 +5,7 @@ import { jiraFilterService } from '../lib/jiraFilterService';
 import { Plus, Save, X, User, Clock, AlertTriangle, CheckCircle, ExternalLink, Loader, Download, RefreshCw } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
 import { useAuth } from '../context/AuthContext';
+import { useCapacityMetric } from '../context/CapacityMetricContext';
 import { useDeveloperCapacities } from '../hooks/useDeveloperCapacities';
 import { exportManualAssignmentsToCSV } from '../utils/csvExport';
 import { DeveloperCapacityAdjustment } from './DeveloperCapacityAdjustment';
@@ -19,6 +20,7 @@ export const ManualTaskAssignment: React.FC = () => {
     capacityReady, capacityCacheKey
   } = useJiraData();
   const { hasRole, canAccessProject, getAccessibleProjects, hasKolayIK } = useAuth();
+  const { capacityMetric } = useCapacityMetric();
   const { getCapacity } = useDeveloperCapacities();
   const [assignments, setAssignments] = useState<TaskAssignment[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -364,8 +366,13 @@ export const ManualTaskAssignment: React.FC = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  {['Yazılımcı', 'Tahmini Süre', 'İzin Düşürülmüş Kapasite', 'Durum'].map((h, i) => (
-                    <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider ${i === 0 ? 'text-left' : i < 3 ? 'text-right' : 'text-center'}`}>
+                  {[
+                    'Yazılımcı',
+                    capacityMetric === 'storyPoints' ? 'Tahmini Süre (SP)' : capacityMetric === 'both' ? 'Tahmini Süre' : 'Tahmini Süre (h)',
+                    capacityMetric === 'storyPoints' ? 'Kapasite (SP)' : capacityMetric === 'both' ? 'Kapasite' : 'Kapasite (h)',
+                    'Durum'
+                  ].map((h, i) => (
+                    <th key={i} className={`px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider ${i === 0 ? 'text-left' : i < 3 ? 'text-right' : 'text-center'}`}>
                       {h}
                     </th>
                   ))}
@@ -390,7 +397,16 @@ export const ManualTaskAssignment: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-5 py-3 text-right">
-                        <span className="text-sm font-bold text-blue-600 tabular-nums">{estimatedHours}h</span>
+                        {capacityMetric === 'both' ? (
+                          <div className="flex flex-col items-end gap-0.5">
+                            <span className="text-sm font-bold text-blue-600 tabular-nums">{estimatedHours}h</span>
+                            <span className="text-sm font-bold text-blue-600 tabular-nums">{estimatedHours} SP</span>
+                          </div>
+                        ) : capacityMetric === 'storyPoints' ? (
+                          <span className="text-sm font-bold text-blue-600 tabular-nums">{estimatedHours} SP</span>
+                        ) : (
+                          <span className="text-sm font-bold text-blue-600 tabular-nums">{estimatedHours}h</span>
+                        )}
                       </td>
                       <td className="px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-3">
@@ -400,7 +416,16 @@ export const ManualTaskAssignment: React.FC = () => {
                               style={{ width: `${fillPct}%` }}
                             />
                           </div>
-                          <span className="text-sm font-semibold text-slate-700 tabular-nums">{capacity}h</span>
+                          {capacityMetric === 'both' ? (
+                            <div className="flex flex-col items-end gap-0.5">
+                              <span className="text-sm font-semibold text-slate-700 tabular-nums">{capacity}h</span>
+                              <span className="text-sm font-semibold text-slate-700 tabular-nums">{capacity} SP</span>
+                            </div>
+                          ) : capacityMetric === 'storyPoints' ? (
+                            <span className="text-sm font-semibold text-slate-700 tabular-nums">{capacity} SP</span>
+                          ) : (
+                            <span className="text-sm font-semibold text-slate-700 tabular-nums">{capacity}h</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-5 py-3 text-center">
@@ -495,7 +520,11 @@ export const ManualTaskAssignment: React.FC = () => {
                       ? workload.map(dev => {
                           const capacity = getAdjustedCapacity(dev.developer);
                           const estimatedHours = Math.round((dev.totalHours || 0) * 100) / 100;
-                          return <option key={dev.developer} value={dev.developer}>{dev.developer} ({estimatedHours}h / {capacity}h)</option>;
+                          const suffix = capacityMetric === 'storyPoints' ? ' SP' : capacityMetric === 'both' ? '' : 'h';
+                          const displayText = capacityMetric === 'both'
+                            ? `${dev.developer} (${estimatedHours}h / ${capacity}h | ${estimatedHours} SP / ${capacity} SP)`
+                            : `${dev.developer} (${estimatedHours}${suffix} / ${capacity}${suffix})`;
+                          return <option key={dev.developer} value={dev.developer}>{displayText}</option>;
                         })
                       : fallbackDeveloperNames.map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
