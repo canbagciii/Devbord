@@ -373,7 +373,7 @@ const DailyWorklogTracking: React.FC = () => {
       console.log(`📋 Issue keys:`, Array.from(issueKeys));
 
       const jql = `key in (${Array.from(issueKeys).join(',')})`;
-      const endpoint = `/rest/api/3/search?jql=${encodeURIComponent(jql)}&fields=${selectedStoryPointField}&maxResults=1000`;
+      const endpoint = `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&fields=${selectedStoryPointField}&maxResults=1000`;
       console.log('🔗 Jira API endpoint:', endpoint);
 
       const response = await fetch(`${supabaseUrl}/functions/v1/jira-proxy`, {
