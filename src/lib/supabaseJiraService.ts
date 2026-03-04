@@ -1259,8 +1259,9 @@ class SupabaseJiraService {
       });
       
       if (IS_DEV) {
-        console.log(`✅ Allowed developers from database: ${allowedDevelopers.length} developers`);
+        console.log(`✅ Allowed developers from database: ${allowedDevelopers.length} developers:`, allowedDevelopers);
         console.log(`📊 Found ${sprints.length} ${sprintType} sprints`);
+        console.log(`📊 Developer-Project map:`, Array.from(normalizedDeveloperProjectMap.entries()));
       }
 
       // OPTIMIZE: Sprint task'larını paralel çek (sıralı yerine)
@@ -1295,6 +1296,11 @@ class SupabaseJiraService {
       
       if (IS_DEV) {
         console.log(`✅ Toplam ${allTasks.length} görev yüklendi`);
+        console.log(`📋 Görev dağılımı:`, allTasks.reduce((acc, t) => {
+          const key = `${t.assignee} (${t.projectKey})`;
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>));
       }
 
       // OPTIMIZE: Group tasks by developer with project filtering - Set kullanarak O(1) lookup
@@ -1316,7 +1322,7 @@ class SupabaseJiraService {
         if (allowedProjects && allowedProjects.size > 0) {
           if (!allowedProjects.has(task.projectKey)) {
             if (IS_DEV) {
-              console.log(`⏭️ Skipping task for ${task.assignee} - project ${task.projectKey} not in their allowed projects`);
+              console.log(`⏭️ Skipping task for ${task.assignee} (normalized: ${normalizedAssignee}) - project ${task.projectKey} not in their allowed projects [${Array.from(allowedProjects).join(', ')}]`);
             }
             continue;
           }
