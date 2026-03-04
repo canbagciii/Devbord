@@ -49,6 +49,8 @@ const DailyWorklogTracking: React.FC = () => {
   const [loadingFields, setLoadingFields] = useState(false);
   const [selectedStoryPointField, setSelectedStoryPointField] = useState<string>('');
   const [estimationType, setEstimationType] = useState<'hours' | 'story_points'>('hours');
+  const [availableProjects, setAvailableProjects] = useState<Array<{ key: string; name: string }>>([]);
+  const [selectedProject, setSelectedProject] = useState<string>('');
 
   const dateRange = viewMode === 'weekly'
     ? getWeekRange(currentDate)
@@ -57,6 +59,7 @@ const DailyWorklogTracking: React.FC = () => {
   useEffect(() => {
     const storedEstimationType = localStorage.getItem('estimationType') as 'hours' | 'story_points' | null;
     const storedStoryPointField = localStorage.getItem('selectedStoryPointField');
+    const storedProject = localStorage.getItem('selectedStoryPointProject');
 
     if (storedEstimationType) {
       setEstimationType(storedEstimationType);
@@ -64,19 +67,26 @@ const DailyWorklogTracking: React.FC = () => {
     if (storedStoryPointField) {
       setSelectedStoryPointField(storedStoryPointField);
     }
+    if (storedProject) {
+      setSelectedProject(storedProject);
+    }
+
+    loadAvailableProjects();
   }, []);
 
-  const loadStoryPointFields = async () => {
+  const loadAvailableProjects = async () => {
+    try {
+      const { jiraFilterService } = await import('../lib/jiraFilterService');
+      const projects = await jiraFilterService.getSelectedProjects();
+      setAvailableProjects(projects.map(p => ({ key: p.project_key, name: p.project_name })));
+    } catch (error) {
+      console.error('Projeler yüklenirken hata:', error);
+    }
+  };
+
+  const loadStoryPointFields = async (projectKey?: string) => {
     setLoadingFields(true);
     try {
-      // Kullanıcının seçili projelerini al
-      const { jiraFilterService } = await import('../lib/jiraFilterService');
-      const selectedProjects = await jiraFilterService.getSelectedProjects();
-
-      // Aktif bir proje varsa onu kullan
-      const activeProject = selectedProjects.find(p => p.is_active);
-      const projectKey = activeProject?.project_key;
-
       console.log('🎯 Loading story point fields for project:', projectKey || 'all');
 
       // Company ID'yi al
@@ -192,6 +202,12 @@ const DailyWorklogTracking: React.FC = () => {
     }
   };
 
+  const handleProjectSelect = async (projectKey: string) => {
+    setSelectedProject(projectKey);
+    localStorage.setItem('selectedStoryPointProject', projectKey);
+    await loadStoryPointFields(projectKey);
+  };
+
   const handleStoryPointFieldSelect = (fieldId: string) => {
     setSelectedStoryPointField(fieldId);
     localStorage.setItem('selectedStoryPointField', fieldId);
@@ -281,6 +297,98 @@ const DailyWorklogTracking: React.FC = () => {
     return [];
   };
 
+  const enrichWithStoryPoints = async (data: DeveloperWorklogData[]): Promise<DeveloperWorklogData[]> => {
+    if (estimationType !== 'story_points' || !selectedStoryPointField || !selectedProject) {
+      return data;
+    }
+
+    try {
+      const companyId = localStorage.getItem('companyId');
+      if (!companyId) return data;
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const issueKeys = new Set<string>();
+      data.forEach(dev => {
+        dev.dailySummaries.forEach(day => {
+          day.entries.forEach(entry => {
+            if (entry.project === selectedProject || entry.issueKey.startsWith(selectedProject + '-')) {
+              issueKeys.add(entry.issueKey);
+            }
+          });
+        });
+      });
+
+      if (issueKeys.size === 0) return data;
+
+      console.log(`📊 Fetching story points for ${issueKeys.size} issues from project ${selectedProject}`);
+
+      const jql = `key in (${Array.from(issueKeys).join(',')})`;
+      const response = await fetch(`${supabaseUrl}/functions/v1/jira-proxy`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'x-company-id': companyId,
+        },
+        body: JSON.stringify({
+          endpoint: `/rest/api/3/search?jql=${encodeURIComponent(jql)}&fields=${selectedStoryPointField}&maxResults=1000`,
+          method: 'GET',
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn('Story point fetch failed:', response.statusText);
+        return data;
+      }
+
+      const result: { issues: Array<{ key: string; fields: Record<string, any> }> } = await response.json();
+      const storyPointMap = new Map<string, number>();
+
+      result.issues.forEach(issue => {
+        const storyPoints = issue.fields[selectedStoryPointField];
+        if (typeof storyPoints === 'number' && storyPoints > 0) {
+          storyPointMap.set(issue.key, storyPoints);
+        }
+      });
+
+      console.log(`✅ Fetched story points for ${storyPointMap.size} issues`);
+
+      return data.map(dev => {
+        const enrichedDailySummaries = dev.dailySummaries.map(day => {
+          const enrichedEntries = day.entries.map(entry => ({
+            ...entry,
+            storyPoints: storyPointMap.get(entry.issueKey)
+          }));
+
+          const totalStoryPoints = enrichedEntries.reduce((sum, entry) =>
+            sum + (entry.storyPoints || 0), 0
+          );
+
+          return {
+            ...day,
+            entries: enrichedEntries,
+            totalStoryPoints: totalStoryPoints > 0 ? totalStoryPoints : undefined
+          };
+        });
+
+        const weeklyTotalStoryPoints = enrichedDailySummaries.reduce((sum, day) =>
+          sum + (day.totalStoryPoints || 0), 0
+        );
+
+        return {
+          ...dev,
+          dailySummaries: enrichedDailySummaries,
+          weeklyTotalStoryPoints: weeklyTotalStoryPoints > 0 ? weeklyTotalStoryPoints : undefined
+        };
+      });
+    } catch (error) {
+      console.error('Error enriching with story points:', error);
+      return data;
+    }
+  };
+
   const loadWorklogData = async () => {
     setLoading(true);
     setError(null);
@@ -333,7 +441,9 @@ const DailyWorklogTracking: React.FC = () => {
       }
 
       analyticsData = await worklogService.getWorklogAnalytics(dateRange.start, dateRange.end);
-      setWorklogData(filteredData);
+
+      const enrichedData = await enrichWithStoryPoints(filteredData);
+      setWorklogData(enrichedData);
       setAnalytics(analyticsData);
     } catch (err) {
       console.error('Error loading worklog data:', err);
@@ -472,51 +582,149 @@ const DailyWorklogTracking: React.FC = () => {
 
       {/* Story Point Configuration Modal */}
       {showStoryPointConfig && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-slate-900">Story Point Field Seçimi</h3>
-              <button
-                onClick={() => setShowStoryPointConfig(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <ChevronUp className="h-5 w-5" />
-              </button>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-slate-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                    <Settings className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">Story Point Yapılandırması</h3>
+                    <p className="text-xs text-slate-500">Proje ve field seçimi yapın</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowStoryPointConfig(false)}
+                  className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <ChevronUp className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
-            {loadingFields ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader className="h-6 w-6 animate-spin text-blue-600" />
-              </div>
-            ) : (
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Project Selection */}
               <div className="space-y-3">
-                <p className="text-sm text-slate-600">
-                  Jira'nızda kullanılan story point field'ını seçin:
-                </p>
-                {storyPointFields.length === 0 ? (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
-                    Hiç story point field bulunamadı. Lütfen Jira ayarlarınızı kontrol edin.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {storyPointFields.map((field) => (
-                      <button
-                        key={field.id}
-                        onClick={() => handleStoryPointFieldSelect(field.id)}
-                        className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
-                          selectedStoryPointField === field.id
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-slate-200 hover:border-slate-300 bg-white'
-                        }`}
-                      >
-                        <div className="font-medium text-slate-900">{field.name}</div>
-                        <div className="text-xs text-slate-500 mt-1">{field.id}</div>
-                      </button>
-                    ))}
+                <div className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-slate-500" />
+                  <label className="text-sm font-semibold text-slate-700">1. Proje Seçin</label>
+                </div>
+                <select
+                  value={selectedProject}
+                  onChange={(e) => handleProjectSelect(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                >
+                  <option value="">Proje seçin...</option>
+                  {availableProjects.map((project) => (
+                    <option key={project.key} value={project.key}>
+                      {project.name} ({project.key})
+                    </option>
+                  ))}
+                </select>
+                {selectedProject && (
+                  <div className="flex items-center gap-2 text-emerald-600 text-xs bg-emerald-50 px-3 py-2 rounded-lg">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    <span>Proje seçildi: {selectedProject}</span>
                   </div>
                 )}
               </div>
-            )}
+
+              {/* Field Selection */}
+              {selectedProject && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-4 w-4 text-slate-500" />
+                    <label className="text-sm font-semibold text-slate-700">2. Story Point Field Seçin</label>
+                  </div>
+
+                  {loadingFields ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="text-center space-y-3">
+                        <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
+                        <p className="text-sm text-slate-500">Field'lar yükleniyor...</p>
+                      </div>
+                    </div>
+                  ) : storyPointFields.length === 0 ? (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-amber-900">Field bulunamadı</p>
+                        <p className="text-xs text-amber-700 mt-1">
+                          Seçili projede story point içeren field bulunamadı. Lütfen Jira ayarlarınızı kontrol edin.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      {storyPointFields.map((field) => (
+                        <button
+                          key={field.id}
+                          onClick={() => handleStoryPointFieldSelect(field.id)}
+                          className={`text-left px-4 py-3 rounded-xl border-2 transition-all ${
+                            selectedStoryPointField === field.id
+                              ? 'border-blue-500 bg-blue-50 shadow-sm'
+                              : 'border-slate-200 hover:border-slate-300 bg-white hover:shadow-sm'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="font-semibold text-slate-900">{field.name}</div>
+                              <div className="text-xs text-slate-500 mt-1 font-mono">{field.id}</div>
+                            </div>
+                            {selectedStoryPointField === field.id && (
+                              <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Info Message */}
+              {!selectedProject && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                  <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-900">Nasıl çalışır?</p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      Önce bir proje seçin, ardından o projede kullanılan story point field'ını seçin.
+                      Sistem otomatik olarak uygun field'ları tespit edecektir.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div className="text-xs text-slate-500">
+                {selectedStoryPointField && selectedProject ? (
+                  <span className="flex items-center gap-2 text-emerald-600">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    Yapılandırma tamamlandı
+                  </span>
+                ) : (
+                  <span>Lütfen proje ve field seçimi yapın</span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowStoryPointConfig(false)}
+                disabled={!selectedStoryPointField || !selectedProject}
+                className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-all ${
+                  selectedStoryPointField && selectedProject
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                Kaydet
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -855,19 +1063,33 @@ const DailyWorklogTracking: React.FC = () => {
                         {/* Daily Hours */}
                         {developer.dailySummaries.map((day) => (
                           <td key={day.date} className="px-3 py-3.5 text-center">
-                            <span className={`text-sm font-semibold tabular-nums ${
-                              day.totalHours === 0 ? 'text-slate-300' :
-                              day.totalHours >= 7 ? 'text-emerald-600' :
-                              day.totalHours >= 5 ? 'text-amber-500' : 'text-red-500'
-                            }`}>
-                              {day.totalHours > 0 ? `${day.totalHours}h` : '–'}
-                            </span>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <span className={`text-sm font-semibold tabular-nums ${
+                                day.totalHours === 0 ? 'text-slate-300' :
+                                day.totalHours >= 7 ? 'text-emerald-600' :
+                                day.totalHours >= 5 ? 'text-amber-500' : 'text-red-500'
+                              }`}>
+                                {day.totalHours > 0 ? `${day.totalHours}h` : '–'}
+                              </span>
+                              {estimationType === 'story_points' && day.totalStoryPoints !== undefined && day.totalStoryPoints > 0 && (
+                                <span className="text-[10px] font-medium text-blue-600">
+                                  {day.totalStoryPoints} SP
+                                </span>
+                              )}
+                            </div>
                           </td>
                         ))}
 
                         {/* Total */}
                         <td className="px-4 py-3.5 text-center">
-                          <span className="text-sm font-bold text-slate-800 tabular-nums">{developer.weeklyTotal}h</span>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="text-sm font-bold text-slate-800 tabular-nums">{developer.weeklyTotal}h</span>
+                            {estimationType === 'story_points' && developer.weeklyTotalStoryPoints !== undefined && developer.weeklyTotalStoryPoints > 0 && (
+                              <span className="text-xs font-semibold text-blue-600">
+                                {developer.weeklyTotalStoryPoints} SP
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Target */}
@@ -983,10 +1205,17 @@ const DailyWorklogTracking: React.FC = () => {
                                         <h5 className="text-xs font-semibold text-slate-600">
                                           {new Date(day.date).toLocaleDateString('tr-TR', { weekday: 'short', day: 'numeric', month: 'short' })}
                                         </h5>
-                                        <span className={`text-xs font-bold tabular-nums ${
-                                          day.totalHours >= 7 ? 'text-emerald-600' :
-                                          day.totalHours >= 5 ? 'text-amber-500' : 'text-red-500'
-                                        }`}>{day.totalHours}h</span>
+                                        <div className="flex items-center gap-2">
+                                          <span className={`text-xs font-bold tabular-nums ${
+                                            day.totalHours >= 7 ? 'text-emerald-600' :
+                                            day.totalHours >= 5 ? 'text-amber-500' : 'text-red-500'
+                                          }`}>{day.totalHours}h</span>
+                                          {estimationType === 'story_points' && day.totalStoryPoints !== undefined && day.totalStoryPoints > 0 && (
+                                            <span className="text-xs font-bold text-blue-600">
+                                              {day.totalStoryPoints} SP
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
                                       <div className="space-y-1.5">
                                         {day.entries.map((entry, entryIndex) => (
@@ -995,7 +1224,14 @@ const DailyWorklogTracking: React.FC = () => {
                                             <div className="text-[11px] text-slate-600 line-clamp-2 leading-tight">{entry.issueSummary}</div>
                                             <div className="flex items-center justify-between mt-1">
                                               <span className="text-[10px] text-slate-400 truncate">{entry.project}</span>
-                                              <span className="text-[11px] font-semibold text-slate-700 tabular-nums ml-1">{entry.timeSpentHours}h</span>
+                                              <div className="flex items-center gap-1.5 ml-1">
+                                                <span className="text-[11px] font-semibold text-slate-700 tabular-nums">{entry.timeSpentHours}h</span>
+                                                {estimationType === 'story_points' && entry.storyPoints !== undefined && entry.storyPoints > 0 && (
+                                                  <span className="text-[10px] font-semibold text-blue-600">
+                                                    {entry.storyPoints} SP
+                                                  </span>
+                                                )}
+                                              </div>
                                             </div>
                                           </div>
                                         ))}
