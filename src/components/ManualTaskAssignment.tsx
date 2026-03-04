@@ -202,7 +202,14 @@ export const ManualTaskAssignment: React.FC = () => {
     }
   };
 
-  const getAdjustedCapacity = (developerName: string): number => getCapacity(developerName);
+  // KolayIK entegrasyonu aktifse ve capacityCalculations varsa izin düşürülmüş kapasiteyi kullan
+  const getAdjustedCapacity = (developerName: string): number => {
+    if (hasKolayIK && capacityCalculations && capacityCalculations.length > 0) {
+      const calc = capacityCalculations.find(c => c.developerName === developerName);
+      if (calc) return calc.adjustedCapacity;
+    }
+    return getCapacity(developerName);
+  };
 
   const overallSprintRange = getOverallSprintDateRange(sprints);
   const workloadReady = !!workload && workload.length > 0;
