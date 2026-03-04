@@ -28,6 +28,11 @@ interface DraftDeveloper {
   existing_id?: string;
 }
 
+interface StoryPointFieldConfig {
+  project_key: string;
+  field_name: string;
+}
+
 export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
   isOnboarding = false,
   onOnboardingComplete
@@ -58,6 +63,7 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
   const [dailyHours, setDailyHours] = useState(8);
   const [capacityMetric, setCapacityMetric] = useState<'hours' | 'storyPoints'>('hours');
   const [dailyStoryPoints, setDailyStoryPoints] = useState(8);
+  const [storyPointFieldConfigs, setStoryPointFieldConfigs] = useState<StoryPointFieldConfig[]>([]);
   const [savingPlan, setSavingPlan] = useState(false);
   const [planSaveMessage, setPlanSaveMessage] = useState<string | null>(null);
   const [planSaveError, setPlanSaveError] = useState<string | null>(null);
@@ -84,13 +90,28 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
         if (storedDailySp) { const v = parseInt(storedDailySp, 10); if (!Number.isNaN(v) && v > 0) setDailyStoryPoints(v); }
       } catch {}
 
-      const [selProjects, selDevelopers] = await Promise.all([
+      const [selProjects, selDevelopers, capacitySettingsData, spFieldConfigs] = await Promise.all([
         jiraFilterService.getSelectedProjects(),
-        jiraFilterService.getSelectedDevelopers()
+        jiraFilterService.getSelectedDevelopers(),
+        companyId ? supabase.from('capacity_settings').select('*').eq('company_id', companyId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+        companyId ? supabase.from('project_story_point_config').select('*').eq('company_id', companyId) : Promise.resolve({ data: null, error: null })
       ]);
 
       setSavedProjects(selProjects);
       setSavedDevelopers(selDevelopers);
+
+      if (capacitySettingsData.data) {
+        if (capacitySettingsData.data.capacity_metric) setCapacityMetric(capacitySettingsData.data.capacity_metric as 'hours' | 'storyPoints');
+        if (capacitySettingsData.data.daily_hours) setDailyHours(Number(capacitySettingsData.data.daily_hours));
+        if (capacitySettingsData.data.daily_story_points) setDailyStoryPoints(Number(capacitySettingsData.data.daily_story_points));
+      }
+
+      if (spFieldConfigs.data) {
+        setStoryPointFieldConfigs(spFieldConfigs.data.map((c: any) => ({
+          project_key: c.project_key,
+          field_name: c.story_point_field
+        })));
+      }
 
       // Draft'i DB'den gelen mevcut veriyle baslat
       setDraftProjects(selProjects.map(p => ({
@@ -219,11 +240,67 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
           if (!same) await jiraFilterService.updateDeveloperProjects(saved.id, dd.project_keys);
         }
       }
-      // 5) Kapasite ayarlari
+      // 5) Kapasite ayarlari - Database'e kaydet
+      const companyId = localStorage.getItem('companyId');
+      if (companyId) {
+        // Capacity settings kaydet
+        const { data: existingCapacity } = await supabase
+          .from('capacity_settings')
+          .select('id')
+          .eq('company_id', companyId)
+          .maybeSingle();
+
+        if (existingCapacity) {
+          await supabase
+            .from('capacity_settings')
+            .update({
+              capacity_metric: capacityMetric,
+              daily_hours: dailyHours,
+              daily_story_points: dailyStoryPoints,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingCapacity.id);
+        } else {
+          await supabase
+            .from('capacity_settings')
+            .insert({
+              company_id: companyId,
+              capacity_metric: capacityMetric,
+              daily_hours: dailyHours,
+              daily_story_points: dailyStoryPoints
+            });
+        }
+
+        // Story Point field configs kaydet (sadece story point modunda)
+        if (capacityMetric === 'storyPoints') {
+          // Önce mevcut kayıtları sil
+          await supabase
+            .from('project_story_point_config')
+            .delete()
+            .eq('company_id', companyId);
+
+          // Yeni kayıtları ekle
+          const configsToInsert = storyPointFieldConfigs
+            .filter(c => c.field_name.trim() !== '')
+            .map(c => ({
+              company_id: companyId,
+              project_key: c.project_key,
+              story_point_field: c.field_name.trim()
+            }));
+
+          if (configsToInsert.length > 0) {
+            await supabase
+              .from('project_story_point_config')
+              .insert(configsToInsert);
+          }
+        }
+      }
+
+      // LocalStorage'a da yaz (backward compatibility)
       try {
         localStorage.setItem('capacityMetric', capacityMetric);
-        localStorage.setItem(capacityMetric === 'hours' ? 'dailyHours' : 'dailyStoryPoints',
-          String(capacityMetric === 'hours' ? dailyHours : dailyStoryPoints));
+        localStorage.setItem('dailyHours', String(dailyHours));
+        localStorage.setItem('dailyStoryPoints', String(dailyStoryPoints));
       } catch {}
 
       supabaseJiraService.clearCache();
@@ -484,14 +561,55 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
               </div>
             )}
             {capacityMetric === 'storyPoints' && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">Günlük hedef <span className="font-normal text-gray-400">(kaç story point?)</span></label>
-                <div className="flex items-center gap-3">
-                  <input type="number" min={1} max={100} value={dailyStoryPoints} onChange={e => { const v = parseInt(e.target.value || '0', 10); setDailyStoryPoints(Number.isNaN(v) ? 0 : v); }} className="w-28 px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-indigo-500 focus:outline-none" />
-                  <span className="text-xs text-gray-400 font-medium">story point / gün</span>
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-2">Günlük kapasite <span className="font-normal text-gray-400">(kaç story point?)</span></label>
+                  <div className="flex items-center gap-3">
+                    <input type="number" min={1} max={100} value={dailyStoryPoints} onChange={e => { const v = parseInt(e.target.value || '0', 10); setDailyStoryPoints(Number.isNaN(v) ? 0 : v); }} className="w-28 px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-indigo-500 focus:outline-none" />
+                    <span className="text-xs text-gray-400 font-medium">story point / gün</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Bir geliştiricinin günde tamamlaması beklenen ortalama story point kapasitesi.</p>
                 </div>
-                <p className="text-xs text-gray-400 mt-2">Ortalama bir geliştiricinin günde tamamlamasını beklediğiniz story point miktarı.</p>
-              </div>
+
+                {draftProjects.filter(p => p.is_active).length > 0 && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-3">Story Point Field Eşleştirme <span className="font-normal text-gray-400">(her proje için)</span></label>
+                    <div className="space-y-3">
+                      {draftProjects.filter(p => p.is_active).map(project => {
+                        const currentConfig = storyPointFieldConfigs.find(c => c.project_key === project.project_key);
+                        return (
+                          <div key={project.project_key} className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                            <div className="w-12 h-12 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                              {project.project_key.slice(0, 2)}
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-xs font-semibold text-gray-900 mb-1">{project.project_key}</div>
+                              <input
+                                type="text"
+                                placeholder="örn: customfield_10016 veya Story Points"
+                                value={currentConfig?.field_name || ''}
+                                onChange={e => {
+                                  const newFieldName = e.target.value;
+                                  setStoryPointFieldConfigs(prev => {
+                                    const existing = prev.find(c => c.project_key === project.project_key);
+                                    if (existing) {
+                                      return prev.map(c => c.project_key === project.project_key ? { ...c, field_name: newFieldName } : c);
+                                    } else {
+                                      return [...prev, { project_key: project.project_key, field_name: newFieldName }];
+                                    }
+                                  });
+                                }}
+                                className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:border-indigo-500 focus:outline-none"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">Jira'da Story Point değerini tutan field adını girin (örn: "customfield_10016" veya "Story Points").</p>
+                  </div>
+                )}
+              </>
             )}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-2">Hesaplama tipi <span className="font-normal text-gray-400">(story point mi, saat mi?)</span></label>

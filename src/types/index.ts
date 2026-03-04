@@ -4,6 +4,7 @@ export interface DeveloperWorkload {
   totalTasks: number;
   totalHours: number;
   totalActualHours: number;
+  totalStoryPoints?: number;
   dynamicCapacity?: number;
   capacityDetails?: {
     totalWorkingDays: number;
@@ -20,6 +21,7 @@ export interface ProjectSprintDetail {
   taskCount: number;
   hours: number;
   actualHours: number;
+  storyPoints?: number;
   tasks?: JiraTask[];
 }
 
@@ -35,6 +37,7 @@ export interface JiraTask {
   sprint: string;
   estimatedHours: number;
   actualHours: number;
+  storyPoints?: number;
   priority: string;
   created: string;
   updated: string;
