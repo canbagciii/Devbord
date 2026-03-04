@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useJiraData } from '../context/JiraDataContext';
+import { useCapacityMetric } from '../context/CapacityMetricContext';
 import { useKolayIKIntegration } from '../hooks/useKolayIKIntegration';
 import { useDeveloperCapacities } from '../hooks/useDeveloperCapacities';
 import { kolayikService } from '../services/kolayikService';
@@ -18,6 +19,7 @@ interface DeveloperCapacityAdjustmentProps {
   onCapacityCalculationsChange: (calculations: any[], cacheKey?: string | null) => void;
 }
 
+// Deprecated - dailyHours artık context'ten gelir
 const getDailyHoursFromStorage = (): number => {
   try {
     const stored = localStorage.getItem('dailyHours');
@@ -36,6 +38,7 @@ export const DeveloperCapacityAdjustment: React.FC<DeveloperCapacityAdjustmentPr
   onCapacityCalculationsChange
 }) => {
   const { sprints, capacityCalculations: contextCapacityCalculations, capacityCacheKey, sprintType, getDeveloperProjectKey: getDeveloperProjectKeyFromContext } = useJiraData();
+  const { dailyHours, dailyStoryPoints } = useCapacityMetric();
   const {
     leaveInfo,
     capacityCalculations,
@@ -183,7 +186,7 @@ export const DeveloperCapacityAdjustment: React.FC<DeveloperCapacityAdjustmentPr
     setLoading(true);
     setError(null);
 
-    const dailyHours = getDailyHoursFromStorage();
+    // dailyHours artık context'ten geliyor
 
     try {
       const calculations: any[] = [];
@@ -424,7 +427,7 @@ export const DeveloperCapacityAdjustment: React.FC<DeveloperCapacityAdjustmentPr
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {sprintBasedCalculations.map((calc, index) => {
-                  const dailyHours = getDailyHoursFromStorage();
+                  // dailyHours artık context'ten geliyor
                   return (
                     <tr key={calc.developerName} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                       <td className="px-6 py-4">

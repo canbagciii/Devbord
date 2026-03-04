@@ -61,7 +61,7 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
   const [userSearchTerm, setUserSearchTerm] = useState('');
 
   const [dailyHours, setDailyHours] = useState(8);
-  const [capacityMetric, setCapacityMetric] = useState<'hours' | 'storyPoints'>('hours');
+  const [capacityMetric, setCapacityMetric] = useState<'hours' | 'storyPoints' | 'both'>('hours');
   const [dailyStoryPoints, setDailyStoryPoints] = useState(8);
   const [storyPointFieldConfigs, setStoryPointFieldConfigs] = useState<StoryPointFieldConfig[]>([]);
   const [availableStoryPointFields, setAvailableStoryPointFields] = useState<Array<{ id: string; name: string }>>([]);
@@ -571,7 +571,7 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
             <p className="text-xs text-gray-400 mt-0.5">Günlük çalışma süresini ve kapasite hesaplamasında kullanılacak birimi belirleyin.</p>
           </div>
           <div className="space-y-6">
-            {capacityMetric === 'hours' && (
+            {(capacityMetric === 'hours' || capacityMetric === 'both') && (
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-2">Günlük çalışma süresi <span className="font-normal text-gray-400">(saat)</span></label>
                 <div className="flex items-center gap-3">
@@ -581,7 +581,7 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
                 <p className="text-xs text-gray-400 mt-2">Toplantılar ve molalar hariç, geliştirme için ayırdığınız ortalama süre.</p>
               </div>
             )}
-            {capacityMetric === 'storyPoints' && (
+            {(capacityMetric === 'storyPoints' || capacityMetric === 'both') && (
               <>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-2">Günlük kapasite <span className="font-normal text-gray-400">(kaç story point?)</span></label>
@@ -755,13 +755,26 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
             <div className="rounded-xl bg-gray-50 border border-gray-100 p-4">
               <h4 className="text-[0.65rem] font-bold text-gray-400 uppercase tracking-widest mb-3">Ayarlar</h4>
               <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-                  <span className="text-gray-500">Günlük hedef</span>
-                  <span className="font-bold text-gray-900">{capacityMetric === 'hours' ? `${dailyHours} saat/gün` : `${dailyStoryPoints} SP/gün`}</span>
-                </div>
+                {capacityMetric === 'both' ? (
+                  <>
+                    <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                      <span className="text-gray-500">Günlük hedef (Saat)</span>
+                      <span className="font-bold text-gray-900">{dailyHours} saat/gün</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                      <span className="text-gray-500">Günlük hedef (SP)</span>
+                      <span className="font-bold text-gray-900">{dailyStoryPoints} SP/gün</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                    <span className="text-gray-500">Günlük hedef</span>
+                    <span className="font-bold text-gray-900">{capacityMetric === 'hours' ? `${dailyHours} saat/gün` : `${dailyStoryPoints} SP/gün`}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-gray-500">Hesaplama tipi</span>
-                  <span className="font-bold text-gray-900">{capacityMetric === 'hours' ? 'Saat bazlı' : 'Story Point bazlı'}</span>
+                  <span className="font-bold text-gray-900">{capacityMetric === 'hours' ? 'Saat bazlı' : capacityMetric === 'storyPoints' ? 'Story Point bazlı' : 'Her İkisi'}</span>
                 </div>
               </div>
             </div>
