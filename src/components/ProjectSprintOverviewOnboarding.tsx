@@ -125,7 +125,7 @@ const SuccessRateVisual = () => (
     <div className="flex items-center gap-3 text-[10px] text-slate-500 justify-center mt-1">
       <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" />≥%80 İyi</span>
       <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500 inline-block" />%60–79 Orta</span>
-      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /><%60 Düşük</span>
+      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" />{"<"}%60 Düşük</span>
     </div>
   </div>
 );
