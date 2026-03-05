@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Clock, TrendingUp, AlertTriangle, CheckCircle, Download, RefreshCw, ChevronDown, ChevronUp, CreditCard as Edit, Save, X, Loader, Search, Calendar } from 'lucide-react';
+import { Users, Clock, TrendingUp, AlertTriangle, CheckCircle, Download, RefreshCw, ChevronDown, ChevronUp, CreditCard as Edit, Save, X, Loader, Search, Calendar, HelpCircle } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
 import { useAuth } from '../context/AuthContext';
 import { useDeveloperCapacities } from '../hooks/useDeveloperCapacities';
@@ -19,6 +19,7 @@ import {
   getDeveloperCapacity
 } from '../utils/workloadUtils';
 import { useDeveloperActualHours } from '../hooks/useDeveloperActualHours';
+import DeveloperWorkloadOnboarding, { useDeveloperWorkloadOnboarding } from './DeveloperWorkloadDashboardOnboarding';
 
 type ViewMode = 'weekly' | 'monthly';
 
@@ -39,6 +40,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
   } = useJiraData();
   const { canViewDeveloperData, user, hasKolayIK } = useAuth();
   const { getCapacity, updateCapacity, canEdit } = useDeveloperCapacities();
+  const { isOnboardingOpen, openOnboarding, closeOnboarding } = useDeveloperWorkloadOnboarding();
   const [expandedDeveloper, setExpandedDeveloper] = useState<string | null>(null);
   const [editingCapacity, setEditingCapacity] = useState<string | null>(null);
   const [capacityValue, setCapacityValue] = useState<string>('');
@@ -192,6 +194,9 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
 
   return (
     <div className="space-y-5 p-1">
+      {/* Onboarding Modal */}
+      <DeveloperWorkloadOnboarding isOpen={isOnboardingOpen} onClose={closeOnboarding} />
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -212,6 +217,14 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400 mr-1">Son yenileme: {formatLastRefresh()}</span>
+          <button
+            onClick={openOnboarding}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
+            title="Sayfayı nasıl kullanacağınızı öğrenin"
+          >
+            <HelpCircle className="h-4 w-4" />
+            Nasıl Kullanılır?
+          </button>
           <button
             onClick={() => exportDeveloperWorkloadToCSV(filteredWorkload)}
             disabled={filteredWorkload.length === 0}
