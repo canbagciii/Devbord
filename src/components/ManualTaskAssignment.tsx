@@ -720,4 +720,4 @@ export const ManualTaskAssignment: React.FC = () => {
       </div>
     </div>
   );
-};
+}; 
