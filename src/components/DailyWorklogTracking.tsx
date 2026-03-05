@@ -438,7 +438,7 @@ const DailyWorklogTracking: React.FC = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Günlük Süre Takibi</h2>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Günlük & Haftalık & Aylık Süre Takibi</h2>
           <p className="text-slate-500 mt-0.5 text-sm">
             Yazılımcıların günlük worklog kayıtları ve haftalık hedef takibi
           </p>
