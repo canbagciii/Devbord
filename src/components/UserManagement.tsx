@@ -3,7 +3,8 @@ import { useUsers, User } from '../hooks/useUsers';
 import { useAuth } from '../context/AuthContext';
 import { JiraFilterManagement } from './JiraFilterManagement';
 import { jiraFilterService } from '../lib/jiraFilterService';
-import { Users, Plus, CreditCard as Edit, Trash2, Shield, Eye, Settings, Search, Filter, UserPlus, UserX, RefreshCw, Save, X, AlertTriangle, CheckCircle, Mail, Key, Building } from 'lucide-react';
+import { Users, Plus, CreditCard as Edit, Trash2, Shield, Eye, Settings, Search, Filter, UserPlus, UserX, RefreshCw, Save, X, AlertTriangle, CheckCircle, Mail, Key, Building, HelpCircle } from 'lucide-react';
+import UserManagementOnboarding, { useUserManagementOnboarding } from './UserManagementOnboarding';
 
 interface UserFormData {
   name: string;
@@ -27,6 +28,7 @@ export const UserManagement: React.FC = () => {
     reactivateUser,
     refetch
   } = useUsers();
+  const { isOnboardingOpen, openOnboarding, closeOnboarding } = useUserManagementOnboarding();
 
   const [activeTab, setActiveTab] = useState<'users'>('users');
   const [showForm, setShowForm] = useState(false);
@@ -46,10 +48,8 @@ export const UserManagement: React.FC = () => {
   const [projectOptions, setProjectOptions] = useState<Array<{ key: string; name: string }>>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
 
-  // Hayat Finans (HF) her zaman proje atamaları listesinde olsun
   const HAYAT_FINANS = { key: 'HF', name: 'Hayat Finans' };
 
-  // Database'den projeleri yükle
   useEffect(() => {
     const loadProjects = async () => {
       try {
@@ -59,13 +59,11 @@ export const UserManagement: React.FC = () => {
           key: p.project_key,
           name: p.project_name
         }));
-        // HF (Hayat Finans) listede yoksa ekle
         if (!options.some(p => p.key === HAYAT_FINANS.key)) {
           options.push(HAYAT_FINANS);
           options.sort((a, b) => a.name.localeCompare(b.name));
         }
         setProjectOptions(options);
-        console.log('✅ Loaded projects for user management:', options);
       } catch (error) {
         console.error('Error loading projects:', error);
       } finally {
@@ -75,7 +73,6 @@ export const UserManagement: React.FC = () => {
     loadProjects();
   }, []);
 
-  // Yetki kontrolü
   if (!hasRole('admin')) {
     return (
       <div className="space-y-6">
@@ -92,7 +89,6 @@ export const UserManagement: React.FC = () => {
     );
   }
 
-  // Form işlemleri
   const resetForm = () => {
     setFormData({
       name: '',
@@ -114,7 +110,7 @@ export const UserManagement: React.FC = () => {
     setFormData({
       name: user.name,
       email: user.email,
-      password: '', // Şifre düzenlemede boş bırakılır
+      password: '',
       role: user.role,
       assignedProjects: user.assignedProjects,
       isActive: user.isActive
@@ -129,25 +125,20 @@ export const UserManagement: React.FC = () => {
 
     try {
       if (editingUser) {
-        // Güncelleme
         const updateData: Partial<User> = {
           name: formData.name,
           role: formData.role,
           assignedProjects: formData.assignedProjects,
           isActive: formData.isActive
         };
-        
         await updateUser(editingUser.id, updateData);
       } else {
-        // Yeni kullanıcı ekleme
         if (!formData.password) {
           alert('Şifre gereklidir');
           return;
         }
-        
         await addUser(formData);
       }
-      
       setShowForm(false);
       resetForm();
     } catch (err) {
@@ -194,16 +185,13 @@ export const UserManagement: React.FC = () => {
     }));
   };
 
-  // Filtreleme
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesStatus = statusFilter === 'all' || 
+    const matchesStatus = statusFilter === 'all' ||
                          (statusFilter === 'active' && user.isActive) ||
                          (statusFilter === 'inactive' && !user.isActive);
-    
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -234,7 +222,6 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  // İstatistikler
   const stats = {
     total: users.length,
     active: users.filter(u => u.isActive).length,
@@ -246,6 +233,9 @@ export const UserManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Onboarding Modal */}
+      <UserManagementOnboarding isOpen={isOnboardingOpen} onClose={closeOnboarding} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -253,6 +243,14 @@ export const UserManagement: React.FC = () => {
           <p className="text-gray-600 mt-1">Sistem kullanıcılarını yönetin ve proje erişimlerini düzenleyin</p>
         </div>
         <div className="flex items-center space-x-3">
+          <button
+            onClick={openOnboarding}
+            className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-sm"
+            title="Sayfayı nasıl kullanacağınızı öğrenin"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span>Nasıl Kullanılır?</span>
+          </button>
           <button
             onClick={refetch}
             disabled={loading}
@@ -399,31 +397,17 @@ export const UserManagement: React.FC = () => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Kullanıcı
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Rol
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Atanmış Projeler
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Durum
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Oluşturma
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    İşlemler
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kullanıcı</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Atanmış Projeler</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Oluşturma</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredUsers.map((user, index) => (
-                  <tr key={user.id} className={`hover:bg-gray-50 transition-colors ${
-                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
-                  }`}>
+                  <tr key={user.id} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
                         <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -448,9 +432,7 @@ export const UserManagement: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
                         {user.role === 'admin' ? (
-                          <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-                            Tüm Projeler
-                          </span>
+                          <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">Tüm Projeler</span>
                         ) : user.assignedProjects.length > 0 ? (
                           user.assignedProjects.map(projectKey => {
                             const project = projectOptions.find(p => p.key === projectKey);
@@ -467,9 +449,7 @@ export const UserManagement: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${
-                        user.isActive 
-                          ? 'bg-green-100 text-green-800 border-green-200' 
-                          : 'bg-red-100 text-red-800 border-red-200'
+                        user.isActive ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'
                       }`}>
                         {user.isActive ? 'Aktif' : 'Pasif'}
                       </span>
@@ -482,37 +462,19 @@ export const UserManagement: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => handleEditUser(user)}
-                          className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-blue-50"
-                          title="Düzenle"
-                        >
+                        <button onClick={() => handleEditUser(user)} className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-blue-50" title="Düzenle">
                           <Edit className="h-4 w-4" />
                         </button>
-                        
                         {user.isActive ? (
-                          <button
-                            onClick={() => handleDeleteUser(user)}
-                            className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
-                            title="Deaktif Et"
-                          >
+                          <button onClick={() => handleDeleteUser(user)} className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50" title="Deaktif Et">
                             <UserX className="h-4 w-4" />
                           </button>
                         ) : (
-                          <button
-                            onClick={() => handleReactivateUser(user)}
-                            className="text-gray-400 hover:text-green-600 transition-colors p-1 rounded hover:bg-green-50"
-                            title="Aktifleştir"
-                          >
+                          <button onClick={() => handleReactivateUser(user)} className="text-gray-400 hover:text-green-600 transition-colors p-1 rounded hover:bg-green-50" title="Aktifleştir">
                             <CheckCircle className="h-4 w-4" />
                           </button>
                         )}
-                        
-                        <button
-                          onClick={() => handlePermanentDelete(user)}
-                          className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
-                          title="Kalıcı Sil"
-                        >
+                        <button onClick={() => handlePermanentDelete(user)} className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50" title="Kalıcı Sil">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
@@ -539,10 +501,7 @@ export const UserManagement: React.FC = () => {
               <h3 className="text-xl font-semibold text-gray-900">
                 {editingUser ? 'Kullanıcı Düzenle' : 'Yeni Kullanıcı Ekle'}
               </h3>
-              <button
-                onClick={() => setShowForm(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
+              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
                 <X className="h-6 w-6" />
               </button>
             </div>
@@ -554,55 +513,39 @@ export const UserManagement: React.FC = () => {
                   <Users className="h-5 w-5 text-blue-600" />
                   <span>Temel Bilgiler</span>
                 </h4>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ad Soyad *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad *</label>
                     <input
-                      type="text"
-                      required
-                      value={formData.name}
+                      type="text" required value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Kullanıcının tam adı"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      E-posta Adresi *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">E-posta Adresi *</label>
                     <div className="relative">
                       <input
-                        type="email"
-                        required
-                        value={formData.email}
+                        type="email" required value={formData.email}
                         onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="kullanici@acerpro.com.tr"
-                        disabled={!!editingUser} // Email düzenlemede değiştirilemez
+                        disabled={!!editingUser}
                       />
                       <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                     </div>
                   </div>
                 </div>
-
                 {!editingUser && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Şifre *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Şifre *</label>
                     <div className="relative">
                       <input
-                        type="password"
-                        required={!editingUser}
-                        value={formData.password}
+                        type="password" required={!editingUser} value={formData.password}
                         onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Güvenli şifre girin"
-                        minLength={6}
+                        placeholder="Güvenli şifre girin" minLength={6}
                       />
                       <Key className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                     </div>
@@ -617,15 +560,11 @@ export const UserManagement: React.FC = () => {
                   <Shield className="h-5 w-5 text-red-600" />
                   <span>Rol ve Yetki</span>
                 </h4>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Kullanıcı Rolü *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Kullanıcı Rolü *</label>
                     <select
-                      required
-                      value={formData.role}
+                      required value={formData.role}
                       onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as any }))}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
@@ -639,30 +578,15 @@ export const UserManagement: React.FC = () => {
                       {formData.role === 'developer' && 'Sadece kendi verilerini görüntüleme'}
                     </p>
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Durum
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
                     <div className="flex items-center space-x-4 mt-2">
                       <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="isActive"
-                          checked={formData.isActive}
-                          onChange={() => setFormData(prev => ({ ...prev, isActive: true }))}
-                          className="mr-2"
-                        />
+                        <input type="radio" name="isActive" checked={formData.isActive} onChange={() => setFormData(prev => ({ ...prev, isActive: true }))} className="mr-2" />
                         <span className="text-sm text-green-700">Aktif</span>
                       </label>
                       <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="isActive"
-                          checked={!formData.isActive}
-                          onChange={() => setFormData(prev => ({ ...prev, isActive: false }))}
-                          className="mr-2"
-                        />
+                        <input type="radio" name="isActive" checked={!formData.isActive} onChange={() => setFormData(prev => ({ ...prev, isActive: false }))} className="mr-2" />
                         <span className="text-sm text-red-700">Pasif</span>
                       </label>
                     </div>
@@ -677,7 +601,6 @@ export const UserManagement: React.FC = () => {
                     <Building className="h-5 w-5 text-purple-600" />
                     <span>Proje Atamaları</span>
                   </h4>
-                  
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-sm text-gray-600 mb-3">
                       Bu kullanıcının erişebileceği projeleri seçin. Analist rolündeki kullanıcılar, aynı projelere atanan yazılımcıların verilerini görebilir.
@@ -731,36 +654,20 @@ export const UserManagement: React.FC = () => {
                     <Shield className="h-5 w-5 text-purple-600" />
                     <p className="text-sm text-purple-800 font-medium">Yönetici Yetkisi</p>
                   </div>
-                  <p className="text-sm text-purple-700 mt-1">
-                    Bu kullanıcı tüm projelere ve verilere tam erişim sahibi olacak.
-                  </p>
+                  <p className="text-sm text-purple-700 mt-1">Bu kullanıcı tüm projelere ve verilere tam erişim sahibi olacak.</p>
                 </div>
               )}
 
               {/* Form Actions */}
               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
+                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                   İptal
                 </button>
-                <button
-                  type="submit"
-                  disabled={formLoading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center space-x-2"
-                >
+                <button type="submit" disabled={formLoading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center space-x-2">
                   {formLoading ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      <span>{editingUser ? 'Güncelleniyor...' : 'Ekleniyor...'}</span>
-                    </>
+                    <><RefreshCw className="h-4 w-4 animate-spin" /><span>{editingUser ? 'Güncelleniyor...' : 'Ekleniyor...'}</span></>
                   ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      <span>{editingUser ? 'Güncelle' : 'Kullanıcı Ekle'}</span>
-                    </>
+                    <><Save className="h-4 w-4" /><span>{editingUser ? 'Güncelle' : 'Kullanıcı Ekle'}</span></>
                   )}
                 </button>
               </div>
