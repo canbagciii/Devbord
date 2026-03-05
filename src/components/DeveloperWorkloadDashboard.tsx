@@ -3,7 +3,7 @@ import { Users, Clock, TrendingUp, AlertTriangle, CheckCircle, Download, Refresh
 import { useJiraData } from '../context/JiraDataContext';
 import { useAuth } from '../context/AuthContext';
 import { useDeveloperCapacities } from '../hooks/useDeveloperCapacities';
-import { exportDeveloperWorkloadToCSV } from '../utils/csvExport';
+
 import { worklogService } from '../services/worklogService';
 import { DeveloperCapacityAdjustment } from './DeveloperCapacityAdjustment';
 import { getWeekRange, getMonthRange } from '../utils/dateUtils';
@@ -164,6 +164,112 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
 
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
+  const exportToCSV = () => {
+    if (filteredWorkload.length === 0) { alert('İndirilecek veri bulunamadı.'); return; }
+
+    const q = (val: string | number | null | undefined) =>
+      `"${String(val ?? '').replace(/"/g, '""')}"`;
+
+    /* ── BÖLÜM 1: YAZILIMCI ÖZETİ ── */
+    const sec1: string[] = [
+      [q('Yazılımcı'), q('E-posta'), q('Proje'),
+       q('Toplam Görev'), q('Analist Tahmini (h)'), q('Harcanan Süre (h)'),
+       q('Kapasite (h)'), q('Durum'),
+      ].join(','),
+      ...filteredWorkload.map(dev => {
+        const actualHours = actualHoursData[dev.developer] || 0;
+        const devCapacity = getDeveloperCapacity(
+          dev.developer, getCapacity,
+          hasKolayIK && showKolayIKIntegration, capacityCalculations
+        );
+        const status = calculateDeveloperStatus(actualHours, devCapacity);
+        return [
+          q(dev.developer), q(dev.email), q(getDeveloperProjectKey(dev.developer)),
+          q(dev.totalTasks),
+          q(Math.round(dev.totalHours * 100) / 100),
+          q(actualHours),
+          q(devCapacity),
+          q(status),
+        ].join(',');
+      }),
+    ];
+
+    /* ── BÖLÜM 2: PROJE / SPRINT DETAYLARI ── */
+    const sec2: string[] = [
+      '', '',
+      [q('=== PROJE / SPRINT DETAYLARI ===')].join(','),
+      '',
+      [q('Yazılımcı'), q('Proje'), q('Sprint'),
+       q('Görev Sayısı'), q('Tahmini (h)'), q('Harcanan (h)'), q('İlerleme (%)'),
+      ].join(','),
+    ];
+
+    filteredWorkload.forEach(dev => {
+      dev.details.forEach((detail, idx) => {
+        const pct = detail.hours > 0
+          ? `${Math.round((detail.actualHours / detail.hours) * 100)}%`
+          : detail.actualHours > 0 ? '∞' : '0%';
+        sec2.push([
+          q(idx === 0 ? dev.developer : ''),
+          q(detail.project),
+          q(detail.sprint),
+          q(detail.taskCount),
+          q(Math.round(detail.hours * 100) / 100),
+          q(Math.round(detail.actualHours * 100) / 100),
+          q(pct),
+        ].join(','));
+      });
+      if (dev.details.length === 0) {
+        sec2.push([q(dev.developer), q('—'), q('—'), q(0), q(0), q(0), q('—')].join(','));
+      }
+    });
+
+    /* ── BÖLÜM 3: GÖREV DETAYLARI ── */
+    const sec3: string[] = [
+      '', '',
+      [q('=== GÖREV DETAYLARI ===')].join(','),
+      '',
+      [q('Yazılımcı'), q('Proje'), q('Sprint'),
+       q('Issue Key'), q('Issue Başlığı'), q('Issue Tipi'), q('Durum'),
+       q('Tahmini (h)'), q('Harcanan (h)'),
+      ].join(','),
+    ];
+
+    filteredWorkload.forEach(dev => {
+      let hasAnyTask = false;
+      dev.details.forEach(detail => {
+        if (!detail.tasks || detail.tasks.length === 0) return;
+        detail.tasks.forEach((task, tIdx) => {
+          hasAnyTask = true;
+          sec3.push([
+            q(tIdx === 0 ? dev.developer : ''),
+            q(detail.project),
+            q(detail.sprint),
+            q(task.key),
+            q(task.summary),
+            q(task.issueType || '—'),
+            q(task.status),
+            q(task.estimatedHours > 0 ? task.estimatedHours : '—'),
+            q(task.actualHours > 0 ? task.actualHours : '—'),
+          ].join(','));
+        });
+      });
+      if (!hasAnyTask) {
+        sec3.push([q(dev.developer), q('—'), q('—'), q('—'), q('Görev yok'), q('—'), q('—'), q('—'), q('—')].join(','));
+      }
+    });
+
+    const allRows = [...sec1, ...sec2, ...sec3];
+    const blob = new Blob(['\uFEFF' + allRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.setAttribute('href', URL.createObjectURL(blob));
+    link.setAttribute('download', `is_yuku_analizi_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -200,7 +306,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Yazılımcı Sprint Analizi</h2>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Yazılımcı İş Yükü Analizi</h2>
           <p className="text-slate-500 mt-0.5 text-sm">
             {viewMode === 'weekly' ? 'Haftalık' : 'Aylık'} görev dağılımı ve iş yükü analizi
           </p>
@@ -226,7 +332,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
             Nasıl Kullanılır?
           </button>
           <button
-            onClick={() => exportDeveloperWorkloadToCSV(filteredWorkload)}
+            onClick={exportToCSV}
             disabled={filteredWorkload.length === 0}
             className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-40 transition-all shadow-sm"
           >
