@@ -215,48 +215,185 @@ const DailyWorklogTracking: React.FC = () => {
     const dataToExport = selectedDeveloper === 'all' ? worklogData : filteredWorklogData;
     if (dataToExport.length === 0) { alert('İndirilecek veri bulunamadı.'); return; }
 
-    const csvHeaders = [
-      'Yazılımcı', 'E-posta',
-      viewMode === 'weekly' ? 'Haftalık Toplam (saat)' : 'Aylık Toplam (saat)',
-      viewMode === 'weekly' ? 'Haftalık Hedef (saat)' : 'Aylık Hedef (saat)',
-      'Durum', 'İzin Günleri', 'Kapasite Ayarlaması',
-      ...dateRange.dates.map(date => new Date(date).toLocaleDateString('tr-TR'))
-    ];
+    const q = (val: string | number | null | undefined) =>
+      `"${String(val ?? '').replace(/"/g, '""')}"`;
 
-    const csvData = dataToExport.map(dev => {
-      const developerLeave = leaveData.find(leave => leave.developerName === dev.developerName);
-      const leaveDays = developerLeave?.leaveDays || 0;
-      let originalTarget: number;
+    const periodLabel = viewMode === 'weekly' ? 'Haftalık' : 'Aylık';
+    const periodRange = `${dateRange.start} – ${dateRange.end}`;
+    const workingDates = dateRange.dates;
+    const workingDayCount = workingDates.filter(d => { const day = new Date(d).getDay(); return day >= 1 && day <= 5; }).length;
+
+    const getOriginalTarget = (): number => {
       try {
         const metric = typeof localStorage !== 'undefined' ? localStorage.getItem('capacityMetric') : null;
         if (metric === 'hours') {
           const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('dailyHours') : null;
           const parsed = stored ? parseFloat(stored) : NaN;
           const daily = Number.isFinite(parsed) && parsed > 0 ? parsed : 7;
-          if (viewMode === 'weekly') originalTarget = Math.round(daily * 5);
-          else {
-            const workingDays = dateRange.dates.filter(date => { const d = new Date(date).getDay(); return d >= 1 && d <= 5; }).length;
-            originalTarget = Math.round(daily * workingDays);
-          }
-        } else {
-          originalTarget = viewMode === 'weekly' ? 35 : dateRange.dates.filter(date => { const d = new Date(date).getDay(); return d >= 1 && d <= 5; }).length * 7;
+          return viewMode === 'weekly' ? Math.round(daily * 5) : Math.round(daily * workingDayCount);
         }
-      } catch (e) {
-        originalTarget = viewMode === 'weekly' ? 35 : dateRange.dates.filter(date => { const d = new Date(date).getDay(); return d >= 1 && d <= 5; }).length * 7;
+      } catch { /* ignore */ }
+      return viewMode === 'weekly' ? 35 : workingDayCount * 7;
+    };
+    const baseOriginalTarget = getOriginalTarget();
+
+    const statusLabel = (s: string) =>
+      s === 'sufficient' ? 'Yeterli' : s === 'insufficient' ? 'Eksik' : 'Fazla';
+
+    /* ── BÖLÜM 1: ÖZET ── */
+    const section1Rows: string[] = [
+      [q(`=== ${periodLabel.toUpperCase()} ÖZET RAPORU ===`), q(`Dönem: ${periodRange}`), q(`Oluşturma: ${new Date().toLocaleString('tr-TR')}`)].join(','),
+      '',
+      [q('Yazılımcı'), q('E-posta'), q(`${periodLabel} Toplam (h)`), q(`Hedef (h)`), q('Orijinal Hedef (h)'), q('Hedefe Oran (%)'),
+       q('Durum'), q('İzin Günü'), q('İzin Saati Düşürüldü'), q('Ayarlanmış Hedef'),
+       q('Günlük Ort. (h)'), ...workingDates.map(d => q(new Date(d).toLocaleDateString('tr-TR', { weekday: 'short', day: '2-digit', month: '2-digit' })))
+      ].join(','),
+      ...dataToExport.map(dev => {
+        const leave = leaveData.find(l => l.developerName === dev.developerName);
+        const leaveDays = leave?.leaveDays ?? 0;
+        const leaveHours = leaveDays * 7;
+        const adjustedTarget = dev.weeklyTarget;
+        const ratio = adjustedTarget > 0 ? Math.round((dev.weeklyTotal / adjustedTarget) * 100) : 0;
+        const activeDays = workingDates.filter(d => {
+          const day = new Date(d).getDay();
+          return day >= 1 && day <= 5;
+        }).length - leaveDays;
+        const dailyAvg = activeDays > 0 ? Math.round((dev.weeklyTotal / activeDays) * 100) / 100 : 0;
+
+        return [
+          q(dev.developerName), q(dev.email),
+          q(dev.weeklyTotal), q(adjustedTarget), q(baseOriginalTarget),
+          q(`${ratio}%`), q(statusLabel(dev.weeklyStatus)),
+          q(leaveDays > 0 ? leaveDays : '—'),
+          q(leaveHours > 0 ? `-${leaveHours}h` : '—'),
+          q(leaveHours > 0 ? `${baseOriginalTarget}h → ${adjustedTarget}h` : '—'),
+          q(dailyAvg),
+          ...workingDates.map(date => {
+            const daySummary = dev.dailySummaries.find(ds => ds.date === date);
+            return q(daySummary?.totalHours ?? 0);
+          })
+        ].join(',');
+      })
+    ];
+
+    /* ── BÖLÜM 2: GÜNLÜK WORKLOG DETAY ── */
+    const section2Rows: string[] = [
+      '',
+      '',
+      [q('=== GÜNLÜK WORKLOG DETAYI ===')].join(','),
+      '',
+      [q('Yazılımcı'), q('E-posta'), q('Tarih'), q('Gün'), q('Günlük Toplam (h)'),
+       q('Issue Key'), q('Issue Başlığı'), q('Proje'), q('Harcanan Süre (h)')
+      ].join(','),
+    ];
+
+    dataToExport.forEach(dev => {
+      const daysWithEntries = dev.dailySummaries.filter(day => day.entries.length > 0);
+      const daysWithoutEntries = dev.dailySummaries.filter(day => {
+        const d = new Date(day.date).getDay();
+        return d >= 1 && d <= 5 && day.entries.length === 0 && day.totalHours === 0;
+      });
+
+      if (daysWithEntries.length === 0 && daysWithoutEntries.length === 0) {
+        // Hiç gün yoksa tek satır
+        section2Rows.push([q(dev.developerName), q(dev.email), q('—'), q('—'), q(0), q('—'), q('Kayıt yok'), q('—'), q('—')].join(','));
+        return;
       }
-      const capacityAdjustment = leaveDays > 0 ? `${originalTarget}h → ${dev.weeklyTarget}h (-${leaveDays * 7}h)` : 'Ayarlama yok';
-      return [dev.developerName, dev.email, dev.weeklyTotal, dev.weeklyTarget,
-        dev.weeklyStatus === 'sufficient' ? 'Yeterli' : dev.weeklyStatus === 'insufficient' ? 'Eksik' : 'Fazla',
-        leaveDays, capacityAdjustment, ...dev.dailySummaries.map(day => day.totalHours)];
+
+      daysWithEntries.forEach(day => {
+        const dayLabel = new Date(day.date).toLocaleDateString('tr-TR', { weekday: 'long' });
+        day.entries.forEach((entry, idx) => {
+          section2Rows.push([
+            q(idx === 0 ? dev.developerName : ''),
+            q(idx === 0 ? dev.email : ''),
+            q(new Date(day.date).toLocaleDateString('tr-TR')),
+            q(idx === 0 ? dayLabel : ''),
+            q(idx === 0 ? day.totalHours : ''),
+            q(entry.issueKey ?? '—'),
+            q(entry.issueSummary ?? '—'),
+            q(entry.project ?? '—'),
+            q(entry.timeSpentHours)
+          ].join(','));
+        });
+      });
+
+      // İzinsiz ve sıfır gün loglu çalışma günleri
+      daysWithoutEntries.forEach(day => {
+        const dayLabel = new Date(day.date).toLocaleDateString('tr-TR', { weekday: 'long' });
+        section2Rows.push([
+          q(dev.developerName), q(dev.email),
+          q(new Date(day.date).toLocaleDateString('tr-TR')),
+          q(dayLabel), q(0), q('—'), q('Log girilmemiş'), q('—'), q(0)
+        ].join(','));
+      });
     });
 
-    const csvContent = [csvHeaders.join(','), ...csvData.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))].join('\n');
+    /* ── BÖLÜM 3: PROJE BAZLI ÖZET ── */
+    const section3Rows: string[] = [
+      '',
+      '',
+      [q('=== PROJE BAZLI ÖZET ===')].join(','),
+      '',
+      [q('Yazılımcı'), q('Proje'), q('Toplam Harcanan (h)'), q('Toplam Logdan Payı (%)')].join(','),
+    ];
+
+    dataToExport.forEach(dev => {
+      const allEntries = dev.dailySummaries.flatMap(day => day.entries);
+      if (allEntries.length === 0) {
+        section3Rows.push([q(dev.developerName), q('—'), q(0), q('—')].join(','));
+        return;
+      }
+      const projectMap: Record<string, number> = {};
+      allEntries.forEach(e => {
+        const proj = e.project ?? 'Bilinmeyen';
+        projectMap[proj] = (projectMap[proj] ?? 0) + e.timeSpentHours;
+      });
+      const sorted = Object.entries(projectMap).sort(([, a], [, b]) => b - a);
+      sorted.forEach(([proj, hours], idx) => {
+        const share = dev.weeklyTotal > 0 ? Math.round((hours / dev.weeklyTotal) * 100) : 0;
+        section3Rows.push([
+          q(idx === 0 ? dev.developerName : ''),
+          q(proj),
+          q(Math.round(hours * 100) / 100),
+          q(`${share}%`)
+        ].join(','));
+      });
+    });
+
+    /* ── BÖLÜM 4: İZİN DETAY (sadece KolayIK aktifse) ── */
+    const section4Rows: string[] = [];
+    const activeLeaveData = leaveData.filter(l => l.leaveDays > 0);
+    if (activeLeaveData.length > 0) {
+      section4Rows.push('', '', [q('=== İZİN DETAYLARI ===')].join(','), '');
+      section4Rows.push([
+        q('Yazılımcı'), q('E-posta'), q('Toplam İzin Günü'), q('Toplam İzin Saati'),
+        q('İzin Türü'), q('Başlangıç'), q('Bitiş'), q('Gün'), q('Açıklama')
+      ].join(','));
+      activeLeaveData.forEach(dev => {
+        dev.leaveDetails.forEach((leave, idx) => {
+          section4Rows.push([
+            q(idx === 0 ? dev.developerName : ''),
+            q(idx === 0 ? dev.email : ''),
+            q(idx === 0 ? dev.leaveDays : ''),
+            q(idx === 0 ? `-${dev.leaveDays * 7}h` : ''),
+            q(leave.leaveType),
+            q(new Date(leave.startDate).toLocaleDateString('tr-TR')),
+            q(new Date(leave.endDate).toLocaleDateString('tr-TR')),
+            q(leave.days),
+            q(leave.description ?? '')
+          ].join(','));
+        });
+      });
+    }
+
+    const allRows = [...section1Rows, ...section2Rows, ...section3Rows, ...section4Rows];
+    const csvContent = allRows.join('\n');
+
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `gunluk_sure_takibi_${viewMode}_${dateRange.start}_${dateRange.end}.csv`);
+    link.setAttribute('href', URL.createObjectURL(blob));
+    link.setAttribute('download', `sure_takibi_${viewMode}_${dateRange.start}_${dateRange.end}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
