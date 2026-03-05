@@ -66,7 +66,7 @@ export const WorkloadAnalytics: React.FC = () => {
       <div className="flex items-center justify-center py-12">
         <div className="flex items-center space-x-2">
           <Loader className="h-6 w-6 animate-spin text-blue-600" />
-          <span className="text-gray-600 dark:text-gray-400">Analitik veriler hesaplanıyor...</span>
+          <span className="text-gray-600">Analitik veriler hesaplanıyor...</span>
         </div>
       </div>
     );
@@ -74,7 +74,7 @@ export const WorkloadAnalytics: React.FC = () => {
 
   if (error || !analytics) {
     return (
-      <div className="bg-red-50 border border-red-200 dark:border-red-700 rounded-lg p-6">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
         <div className="flex items-center space-x-2">
           <BarChart3 className="h-5 w-5 text-red-600" />
           <p className="text-red-800">{error || 'Analiz verisi yüklenemedi'}</p>
@@ -105,46 +105,46 @@ export const WorkloadAnalytics: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">İş Yükü Analitikleri</h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Detaylı istatistikler ve dağılım analizi</p>
+        <h2 className="text-2xl font-bold text-gray-900">İş Yükü Analitikleri</h2>
+        <p className="text-gray-600 mt-1">Detaylı istatistikler ve dağılım analizi</p>
       </div>
 
       {/* Main Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Yazılımcı</p>
+              <p className="text-sm font-medium text-gray-600">Toplam Yazılımcı</p>
               <p className="text-3xl font-bold text-blue-600">{analytics.totalDevelopers}</p>
             </div>
             <Users className="h-8 w-8 text-blue-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Görev</p>
+              <p className="text-sm font-medium text-gray-600">Toplam Görev</p>
               <p className="text-3xl font-bold text-green-600">{analytics.totalTasks}</p>
             </div>
             <Activity className="h-8 w-8 text-green-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Süre</p>
+              <p className="text-sm font-medium text-gray-600">Toplam Süre</p>
               <p className="text-3xl font-bold text-purple-600">{analytics.totalHours}h</p>
             </div>
             <Clock className="h-8 w-8 text-purple-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Ortalama Yük</p>
+              <p className="text-sm font-medium text-gray-600">Ortalama Yük</p>
               <p className="text-3xl font-bold text-orange-600">{analytics.averageWorkload}h</p>
             </div>
             <TrendingUp className="h-8 w-8 text-orange-600" />
@@ -154,21 +154,21 @@ export const WorkloadAnalytics: React.FC = () => {
 
       {/* Workload Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div className="flex items-center space-x-2 mb-4">
             <PieChart className="h-5 w-5 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">İş Yükü Dağılımı</h3>
+            <h3 className="text-lg font-semibold text-gray-900">İş Yükü Dağılımı</h3>
           </div>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">Eksik Yük (&lt;70h)</span>
+                <span className="text-sm text-gray-600">Eksik Yük (&lt;70h)</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.underloadedCount}</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="text-lg font-semibold text-gray-900">{analytics.underloadedCount}</span>
+                <span className="text-sm text-gray-500">
                   ({Math.round((analytics.underloadedCount / analytics.totalDevelopers) * 100)}%)
                 </span>
               </div>
@@ -177,11 +177,11 @@ export const WorkloadAnalytics: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 bg-green-500 rounded"></div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">Yeterli (70-90h)</span>
+                <span className="text-sm text-gray-600">Yeterli (70-90h)</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.adequateCount}</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="text-lg font-semibold text-gray-900">{analytics.adequateCount}</span>
+                <span className="text-sm text-gray-500">
                   ({Math.round((analytics.adequateCount / analytics.totalDevelopers) * 100)}%)
                 </span>
               </div>
@@ -190,11 +190,11 @@ export const WorkloadAnalytics: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 bg-red-500 rounded"></div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">Aşırı Yük (&gt;90h)</span>
+                <span className="text-sm text-gray-600">Aşırı Yük (&gt;90h)</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">{analytics.overloadedCount}</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="text-lg font-semibold text-gray-900">{analytics.overloadedCount}</span>
+                <span className="text-sm text-gray-500">
                   ({Math.round((analytics.overloadedCount / analytics.totalDevelopers) * 100)}%)
                 </span>
               </div>
@@ -222,18 +222,18 @@ export const WorkloadAnalytics: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div className="flex items-center space-x-2 mb-4">
             <BarChart3 className="h-5 w-5 text-green-600" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">En Yoğun Projeler</h3>
+            <h3 className="text-lg font-semibold text-gray-900">En Yoğun Projeler</h3>
           </div>
           
           <div className="space-y-3">
             {topProjects.map(([project, hours], index) => (
               <div key={project} className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">#{index + 1}</span>
-                  <span className="text-sm text-gray-900 dark:text-gray-100">{project}</span>
+                  <span className="text-sm font-medium text-gray-600">#{index + 1}</span>
+                  <span className="text-sm text-gray-900">{project}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="w-20 bg-gray-200 rounded-full h-2">
@@ -242,7 +242,7 @@ export const WorkloadAnalytics: React.FC = () => {
                       style={{ width: `${(hours / Math.max(...Object.values(analytics.projectDistribution))) * 100}%` }}
                     />
                   </div>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 w-12 text-right">{hours}h</span>
+                  <span className="text-sm font-semibold text-gray-900 w-12 text-right">{hours}h</span>
                 </div>
               </div>
             ))}
@@ -251,36 +251,36 @@ export const WorkloadAnalytics: React.FC = () => {
       </div>
 
       {/* Developer Performance Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yazılımcı Performans Tablosu</h3>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Yazılımcı Performans Tablosu</h3>
         </div>
         
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Yazılımcı
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Görev Sayısı
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Harcanan Süre
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Proje Sayısı
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Verimlilik
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Durum
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-200">
               {workload?.filter(dev => canViewDeveloperData(dev.developer))
                 .sort((a, b) => b.totalActualHours - a.totalActualHours)
                 .map((developer, index) => {
@@ -298,20 +298,20 @@ export const WorkloadAnalytics: React.FC = () => {
                             {developer.developer.split(' ').map(n => n[0]).join('').slice(0, 2)}
                           </span>
                         </div>
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{developer.developer}</span>
+                        <span className="text-sm font-medium text-gray-900">{developer.developer}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{developer.totalTasks}</span>
+                      <span className="text-sm font-semibold text-gray-900">{developer.totalTasks}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{Math.round(developer.totalActualHours * 10) / 10}h</span>
+                      <span className="text-sm font-semibold text-gray-900">{Math.round(developer.totalActualHours * 10) / 10}h</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{uniqueProjects}</span>
+                      <span className="text-sm text-gray-900">{uniqueProjects}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{efficiency}h/görev</span>
+                      <span className="text-sm text-gray-900">{efficiency}h/görev</span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${

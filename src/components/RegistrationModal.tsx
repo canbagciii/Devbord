@@ -70,24 +70,24 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose, o
 
   return (
     <div
-      className="fixed inset-0 z-[999] bg-gray-900/45 dark:bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-5"
+      className="fixed inset-0 z-[999] bg-gray-900/45 backdrop-blur-sm flex items-center justify-center p-5"
       onClick={handleOverlayClick}
     >
-      <div className="bg-white dark:bg-gray-800 rounded-3xl w-full max-w-[520px] shadow-2xl p-10 max-h-[92vh] overflow-y-auto relative animate-in fade-in zoom-in-95 duration-300">
+      <div className="bg-white rounded-3xl w-full max-w-[520px] shadow-2xl p-10 max-h-[92vh] overflow-y-auto relative animate-in fade-in zoom-in-95 duration-300">
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 border-[1.5px] border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-600 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-600 dark:hover:border-blue-500 transition-all"
+          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-100 border-[1.5px] border-gray-300 flex items-center justify-center text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-600 transition-all"
         >
           <X className="w-4 h-4" />
         </button>
 
         <div className="mb-7">
-          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-gray-100 mb-1.5">Devbord'a Katılın 🚀</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Dakikalar içinde entegrasyonunuzu tamamlayın</p>
+          <h2 className="text-2xl font-extrabold text-gray-900 mb-1.5">Devbord'a Katılın 🚀</h2>
+          <p className="text-sm text-gray-600">Dakikalar içinde entegrasyonunuzu tamamlayın</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg text-sm text-red-800 dark:text-red-300">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
             {error}
           </div>
         )}

@@ -314,7 +314,7 @@ export const SprintEvaluationDashboard: React.FC = () => {
     return (
       <div className="text-center py-12">
         <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500 dark:text-gray-400 text-lg">Bu sayfaya erişim yetkiniz bulunmuyor.</p>
+        <p className="text-gray-500 text-lg">Bu sayfaya erişim yetkiniz bulunmuyor.</p>
         <p className="text-gray-400 text-sm mt-2">
           Sprint değerlendirmelerini görüntülemek için yönetici yetkisi gereklidir.
         </p>
@@ -328,8 +328,8 @@ export const SprintEvaluationDashboard: React.FC = () => {
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <div className="text-center">
-            <p className="text-lg text-gray-700 dark:text-gray-300">Sprint Değerlendirmeleri Yükleniyor...</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-lg text-gray-700">Sprint Değerlendirmeleri Yükleniyor...</p>
+            <p className="text-sm text-gray-500 mt-1">
               {loading ? 'Jira verisi alınıyor...' : 'Değerlendirme verileri işleniyor...'}
             </p>
           </div>
@@ -343,8 +343,8 @@ export const SprintEvaluationDashboard: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sprint Değerlendirmeleri</h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Tamamlanan sprintlerin değerlendirme raporları</p>
+          <h2 className="text-2xl font-bold text-gray-900">Sprint Değerlendirmeleri</h2>
+          <p className="text-gray-600 mt-1">Tamamlanan sprintlerin değerlendirme raporları</p>
         </div>
         <div className="flex items-center space-x-3">
           <button
@@ -359,13 +359,13 @@ export const SprintEvaluationDashboard: React.FC = () => {
 
       {/* Project Filter */}
       {availableProjects.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center space-x-4">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Proje Filtresi:</label>
+            <label className="text-sm font-medium text-gray-700">Proje Filtresi:</label>
             <select
               value={selectedProject}
               onChange={(e) => setSelectedProject(e.target.value)}
-              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Tüm Projeler - Son Sprintler ({evaluationSummaries.length} sprint)</option>
               {availableProjects.map(project => {
@@ -391,23 +391,23 @@ export const SprintEvaluationDashboard: React.FC = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredEvaluationSummaries.map((summary) => (
-          <div key={summary.sprintId} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div key={summary.sprintId} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
                 <Calendar className="h-5 w-5 text-blue-600" />
                 <span className="text-sm font-medium text-blue-600">{summary.projectKey}</span>
               </div>
-              <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded">
+              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
                 Kapatıldı
               </span>
             </div>
 
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">{summary.sprintName}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{summary.projectName}</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{summary.sprintName}</h3>
+            <p className="text-sm text-gray-600 mb-4">{summary.projectName}</p>
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Sprint Başarısı:</span>
+                <span className="text-sm text-gray-600">Sprint Başarısı:</span>
                 <div className="flex items-center space-x-2">
                   <span className={`font-medium ${
                     summary.successRate >= 80 ? 'text-green-600' :
@@ -428,12 +428,12 @@ export const SprintEvaluationDashboard: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Değerlendirme:</span>
+                <span className="text-sm text-gray-600">Değerlendirme:</span>
                 <span className="font-medium">{summary.totalEvaluations} kişi</span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Ortalama Puan:</span>
+                <span className="text-sm text-gray-600">Ortalama Puan:</span>
                 <div className="flex items-center space-x-1">
                   <Star className="h-4 w-4 text-yellow-400 fill-current" />
                   <span className="font-medium">{summary.averageOverallRating}/5</span>
@@ -441,7 +441,7 @@ export const SprintEvaluationDashboard: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Sprint Puanı:</span>
+                <span className="text-sm text-gray-600">Sprint Puanı:</span>
                 <div className="flex items-center space-x-1">
                   <TrendingUp className="h-4 w-4 text-blue-400" />
                   <span className="font-medium">{summary.averageSprintSuccessRating}/5</span>
@@ -465,9 +465,9 @@ export const SprintEvaluationDashboard: React.FC = () => {
       </div>
 
       {filteredEvaluationSummaries.length === 0 && !evaluationsLoading && (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
           <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 text-lg">
+          <p className="text-gray-500 text-lg">
             {selectedProject === 'all' 
               ? 'Değerlendirme yapılmış sprint bulunamadı.' 
               : 'Seçilen proje için değerlendirme bulunamadı.'
@@ -485,17 +485,17 @@ export const SprintEvaluationDashboard: React.FC = () => {
       {/* Detailed View Modal */}
       {selectedSummary && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
               <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                <h3 className="text-xl font-semibold text-gray-900">
                   {selectedSummary.sprintName} - Değerlendirme Detayları
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{selectedSummary.projectName}</p>
+                <p className="text-sm text-gray-600 mt-1">{selectedSummary.projectName}</p>
               </div>
               <button
                 onClick={() => setSelectedSummary(null)}
-                className="text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <span className="sr-only">Kapat</span>
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -509,36 +509,36 @@ export const SprintEvaluationDashboard: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 rounded-lg p-4">
                   <div className="text-2xl font-bold text-blue-600">{selectedSummary.totalTasks}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Görev</div>
+                  <div className="text-sm text-gray-600">Toplam Görev</div>
                 </div>
                 <div className="bg-green-50 rounded-lg p-4">
                   <div className="text-2xl font-bold text-green-600">{selectedSummary.completedTasks}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Tamamlanan</div>
+                  <div className="text-sm text-gray-600">Tamamlanan</div>
                 </div>
                 <div className="bg-purple-50 rounded-lg p-4">
                   <div className="text-2xl font-bold text-purple-600">{selectedSummary.totalEvaluations}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Değerlendirme</div>
+                  <div className="text-sm text-gray-600">Değerlendirme</div>
                 </div>
                 <div className="bg-yellow-50 rounded-lg p-4">
                   <div className="text-2xl font-bold text-yellow-600">%{selectedSummary.successRate}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Başarı Oranı</div>
+                  <div className="text-sm text-gray-600">Başarı Oranı</div>
                 </div>
               </div>
 
               {/* Takım Puanları */}
               {selectedSummary.teamRatings.length > 0 && (
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Takım Üyesi Puanları</h4>
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-4">Takım Üyesi Puanları</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {selectedSummary.teamRatings.map((rating) => (
-                      <div key={rating.memberName} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                        <div className="font-medium text-gray-900 dark:text-gray-100">{rating.memberName}</div>
+                      <div key={rating.memberName} className="bg-gray-50 rounded-lg p-3">
+                        <div className="font-medium text-gray-900">{rating.memberName}</div>
                         <div className="flex items-center space-x-2 mt-1">
                           <div className="flex items-center space-x-1">
                             <Star className="h-4 w-4 text-yellow-400 fill-current" />
                             <span className="font-medium">{rating.averageRating}/5</span>
                           </div>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">({rating.totalRatings} değerlendirme)</span>
+                          <span className="text-sm text-gray-500">({rating.totalRatings} değerlendirme)</span>
                         </div>
                       </div>
                     ))}
@@ -547,15 +547,15 @@ export const SprintEvaluationDashboard: React.FC = () => {
               )}
 
               {/* Tüm Değerlendirmeler */}
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Tüm Değerlendirmeler</h4>
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-4">Tüm Değerlendirmeler</h4>
                 <div className="space-y-4">
                   {selectedSummary.evaluations.map((evaluation, index) => (
-                    <div key={evaluation.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div key={evaluation.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
                         <div>
-                          <span className="font-medium text-gray-900 dark:text-gray-100">{evaluation.evaluatorName}</span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">({evaluation.evaluatorEmail})</span>
+                          <span className="font-medium text-gray-900">{evaluation.evaluatorName}</span>
+                          <span className="text-sm text-gray-500 ml-2">({evaluation.evaluatorEmail})</span>
                         </div>
                         <div className="flex items-center space-x-4">
                           <div className="flex items-center space-x-1">
@@ -571,23 +571,23 @@ export const SprintEvaluationDashboard: React.FC = () => {
                       
                       <div className="space-y-3">
                         <div>
-                          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">Genel Yorum:</h5>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{evaluation.generalComment}</p>
+                          <h5 className="text-sm font-medium text-gray-700">Genel Yorum:</h5>
+                          <p className="text-sm text-gray-600 mt-1">{evaluation.generalComment}</p>
                         </div>
                         
                         {evaluation.deficiencies && (
                           <div>
-                            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">Eksiklikler:</h5>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{evaluation.deficiencies}</p>
+                            <h5 className="text-sm font-medium text-gray-700">Eksiklikler:</h5>
+                            <p className="text-sm text-gray-600 mt-1">{evaluation.deficiencies}</p>
                           </div>
                         )}
                         
                         {evaluation.teamMemberRatings.length > 0 && (
                           <div>
-                            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">Takım Üyesi Puanları:</h5>
+                            <h5 className="text-sm font-medium text-gray-700">Takım Üyesi Puanları:</h5>
                             <div className="mt-2 space-y-2">
                               {evaluation.teamMemberRatings.map((rating) => (
-                                <div key={rating.memberName} className="bg-gray-50 dark:bg-gray-900 rounded p-2">
+                                <div key={rating.memberName} className="bg-gray-50 rounded p-2">
                                   <div className="flex items-center justify-between">
                                     <span className="text-sm font-medium">{rating.memberName}</span>
                                     <div className="flex items-center space-x-1">
@@ -596,7 +596,7 @@ export const SprintEvaluationDashboard: React.FC = () => {
                                     </div>
                                   </div>
                                   {rating.comment && (
-                                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{rating.comment}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{rating.comment}</p>
                                   )}
                                 </div>
                               ))}
@@ -605,12 +605,12 @@ export const SprintEvaluationDashboard: React.FC = () => {
                         )}
                       </div>
                       
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+                      <div className="text-xs text-gray-500 mt-3">
                         Değerlendirme tarihi: {evaluation.createdAt.toLocaleDateString('tr-TR')} {evaluation.createdAt.toLocaleTimeString('tr-TR')}
                       </div>
                       
                       {/* Delete Button for Admins */}
-                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="mt-3 pt-3 border-t border-gray-200">
                         <button
                           onClick={() => handleDeleteEvaluation(evaluation.id, evaluation.evaluatorName)}
                           disabled={deletingEvaluationId === evaluation.id}

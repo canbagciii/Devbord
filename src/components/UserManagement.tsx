@@ -79,7 +79,7 @@ export const UserManagement: React.FC = () => {
   if (!hasRole('admin')) {
     return (
       <div className="space-y-6">
-        <div className="bg-red-50 border border-red-200 dark:border-red-700 rounded-lg p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
           <div className="flex items-center space-x-2">
             <AlertTriangle className="h-5 w-5 text-red-600" />
             <p className="text-red-800">Bu sayfaya erişim yetkiniz bulunmuyor.</p>
@@ -212,7 +212,7 @@ export const UserManagement: React.FC = () => {
       case 'admin': return <Shield className="h-4 w-4 text-red-600" />;
       case 'analyst': return <Eye className="h-4 w-4 text-blue-600" />;
       case 'developer': return <Settings className="h-4 w-4 text-green-600" />;
-      default: return <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />;
+      default: return <Users className="h-4 w-4 text-gray-600" />;
     }
   };
 
@@ -249,8 +249,8 @@ export const UserManagement: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Kullanıcı Yönetimi</h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Sistem kullanıcılarını yönetin ve proje erişimlerini düzenleyin</p>
+          <h2 className="text-2xl font-bold text-gray-900">Kullanıcı Yönetimi</h2>
+          <p className="text-gray-600 mt-1">Sistem kullanıcılarını yönetin ve proje erişimlerini düzenleyin</p>
         </div>
         <div className="flex items-center space-x-3">
           <button
@@ -273,60 +273,60 @@ export const UserManagement: React.FC = () => {
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</p>
+              <p className="text-sm font-medium text-gray-600">Toplam</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
             </div>
-            <Users className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+            <Users className="h-8 w-8 text-gray-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Aktif</p>
+              <p className="text-sm font-medium text-gray-600">Aktif</p>
               <p className="text-2xl font-bold text-green-600">{stats.active}</p>
             </div>
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pasif</p>
+              <p className="text-sm font-medium text-gray-600">Pasif</p>
               <p className="text-2xl font-bold text-red-600">{stats.inactive}</p>
             </div>
             <UserX className="h-8 w-8 text-red-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Yönetici</p>
+              <p className="text-sm font-medium text-gray-600">Yönetici</p>
               <p className="text-2xl font-bold text-red-600">{stats.admins}</p>
             </div>
             <Shield className="h-8 w-8 text-red-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Analist</p>
+              <p className="text-sm font-medium text-gray-600">Analist</p>
               <p className="text-2xl font-bold text-blue-600">{stats.analysts}</p>
             </div>
             <Eye className="h-8 w-8 text-blue-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Yazılımcı</p>
+              <p className="text-sm font-medium text-gray-600">Yazılımcı</p>
               <p className="text-2xl font-bold text-green-600">{stats.developers}</p>
             </div>
             <Settings className="h-8 w-8 text-green-600" />
@@ -335,7 +335,7 @@ export const UserManagement: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+      <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -344,14 +344,14 @@ export const UserManagement: React.FC = () => {
               placeholder="Kullanıcı ara..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">Tüm Roller</option>
             <option value="admin">Yönetici</option>
@@ -362,7 +362,7 @@ export const UserManagement: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">Tüm Durumlar</option>
             <option value="active">Aktif</option>
@@ -373,7 +373,7 @@ export const UserManagement: React.FC = () => {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-50 border border-red-200 dark:border-red-700 rounded-lg p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <AlertTriangle className="h-5 w-5 text-red-600" />
             <p className="text-red-800">{error}</p>
@@ -382,44 +382,44 @@ export const UserManagement: React.FC = () => {
       )}
 
       {/* Users Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Kullanıcı Listesi</h3>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Kullanıcı Listesi</h3>
         </div>
         
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="flex items-center space-x-2">
               <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
-              <span className="text-gray-600 dark:text-gray-400">Kullanıcılar yükleniyor...</span>
+              <span className="text-gray-600">Kullanıcılar yükleniyor...</span>
             </div>
           </div>
         ) : filteredUsers.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Kullanıcı
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Rol
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Atanmış Projeler
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Durum
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Oluşturma
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     İşlemler
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200">
                 {filteredUsers.map((user, index) => (
                   <tr key={user.id} className={`hover:bg-gray-50 transition-colors ${
                     index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
@@ -432,8 +432,8 @@ export const UserManagement: React.FC = () => {
                           </span>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.name}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+                          <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                          <p className="text-sm text-gray-500">{user.email}</p>
                         </div>
                       </div>
                     </td>
@@ -448,20 +448,20 @@ export const UserManagement: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
                         {user.role === 'admin' ? (
-                          <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-2 py-1 rounded-full">
+                          <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
                             Tüm Projeler
                           </span>
                         ) : user.assignedProjects.length > 0 ? (
                           user.assignedProjects.map(projectKey => {
                             const project = projectOptions.find(p => p.key === projectKey);
                             return (
-                              <span key={projectKey} className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full">
+                              <span key={projectKey} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                                 {project?.name || projectKey}
                               </span>
                             );
                           })
                         ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-400 italic">Proje atanmamış</span>
+                          <span className="text-xs text-gray-500 italic">Proje atanmamış</span>
                         )}
                       </div>
                     </td>
@@ -475,7 +475,7 @@ export const UserManagement: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="text-sm text-gray-500">
                         <div>{user.createdAt.toLocaleDateString('tr-TR')}</div>
                         <div className="text-xs">{user.createdAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</div>
                       </div>
@@ -525,7 +525,7 @@ export const UserManagement: React.FC = () => {
         ) : (
           <div className="text-center py-12">
             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-gray-400 text-lg">Kullanıcı bulunamadı.</p>
+            <p className="text-gray-500 text-lg">Kullanıcı bulunamadı.</p>
             <p className="text-gray-400 text-sm mt-2">Filtreleri değiştirin veya yeni kullanıcı ekleyin.</p>
           </div>
         )}
@@ -534,14 +534,14 @@ export const UserManagement: React.FC = () => {
       {/* User Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-900">
                 {editingUser ? 'Kullanıcı Düzenle' : 'Yeni Kullanıcı Ekle'}
               </h3>
               <button
                 onClick={() => setShowForm(false)}
-                className="text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -550,14 +550,14 @@ export const UserManagement: React.FC = () => {
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               {/* Temel Bilgiler */}
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center space-x-2">
+                <h4 className="font-medium text-gray-900 flex items-center space-x-2">
                   <Users className="h-5 w-5 text-blue-600" />
                   <span>Temel Bilgiler</span>
                 </h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Ad Soyad *
                     </label>
                     <input
@@ -565,13 +565,13 @@ export const UserManagement: React.FC = () => {
                       required
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Kullanıcının tam adı"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       E-posta Adresi *
                     </label>
                     <div className="relative">
@@ -580,7 +580,7 @@ export const UserManagement: React.FC = () => {
                         required
                         value={formData.email}
                         onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="kullanici@acerpro.com.tr"
                         disabled={!!editingUser} // Email düzenlemede değiştirilemez
                       />
@@ -591,7 +591,7 @@ export const UserManagement: React.FC = () => {
 
                 {!editingUser && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Şifre *
                     </label>
                     <div className="relative">
@@ -600,40 +600,40 @@ export const UserManagement: React.FC = () => {
                         required={!editingUser}
                         value={formData.password}
                         onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Güvenli şifre girin"
                         minLength={6}
                       />
                       <Key className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">En az 6 karakter olmalıdır</p>
+                    <p className="text-xs text-gray-500 mt-1">En az 6 karakter olmalıdır</p>
                   </div>
                 )}
               </div>
 
               {/* Rol ve Yetki */}
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center space-x-2">
+                <h4 className="font-medium text-gray-900 flex items-center space-x-2">
                   <Shield className="h-5 w-5 text-red-600" />
                   <span>Rol ve Yetki</span>
                 </h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Kullanıcı Rolü *
                     </label>
                     <select
                       required
                       value={formData.role}
                       onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as any }))}
-                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="developer">Yazılımcı</option>
                       <option value="analyst">Analist</option>
                       <option value="admin">Yönetici</option>
                     </select>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       {formData.role === 'admin' && 'Tüm projelere ve verilere tam erişim'}
                       {formData.role === 'analyst' && 'Atanmış projelerdeki verileri görüntüleme'}
                       {formData.role === 'developer' && 'Sadece kendi verilerini görüntüleme'}
@@ -641,7 +641,7 @@ export const UserManagement: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Durum
                     </label>
                     <div className="flex items-center space-x-4 mt-2">
@@ -673,19 +673,19 @@ export const UserManagement: React.FC = () => {
               {/* Proje Atamaları */}
               {formData.role !== 'admin' && (
                 <div className="space-y-4">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center space-x-2">
+                  <h4 className="font-medium text-gray-900 flex items-center space-x-2">
                     <Building className="h-5 w-5 text-purple-600" />
                     <span>Proje Atamaları</span>
                   </h4>
                   
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-3">
                       Bu kullanıcının erişebileceği projeleri seçin. Analist rolündeki kullanıcılar, aynı projelere atanan yazılımcıların verilerini görebilir.
                     </p>
                     {projectsLoading ? (
                       <div className="flex items-center justify-center py-4">
                         <RefreshCw className="h-5 w-5 animate-spin text-blue-600 mr-2" />
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Projeler yükleniyor...</span>
+                        <span className="text-sm text-gray-600">Projeler yükleniyor...</span>
                       </div>
                     ) : projectOptions.length === 0 ? (
                       <div className="text-sm text-yellow-600 py-4 text-center">
@@ -699,11 +699,11 @@ export const UserManagement: React.FC = () => {
                               type="checkbox"
                               checked={formData.assignedProjects.includes(project.key)}
                               onChange={() => handleProjectToggle(project.key)}
-                              className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
                             <div className="flex flex-col">
-                              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{project.key}</span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">{project.name}</span>
+                              <span className="text-sm font-medium text-gray-900">{project.key}</span>
+                              <span className="text-xs text-gray-500">{project.name}</span>
                             </div>
                           </label>
                         ))}
@@ -715,7 +715,7 @@ export const UserManagement: React.FC = () => {
                       </p>
                     )}
                     {formData.role === 'analyst' && formData.assignedProjects.length > 0 && (
-                      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 dark:border-blue-700 rounded">
+                      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
                         <p className="text-xs text-blue-800">
                           <strong>Analist Yetkisi:</strong> Bu kullanıcı seçilen projelerde çalışan yazılımcıların iş yükü analizi ve günlük süre takibi verilerini görebilecek.
                         </p>
@@ -738,11 +738,11 @@ export const UserManagement: React.FC = () => {
               )}
 
               {/* Form Actions */}
-              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors"
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   İptal
                 </button>

@@ -252,7 +252,7 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
       <div className="flex items-center justify-center h-64">
         <div className="flex flex-col items-center gap-3">
           <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-indigo-100 border-t-indigo-600"></div>
-          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Yükleniyor...</span>
+          <span className="text-sm text-gray-500 font-medium">Yükleniyor...</span>
         </div>
       </div>
     );
@@ -288,18 +288,18 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
             <Settings className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Kapasite Planlama</h2>
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight">Kapasite Planlama</h2>
             <p className="text-xs text-gray-400 mt-0.5">Jira projelerini ve ekibini yapılandır</p>
           </div>
         </div>
-        <button onClick={refreshFromJira} disabled={refreshing} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:border-indigo-300 hover:text-indigo-600 transition-all text-sm font-medium shadow-sm disabled:opacity-50">
+        <button onClick={refreshFromJira} disabled={refreshing} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:border-indigo-300 hover:text-indigo-600 transition-all text-sm font-medium shadow-sm disabled:opacity-50">
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           {refreshing ? 'Yenileniyor...' : "JIRA'dan Yenile"}
         </button>
       </div>
 
       {!jiraConnected && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 dark:border-amber-700 rounded-xl p-4">
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
           <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
           <div>
             <p className="text-sm font-semibold text-amber-900">JIRA Bağlantısı Bulunamadı</p>
@@ -324,17 +324,17 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
       {currentStep === 1 && (
         <div className="space-y-6">
           <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">Proje ve Ekip Seç</h3>
+            <h3 className="text-base font-bold text-gray-900">Proje ve Ekip Seç</h3>
             <p className="text-xs text-gray-400 mt-0.5">Bir projeye tıklayarak seçin, ardından o proje için çalışacak yazılımcıları belirleyin.</p>
           </div>
 
           <div className="relative">
-            <input type="text" placeholder="Proje ara..." value={projectSearchTerm} onChange={e => setProjectSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent text-sm bg-gray-50 dark:bg-gray-900 placeholder-gray-400" />
+            <input type="text" placeholder="Proje ara..." value={projectSearchTerm} onChange={e => setProjectSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent text-sm bg-gray-50 placeholder-gray-400" />
             <Folder className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           </div>
 
           {allProjects.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+            <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
               <Folder className="h-10 w-10 text-gray-300 mx-auto mb-3" />
               <p className="text-sm text-gray-400 font-medium">Henüz proje yüklenmedi</p>
               <p className="text-xs text-gray-400 mt-1">&quot;JIRA&apos;dan Yenile&quot; butonuna basarak projeleri yükleyin.</p>
@@ -356,8 +356,8 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{project.key}</span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">{project.name}</span>
+                            <span className="text-sm font-bold text-gray-900">{project.key}</span>
+                            <span className="text-xs text-gray-500">{project.name}</span>
                           </div>
                           {isSelected && (
                             <div className="flex items-center gap-1.5 mt-0.5">
@@ -371,7 +371,7 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
                       <div className="flex items-center gap-2">
                         {isSelected && (
                           <>
-                            <button type="button" onClick={e => { e.stopPropagation(); handleToggleProject(project.key); }} className="p-1.5 rounded-lg hover:bg-white dark:bg-gray-800 transition-colors" title={draftProj?.is_active ? 'Pasif yap' : 'Aktif yap'}>
+                            <button type="button" onClick={e => { e.stopPropagation(); handleToggleProject(project.key); }} className="p-1.5 rounded-lg hover:bg-white transition-colors" title={draftProj?.is_active ? 'Pasif yap' : 'Aktif yap'}>
                               {draftProj?.is_active ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <XCircle className="h-4 w-4 text-gray-400" />}
                             </button>
                             <button type="button" onClick={e => { e.stopPropagation(); handleRemoveProject(project.key); }} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
@@ -385,11 +385,11 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
 
                     {/* Expanded user panel - Ekibi Kaydet butonu yok, checkbox anlik draft'i gunceller */}
                     {isExpanded && (
-                      <div className="border-t border-indigo-100 bg-white dark:bg-gray-800 px-5 py-4">
+                      <div className="border-t border-indigo-100 bg-white px-5 py-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4 text-indigo-500" />
-                            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.key} için yazılımcılar</span>
+                            <span className="text-sm font-semibold text-gray-800">{project.key} için yazılımcılar</span>
                           </div>
                           <span className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-medium">
                             {draftDevelopers.filter(d => d.project_keys.includes(project.key)).length} seçili
@@ -401,7 +401,7 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
                         ) : (
                           <>
                             <div className="relative mb-3">
-                              <input type="text" placeholder="Yazılımcı ara..." value={userSearchTerm} onChange={e => setUserSearchTerm(e.target.value)} className="w-full pl-8 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent text-sm bg-gray-50 dark:bg-gray-900 placeholder-gray-400" />
+                              <input type="text" placeholder="Yazılımcı ara..." value={userSearchTerm} onChange={e => setUserSearchTerm(e.target.value)} className="w-full pl-8 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent text-sm bg-gray-50 placeholder-gray-400" />
                               <Users className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
@@ -411,12 +411,12 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
                                   const checked = draftDevelopers.some(d => d.accountId === user.accountId && d.project_keys.includes(project.key));
                                   return (
                                     <label key={user.accountId} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all border ${checked ? 'bg-indigo-50 border-indigo-200' : 'bg-gray-50 border-transparent hover:border-gray-200'}`}>
-                                      <input type="checkbox" checked={checked} onChange={() => toggleUserForProject(project.key, user)} className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-400" />
+                                      <input type="checkbox" checked={checked} onChange={() => toggleUserForProject(project.key, user)} className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-400" />
                                       <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${checked ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
                                         {user.displayName.charAt(0).toUpperCase()}
                                       </div>
                                       <div className="flex flex-col min-w-0">
-                                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{user.displayName}</span>
+                                        <span className="text-sm font-medium text-gray-800 truncate">{user.displayName}</span>
                                         {user.emailAddress && <span className="text-xs text-gray-400 truncate">{user.emailAddress}</span>}
                                       </div>
                                     </label>
@@ -427,7 +427,7 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
                         )}
 
                         <div className="flex items-center justify-end mt-4">
-                          <button type="button" onClick={() => setExpandedProjectKey(null)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors">
+                          <button type="button" onClick={() => setExpandedProjectKey(null)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">
                             Kapat
                           </button>
                         </div>
@@ -440,13 +440,13 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
           )}
 
           {draftDevelopers.length > 0 && (
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100">
-              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Seçilen Yazılımcılar</h4>
+            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Seçilen Yazılımcılar</h4>
               <div className="flex flex-wrap gap-2">
                 {draftDevelopers.map(dev => (
-                  <div key={dev.accountId} className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-1.5">
+                  <div key={dev.accountId} className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-1.5">
                     <div className="w-5 h-5 rounded-md bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-bold">{dev.displayName.charAt(0)}</div>
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{dev.displayName}</span>
+                    <span className="text-xs font-medium text-gray-700">{dev.displayName}</span>
                     <button onClick={() => handleRemoveDeveloper(dev.accountId)} className="text-gray-300 hover:text-red-400 transition-colors"><XCircle className="h-3.5 w-3.5" /></button>
                   </div>
                 ))}
@@ -467,17 +467,17 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
 
       {/* STEP 2 */}
       {currentStep === 2 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm px-8 py-8">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-8 py-8">
           <div className="mb-6">
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">Analiz Ayarları</h3>
+            <h3 className="text-base font-bold text-gray-900">Analiz Ayarları</h3>
             <p className="text-xs text-gray-400 mt-0.5">Günlük çalışma süresini ve kapasite hesaplamasında kullanılacak birimi belirleyin.</p>
           </div>
           <div className="space-y-6">
             {capacityMetric === 'hours' && (
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Günlük çalışma süresi <span className="font-normal text-gray-400">(saat)</span></label>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">Günlük çalışma süresi <span className="font-normal text-gray-400">(saat)</span></label>
                 <div className="flex items-center gap-3">
-                  <input type="number" min={1} max={24} value={dailyHours} onChange={e => { const v = parseInt(e.target.value || '0', 10); setDailyHours(Number.isNaN(v) ? 0 : v); }} className="w-24 px-3 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold focus:border-indigo-500 focus:outline-none" />
+                  <input type="number" min={1} max={24} value={dailyHours} onChange={e => { const v = parseInt(e.target.value || '0', 10); setDailyHours(Number.isNaN(v) ? 0 : v); }} className="w-24 px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-indigo-500 focus:outline-none" />
                   <span className="text-xs text-gray-400 font-medium">saat / gün</span>
                 </div>
                 <p className="text-xs text-gray-400 mt-2">Toplantılar ve molalar hariç, geliştirme için ayırdığınız ortalama süre.</p>
@@ -485,16 +485,16 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
             )}
             {capacityMetric === 'storyPoints' && (
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Günlük hedef <span className="font-normal text-gray-400">(kaç story point?)</span></label>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">Günlük hedef <span className="font-normal text-gray-400">(kaç story point?)</span></label>
                 <div className="flex items-center gap-3">
-                  <input type="number" min={1} max={100} value={dailyStoryPoints} onChange={e => { const v = parseInt(e.target.value || '0', 10); setDailyStoryPoints(Number.isNaN(v) ? 0 : v); }} className="w-28 px-3 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold focus:border-indigo-500 focus:outline-none" />
+                  <input type="number" min={1} max={100} value={dailyStoryPoints} onChange={e => { const v = parseInt(e.target.value || '0', 10); setDailyStoryPoints(Number.isNaN(v) ? 0 : v); }} className="w-28 px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-indigo-500 focus:outline-none" />
                   <span className="text-xs text-gray-400 font-medium">story point / gün</span>
                 </div>
                 <p className="text-xs text-gray-400 mt-2">Ortalama bir geliştiricinin günde tamamlamasını beklediğiniz story point miktarı.</p>
               </div>
             )}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Hesaplama tipi <span className="font-normal text-gray-400">(story point mi, saat mi?)</span></label>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">Hesaplama tipi <span className="font-normal text-gray-400">(story point mi, saat mi?)</span></label>
               <div className="flex gap-3">
                 {[{ value: 'hours', label: 'Saat bazlı' }, { value: 'storyPoints', label: 'Story Point bazlı' }].map(opt => (
                   <button key={opt.value} type="button" onClick={() => setCapacityMetric(opt.value as 'hours' | 'storyPoints')} className={`flex-1 px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${capacityMetric === opt.value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-600 hover:border-indigo-200'}`}>
@@ -506,7 +506,7 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
             </div>
           </div>
           <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-100">
-            <button type="button" onClick={() => setCurrentStep(1)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-indigo-300 hover:text-indigo-600 transition-all">
+            <button type="button" onClick={() => setCurrentStep(1)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600 transition-all">
               <ArrowLeft className="h-4 w-4" />Geri
             </button>
             <button type="button" onClick={() => setCurrentStep(3)} className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200">
@@ -518,17 +518,17 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
 
       {/* STEP 3 */}
       {currentStep === 3 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm px-8 py-8">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-8 py-8">
           <div className="flex flex-col items-center mb-8">
             <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center mb-4 shadow-lg shadow-emerald-100">
               <CheckCircle className="h-8 w-8 text-emerald-500" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Kapasite Planı Hazır!</h3>
+            <h3 className="text-lg font-bold text-gray-900">Kapasite Planı Hazır!</h3>
             <p className="text-xs text-gray-400 mt-1">Özet bilgileri kontrol edin.</p>
           </div>
 
           <div className="space-y-3 mb-6">
-            <div className="rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-100 p-4">
+            <div className="rounded-xl bg-gray-50 border border-gray-100 p-4">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-[0.65rem] font-bold text-gray-400 uppercase tracking-widest">Projeler</h4>
                 <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">{activeProjectCount > 0 ? `${activeProjectCount} aktif` : '0 aktif'}</span>
@@ -538,18 +538,18 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
                   {draftProjects.map(project => {
                     const devCount = draftDevelopers.filter(d => d.project_keys.includes(project.project_key)).length;
                     return (
-                      <div key={project.project_key} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+                      <div key={project.project_key} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2">
                         <div className="flex items-center gap-2.5">
                           <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${project.is_active ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-400'}`}>{project.project_key.slice(0, 2)}</div>
                           <div>
                             <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.project_key}</span>
-                              {!project.is_active && <span className="text-[0.6rem] font-semibold text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-full uppercase">Pasif</span>}
+                              <span className="text-sm font-semibold text-gray-800">{project.project_key}</span>
+                              {!project.is_active && <span className="text-[0.6rem] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full uppercase">Pasif</span>}
                             </div>
                             <span className="text-xs text-gray-400">{project.project_name}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
                           <Users className="h-3.5 w-3.5" />
                           <span>{devCount > 0 ? `${devCount} yazılımcı` : 'Atanmadı'}</span>
                         </div>
@@ -560,7 +560,7 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
               )}
             </div>
 
-            <div className="rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-100 p-4">
+            <div className="rounded-xl bg-gray-50 border border-gray-100 p-4">
               <h4 className="text-[0.65rem] font-bold text-gray-400 uppercase tracking-widest mb-3">Ekip</h4>
               {activeDeveloperCount === 0 ? <p className="text-sm text-gray-400">Henüz aktif yazılımcı yok.</p> : (
                 <div className="flex flex-wrap gap-2">
@@ -573,16 +573,16 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
               )}
             </div>
 
-            <div className="rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-100 p-4">
+            <div className="rounded-xl bg-gray-50 border border-gray-100 p-4">
               <h4 className="text-[0.65rem] font-bold text-gray-400 uppercase tracking-widest mb-3">Ayarlar</h4>
               <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-2">
-                  <span className="text-gray-500 dark:text-gray-400">Günlük hedef</span>
-                  <span className="font-bold text-gray-900 dark:text-gray-100">{capacityMetric === 'hours' ? `${dailyHours} saat/gün` : `${dailyStoryPoints} SP/gün`}</span>
+                <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                  <span className="text-gray-500">Günlük hedef</span>
+                  <span className="font-bold text-gray-900">{capacityMetric === 'hours' ? `${dailyHours} saat/gün` : `${dailyStoryPoints} SP/gün`}</span>
                 </div>
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-gray-500 dark:text-gray-400">Hesaplama tipi</span>
-                  <span className="font-bold text-gray-900 dark:text-gray-100">{capacityMetric === 'hours' ? 'Saat bazlı' : 'Story Point bazlı'}</span>
+                  <span className="text-gray-500">Hesaplama tipi</span>
+                  <span className="font-bold text-gray-900">{capacityMetric === 'hours' ? 'Saat bazlı' : 'Story Point bazlı'}</span>
                 </div>
               </div>
             </div>
@@ -598,7 +598,7 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
             <button type="button" disabled={activeProjectCount === 0 || activeDeveloperCount === 0 || savingPlan} onClick={handleConfirm} className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-bold bg-emerald-500 text-white hover:bg-emerald-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all shadow-md shadow-emerald-200">
               {savingPlan ? (<><div className="h-4 w-4 rounded-full border-2 border-emerald-200 border-t-emerald-600 animate-spin" />Kaydediliyor...</>) : (<><CheckCircle className="h-4 w-4" />Planı Onayla & Devam Et</>)}
             </button>
-            <button type="button" onClick={() => setCurrentStep(2)} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-indigo-300 hover:text-indigo-600 transition-all">
+            <button type="button" onClick={() => setCurrentStep(2)} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600 transition-all">
               <ArrowLeft className="h-4 w-4" />Ayarları Düzenle
             </button>
           </div>

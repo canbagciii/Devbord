@@ -463,7 +463,7 @@ export const ProjectSprintOverview: React.FC = () => {
       <div className="flex items-center justify-center py-12">
         <div className="flex items-center space-x-2">
           <Loader className="h-6 w-6 animate-spin text-blue-600" />
-          <span className="text-gray-600 dark:text-gray-400">Proje ve sprint bilgileri yükleniyor bu işlem 10 saniye sürecektir...</span>
+          <span className="text-gray-600">Proje ve sprint bilgileri yükleniyor bu işlem 10 saniye sürecektir...</span>
         </div>
       </div>
     );
@@ -471,7 +471,7 @@ export const ProjectSprintOverview: React.FC = () => {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 dark:border-red-700 rounded-lg p-6">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
         <div className="flex items-center space-x-2">
           <Activity className="h-5 w-5 text-red-600" />
           <p className="text-red-800">{error}</p>
@@ -491,8 +491,8 @@ export const ProjectSprintOverview: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Proje & Sprint Genel Bakış</h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <h2 className="text-2xl font-bold text-gray-900">Proje & Sprint Genel Bakış</h2>
+          <p className="text-gray-600 mt-1">
             {sprintType === 'active' 
               ? 'Aktif sprintlerin proje bazlı analizi'
               : isAnalystOrDeveloper 
@@ -500,14 +500,14 @@ export const ProjectSprintOverview: React.FC = () => {
                 : 'Son kapatılan sprintlerin proje bazlı analizi'}
           </p>
           {debugInfo && (
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 p-2 rounded">
+            <div className="mt-2 text-xs text-gray-500 bg-gray-100 p-2 rounded">
               Debug: {debugInfo.sprintType} | Sprints: {debugInfo.sprintsCount} | Tasks: {debugInfo.sprintTasksKeys.length}
             </div>
           )}
         </div>
         <div className="flex items-center space-x-3">
           {lastUpdate && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-gray-500">
               Son güncelleme: {lastUpdate.toLocaleTimeString('tr-TR')}
             </span>
           )}
@@ -531,14 +531,14 @@ export const ProjectSprintOverview: React.FC = () => {
       </div>
 
       {/* Filter */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+      <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
         <div className="flex flex-col space-y-4">
           <div className="flex items-center space-x-4">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Proje Filtresi:</label>
+            <label className="text-sm font-medium text-gray-700">Proje Filtresi:</label>
             <select
               value={selectedProject}
               onChange={(e) => setSelectedProject(e.target.value)}
-              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Tüm Projeler</option>
               {Array.from(new Set(sprintDetails.map(sprint => sprint.projectKey)))
@@ -554,12 +554,12 @@ export const ProjectSprintOverview: React.FC = () => {
           
           {/* Analist/Yazılımcı kullanıcıları için ek filtreler */}
           {isAnalystOrDeveloper && sprintType === 'closed' && (
-            <div className="flex items-center space-x-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Yıl Filtresi:</label>
+            <div className="flex items-center space-x-4 pt-2 border-t border-gray-200">
+              <label className="text-sm font-medium text-gray-700">Yıl Filtresi:</label>
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all">Tüm Yıllar</option>
                 {availableYears.map(year => (
@@ -569,19 +569,19 @@ export const ProjectSprintOverview: React.FC = () => {
                 ))}
               </select>
               
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 ml-4">Sprint Adı:</label>
+              <label className="text-sm font-medium text-gray-700 ml-4">Sprint Adı:</label>
               <input
                 type="text"
                 value={sprintNameFilter}
                 onChange={(e) => setSprintNameFilter(e.target.value)}
                 placeholder="Sprint adına göre ara..."
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent flex-1 max-w-md"
+                className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent flex-1 max-w-md"
               />
               
               {sprintNameFilter && (
                 <button
                   onClick={() => setSprintNameFilter('')}
-                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:text-gray-200 px-2"
+                  className="text-sm text-gray-600 hover:text-gray-800 px-2"
                 >
                   Temizle
                 </button>
@@ -593,54 +593,54 @@ export const ProjectSprintOverview: React.FC = () => {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Aktif Sprint</p>
+              <p className="text-sm font-medium text-gray-600">Aktif Sprint</p>
               <p className="text-2xl font-bold text-blue-600">{stats.totalSprints}</p>
             </div>
             <Activity className="h-8 w-8 text-blue-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Ana Görev</p>
+              <p className="text-sm font-medium text-gray-600">Ana Görev</p>
               <p className="text-2xl font-bold text-green-600">{stats.totalTasks}</p>
             </div>
             <Calendar className="h-8 w-8 text-green-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Süre</p>
+              <p className="text-sm font-medium text-gray-600">Toplam Süre</p>
               <p className="text-2xl font-bold text-purple-600">{stats.totalHours}h</p>
             </div>
             <Clock className="h-8 w-8 text-purple-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Yazılımcı Harcanan Süre</p>
+              <p className="text-sm font-medium text-gray-600">Yazılımcı Harcanan Süre</p>
               <p className="text-2xl font-bold text-orange-600">{stats.totalActualHours}h</p>
             </div>
             <Clock className="h-8 w-8 text-orange-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
               <div className="flex items-center space-x-2">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-0">70h Hedef</p>
+                <p className="text-sm font-medium text-gray-600 mb-0">70h Hedef</p>
                 <button
                   onClick={refresh}
-                  className="ml-1 px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-xs border border-blue-200 dark:border-blue-700 flex items-center"
+                  className="ml-1 px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-xs border border-blue-200 flex items-center"
                   title="Jira verilerini yenile"
                   disabled={loading}
                 >
@@ -658,7 +658,7 @@ export const ProjectSprintOverview: React.FC = () => {
       {/* Sprint Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sortedSprints.slice(0, displayedSprintCount).map((sprint) => (
-          <div key={sprint.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow">
+          <div key={sprint.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
@@ -673,15 +673,15 @@ export const ProjectSprintOverview: React.FC = () => {
                 </span>
               </div>
 
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">{sprint.name}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{sprint.projectName}</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{sprint.name}</h3>
+              <p className="text-sm text-gray-600 mb-4">{sprint.projectName}</p>
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Ana Görev Sayısı:</span>
+                  <span className="text-sm text-gray-600">Ana Görev Sayısı:</span>
                   <div className="text-right">
                     <span className="font-medium text-blue-600">{sprint.taskCount} görev</span>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <div className="text-xs text-gray-500 mt-1">
                       {Object.entries(sprint.issueTypeBreakdown || {})
                         .filter(([type]) => {
                           const typeLower = type.toLowerCase();
@@ -706,10 +706,10 @@ export const ProjectSprintOverview: React.FC = () => {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Tamamlanan Görev:</span>
+                  <span className="text-sm text-gray-600">Tamamlanan Görev:</span>
                   <div className="text-right">
                     <span className="font-medium text-green-600">{sprint.doneTaskCount} görev</span>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <div className="text-xs text-gray-500 mt-1">
                       {Object.entries(sprint.issueTypeBreakdown || {})
                         .filter(([type]) => {
                           const typeLower = type.toLowerCase();
@@ -734,7 +734,7 @@ export const ProjectSprintOverview: React.FC = () => {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Sprint Başarı Oranı:</span>
+                  <span className="text-sm text-gray-600">Sprint Başarı Oranı:</span>
                   <div className="flex items-center space-x-2">
                     <span className={`font-medium ${
                       sprint.successRate >= 80 ? 'text-green-600' :
@@ -755,12 +755,12 @@ export const ProjectSprintOverview: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Toplam Orijinal Tahmin:</span>
+                  <span className="text-sm text-gray-600">Toplam Orijinal Tahmin:</span>
                   <span className="font-medium">{sprint.totalHours}h</span>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Harcanan Süre:</span>
+                  <span className="text-sm text-gray-600">Harcanan Süre:</span>
                   <span className="font-medium text-orange-600">{Math.round((sprint.totalActualHours || 0) * 10) / 10}h</span>
                 </div>
                 
@@ -768,7 +768,7 @@ export const ProjectSprintOverview: React.FC = () => {
 
                 {sprint.startDate && sprint.endDate && (
                   <div className="pt-2 border-t border-gray-100">
-                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center justify-between text-xs text-gray-500">
                       <span>Başlangıç: {new Date(sprint.startDate).toLocaleDateString('tr-TR')}</span>
                       <span>Bitiş: {new Date(sprint.endDate).toLocaleDateString('tr-TR')}</span>
                     </div>
@@ -779,10 +779,10 @@ export const ProjectSprintOverview: React.FC = () => {
               {/* Assigned Developers */}
               {sprint.assignedDevelopers.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Sprintte Çalışanlar:</p>
+                  <p className="text-xs font-medium text-gray-700 mb-2">Sprintte Çalışanlar:</p>
                   <div className="flex flex-wrap gap-1">
       {sprint.assignedDevelopers.map((developer, idx) => (
-        <span key={idx} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded">
+        <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
           {developer}
         </span>
       ))}
@@ -814,7 +814,7 @@ export const ProjectSprintOverview: React.FC = () => {
                     </button>
                   ) : (
                     <div className="text-center py-2">
-                      <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
+                      <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                         Değerlendirme süresi doldu
                       </span>
                     </div>
@@ -839,9 +839,9 @@ export const ProjectSprintOverview: React.FC = () => {
       )}
 
       {sortedSprints.length === 0 && (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
           <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 text-lg">
+          <p className="text-gray-500 text-lg">
             {getAccessibleProjects().length === 0 ? 'Erişim yetkiniz bulunmuyor.' : 
              sprintType === 'active' ? 'Aktif sprint bulunamadı.' : 'Son kapatılan sprint bulunamadı.'}
           </p>
@@ -854,7 +854,7 @@ export const ProjectSprintOverview: React.FC = () => {
             }
           </p>
           {debugInfo && (
-            <div className="mt-4 text-xs text-gray-400 bg-gray-50 dark:bg-gray-900 p-3 rounded">
+            <div className="mt-4 text-xs text-gray-400 bg-gray-50 p-3 rounded">
               <strong>Debug Info:</strong><br/>
               Sprint Type: {debugInfo.sprintType}<br/>
               Raw Sprints: {debugInfo.sprintsCount}<br/>

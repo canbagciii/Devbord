@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Task } from '../types';
-import { Search, Filter, Plus, CreditCard as Edit, Trash2, Clock, User, Building, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Filter, Plus, Edit, Trash2, Clock, User, Building, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface TaskListProps {
   tasks: Task[];
@@ -56,10 +56,10 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onEditTask, onDeleteT
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'todo': return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-700';
-      case 'in-progress': return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-700';
-      case 'done': return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-700';
-      default: return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-600';
+      case 'todo': return 'bg-red-100 text-red-800 border-red-200';
+      case 'in-progress': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'done': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -84,12 +84,12 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onEditTask, onDeleteT
   const SortButton: React.FC<{ field: keyof Task; children: React.ReactNode }> = ({ field, children }) => (
     <button
       onClick={() => handleSort(field)}
-      className="flex items-center space-x-1 text-left font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:text-gray-100 dark:hover:text-gray-100 transition-colors"
+      className="flex items-center space-x-1 text-left font-medium text-gray-700 hover:text-gray-900 transition-colors"
     >
       <span>{children}</span>
       {sortField === field && (
-        sortDirection === 'asc' ?
-          <ChevronUp className="h-4 w-4" /> :
+        sortDirection === 'asc' ? 
+          <ChevronUp className="h-4 w-4" /> : 
           <ChevronDown className="h-4 w-4" />
       )}
     </button>
@@ -99,7 +99,7 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onEditTask, onDeleteT
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Görev Listesi</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Görev Listesi</h2>
         <button
           onClick={onAddTask}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
@@ -110,7 +110,7 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onEditTask, onDeleteT
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+      <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -119,25 +119,25 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onEditTask, onDeleteT
               placeholder="Görev ara..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 dark:bg-gray-700 dark:text-gray-100"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-
+          
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 dark:bg-gray-700 dark:text-gray-100"
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">Tüm Durumlar</option>
             <option value="todo">Bekliyor</option>
             <option value="in-progress">Devam Ediyor</option>
             <option value="done">Tamamlandı</option>
           </select>
-
+          
           <select
             value={bankFilter}
             onChange={(e) => setBankFilter(e.target.value)}
-            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 dark:bg-gray-700 dark:text-gray-100"
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">Tüm Bankalar</option>
             {uniqueBanks.map(bank => (
@@ -148,40 +148,40 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onEditTask, onDeleteT
       </div>
 
       {/* Task Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <SortButton field="title">Görev</SortButton>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <SortButton field="assignedTo">Atanan</SortButton>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <SortButton field="bank">Banka</SortButton>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <SortButton field="status">Durum</SortButton>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Süre
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <SortButton field="updatedAt">Güncelleme</SortButton>
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   İşlemler
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="bg-white divide-y divide-gray-200">
               {sortedTasks.map((task, index) => (
-                <tr
-                  key={task.id}
-                  className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                    index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/30 dark:bg-gray-900/30'
+                <tr 
+                  key={task.id} 
+                  className={`hover:bg-gray-50 transition-colors ${
+                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
                   }`}
                 >
                   <td className="px-6 py-4">
@@ -193,11 +193,11 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onEditTask, onDeleteT
                             {task.id.slice(-6).toUpperCase()}
                           </span>
                         </div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1 line-clamp-2">
+                        <p className="text-sm font-medium text-gray-900 mt-1 line-clamp-2">
                           {task.title}
                         </p>
                         {task.description && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-1">
                             {task.description}
                           </p>
                         )}
@@ -206,21 +206,21 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onEditTask, onDeleteT
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-2">
-                      <div className="flex-shrink-0 h-8 w-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                        <span className="text-xs font-medium text-blue-800 dark:text-blue-300">
+                      <div className="flex-shrink-0 h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-medium text-blue-800">
                           {task.assignedTo.split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{task.assignedTo}</p>
+                        <p className="text-sm font-medium text-gray-900">{task.assignedTo}</p>
                         {task.assignedBy && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Atayan: {task.assignedBy}</p>
+                          <p className="text-xs text-gray-500">Atayan: {task.assignedBy}</p>
                         )}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm text-gray-900 dark:text-gray-100">{task.bank}</span>
+                    <span className="text-sm text-gray-900">{task.bank}</span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(task.status)}`}>
@@ -228,20 +228,20 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onEditTask, onDeleteT
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900 dark:text-gray-100">
+                    <div className="text-sm text-gray-900">
                       {task.estimatedHours && (
                         <div className="flex items-center space-x-1">
                           <Clock className="h-3 w-3 text-gray-400" />
                           <span>{task.estimatedHours}h</span>
                           {task.actualHours && (
-                            <span className="text-gray-500 dark:text-gray-400">/ {task.actualHours}h</span>
+                            <span className="text-gray-500">/ {task.actualHours}h</span>
                           )}
                         </div>
                       )}
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-sm text-gray-500">
                       <div>{task.updatedAt.toLocaleDateString('tr-TR')}</div>
                       <div className="text-xs">{task.updatedAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
@@ -250,14 +250,14 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onEditTask, onDeleteT
                     <div className="flex items-center justify-end space-x-2">
                       <button
                         onClick={() => onEditTask(task)}
-                        className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                        className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-blue-50"
                         title="Düzenle"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => onDeleteTask(task.id)}
-                        className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30"
+                        className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
                         title="Sil"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -270,18 +270,18 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onEditTask, onDeleteT
           </table>
         </div>
       </div>
-
+      
       {sortedTasks.length === 0 && (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <p className="text-gray-500 dark:text-gray-400 text-lg">Görev bulunamadı.</p>
-          <p className="text-gray-400 dark:text-gray-500 dark:text-gray-400 text-sm mt-2">Filtreleri değiştirmeyi deneyin veya yeni görev ekleyin.</p>
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+          <p className="text-gray-500 text-lg">Görev bulunamadı.</p>
+          <p className="text-gray-400 text-sm mt-2">Filtreleri değiştirmeyi deneyin veya yeni görev ekleyin.</p>
         </div>
       )}
 
       {/* Summary */}
       {sortedTasks.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+          <div className="flex items-center justify-between text-sm text-gray-600">
             <span>Toplam {sortedTasks.length} görev gösteriliyor</span>
             <div className="flex items-center space-x-4">
               <span className="flex items-center space-x-1">

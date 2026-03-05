@@ -45,7 +45,7 @@ export const KolayIKEmployees: React.FC = () => {
   if (!hasRole('admin')) {
     return (
       <div className="space-y-6">
-        <div className="bg-red-50 border border-red-200 dark:border-red-700 rounded-lg p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
           <div className="flex items-center space-x-2">
             <AlertTriangle className="h-5 w-5 text-red-600" />
             <p className="text-red-800">Bu sayfaya erişim yetkiniz bulunmuyor.</p>
@@ -250,17 +250,17 @@ export const KolayIKEmployees: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Kolay IK</h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Seçilen ayda izni olan çalışanlar</p>
+          <h2 className="text-2xl font-bold text-gray-900">Kolay IK</h2>
+          <p className="text-gray-600 mt-1">Seçilen ayda izni olan çalışanlar</p>
         </div>
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Ay:</label>
+            <label className="text-sm font-medium text-gray-700">Ay:</label>
             <input
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             />
           </div>
           <button
@@ -319,7 +319,7 @@ export const KolayIKEmployees: React.FC = () => {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-50 border border-red-200 dark:border-red-700 rounded-lg p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <AlertTriangle className="h-5 w-5 text-red-600" />
             <p className="text-red-800">{error}</p>
@@ -335,50 +335,50 @@ export const KolayIKEmployees: React.FC = () => {
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Çalışan</p>
+              <p className="text-sm font-medium text-gray-600">Toplam Çalışan</p>
               <p className="text-2xl font-bold text-blue-600">{stats.total}</p>
             </div>
             <Users className="h-8 w-8 text-blue-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Aktif</p>
+              <p className="text-sm font-medium text-gray-600">Aktif</p>
               <p className="text-2xl font-bold text-green-600">{stats.active}</p>
             </div>
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pasif</p>
+              <p className="text-sm font-medium text-gray-600">Pasif</p>
               <p className="text-2xl font-bold text-red-600">{stats.inactive}</p>
             </div>
             <XCircle className="h-8 w-8 text-red-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">E-posta Var</p>
+              <p className="text-sm font-medium text-gray-600">E-posta Var</p>
               <p className="text-2xl font-bold text-purple-600">{stats.withEmail}</p>
             </div>
             <Mail className="h-8 w-8 text-purple-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Departman</p>
+              <p className="text-sm font-medium text-gray-600">Departman</p>
               <p className="text-2xl font-bold text-orange-600">{stats.departments}</p>
             </div>
             <Building className="h-8 w-8 text-orange-600" />
@@ -387,7 +387,7 @@ export const KolayIKEmployees: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+      <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -396,14 +396,14 @@ export const KolayIKEmployees: React.FC = () => {
               placeholder="İzinli çalışan ara..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">Tüm Durumlar</option>
             <option value="active">Aktif</option>
@@ -413,7 +413,7 @@ export const KolayIKEmployees: React.FC = () => {
           <select
             value={departmentFilter}
             onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">Tüm Departmanlar</option>
             {departments.map(dept => (
@@ -423,7 +423,7 @@ export const KolayIKEmployees: React.FC = () => {
         </div>
         
         {searchTerm && (
-          <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <div className="mt-2 text-sm text-gray-600">
             {filteredEmployees.length} çalışan gösteriliyor
           </div>
         )}
@@ -434,64 +434,64 @@ export const KolayIKEmployees: React.FC = () => {
         <div className="flex items-center justify-center py-12">
           <div className="flex items-center space-x-2">
             <Loader className="h-6 w-6 animate-spin text-blue-600" />
-            <span className="text-gray-600 dark:text-gray-400">İzinli çalışanlar yükleniyor...</span>
+            <span className="text-gray-600">İzinli çalışanlar yükleniyor...</span>
           </div>
         </div>
       )}
 
       {/* Employees with Leave Table */}
       {!loading && filteredEmployees.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">İzinli Çalışan Listesi</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">İzinli Çalışan Listesi</h3>
+            <p className="text-sm text-gray-600 mt-1">
               {selectedMonth} ayında izni olan {filteredEmployees.length} çalışan
             </p>
           </div>
           
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Çalışan
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     E-posta
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     İzin Günleri
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     İzin Detayları
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Kapasite Etkisi
                   </th>
                   {showDetails && (
                     <>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Departman
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Pozisyon
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         İşe Başlama
                       </th>
                     </>
                   )}
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Durum
                   </th>
                   {showDetails && (
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       ID
                     </th>
                   )}
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200">
                 {filteredEmployees.map((employee, index) => {
                   // Eşleştirme: önce tam isim, sonra email, sonra normalize edilmiş isim
                   const employeeLeaveData = leaveData.find(leave => {
@@ -516,10 +516,10 @@ export const KolayIKEmployees: React.FC = () => {
                               </span>
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{employee.fullName}</p>
+                              <p className="text-sm font-medium text-gray-900">{employee.fullName}</p>
                               <div className="flex items-center space-x-2">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">{employee.firstName}</span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">{employee.lastName}</span>
+                                <span className="text-xs text-gray-500">{employee.firstName}</span>
+                                <span className="text-xs text-gray-500">{employee.lastName}</span>
                               </div>
                             </div>
                           </div>
@@ -529,7 +529,7 @@ export const KolayIKEmployees: React.FC = () => {
                             {employee.email ? (
                               <>
                                 <Mail className="h-4 w-4 text-gray-400" />
-                                <span className="text-sm text-gray-900 dark:text-gray-100">{employee.email}</span>
+                                <span className="text-sm text-gray-900">{employee.email}</span>
                               </>
                             ) : (
                               <span className="text-sm text-gray-400 italic">E-posta yok</span>
@@ -592,7 +592,7 @@ export const KolayIKEmployees: React.FC = () => {
                             </span>
                           </div>
                           {employeeLeaveData && employeeLeaveData.leaveDays > 0 && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            <div className="text-xs text-gray-500 mt-1">
                               70h → {70 - (employeeLeaveData.leaveDays * 7)}h
                             </div>
                           )}
@@ -604,7 +604,7 @@ export const KolayIKEmployees: React.FC = () => {
                                 {employee.department ? (
                                   <>
                                     <Building className="h-4 w-4 text-gray-400" />
-                                    <span className="text-sm text-gray-900 dark:text-gray-100">{employee.department}</span>
+                                    <span className="text-sm text-gray-900">{employee.department}</span>
                                   </>
                                 ) : (
                                   <span className="text-sm text-gray-400 italic">Departman yok</span>
@@ -612,7 +612,7 @@ export const KolayIKEmployees: React.FC = () => {
                               </div>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-sm text-gray-900 dark:text-gray-100">
+                              <span className="text-sm text-gray-900">
                                 {employee.position || '-'}
                               </span>
                             </td>
@@ -621,7 +621,7 @@ export const KolayIKEmployees: React.FC = () => {
                                 {employee.startDate ? (
                                   <>
                                     <Calendar className="h-4 w-4 text-gray-400" />
-                                    <span className="text-sm text-gray-900 dark:text-gray-100">
+                                    <span className="text-sm text-gray-900">
                                       {new Date(employee.startDate).toLocaleDateString('tr-TR')}
                                     </span>
                                   </>
@@ -643,7 +643,7 @@ export const KolayIKEmployees: React.FC = () => {
                         </td>
                         {showDetails && (
                           <td className="px-6 py-4 text-center">
-                            <span className="text-sm font-mono text-gray-600 dark:text-gray-400">{employee.id}</span>
+                            <span className="text-sm font-mono text-gray-600">{employee.id}</span>
                           </td>
                         )}
                       </tr>
@@ -654,9 +654,9 @@ export const KolayIKEmployees: React.FC = () => {
           </div>
           
           {/* Table Footer */}
-          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">
+              <span className="text-gray-600">
                 {selectedMonth} ayında izni olan {filteredEmployees.length} çalışan gösteriliyor
               </span>
               <div className="flex items-center space-x-4">
@@ -676,18 +676,18 @@ export const KolayIKEmployees: React.FC = () => {
 
       {/* Empty State */}
       {!loading && filteredEmployees.length === 0 && employeesWithLeave.length > 0 && (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
           <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 text-lg">Arama kriterlerine uygun çalışan bulunamadı.</p>
+          <p className="text-gray-500 text-lg">Arama kriterlerine uygun çalışan bulunamadı.</p>
           <p className="text-gray-400 text-sm mt-2">Filtreleri değiştirmeyi deneyin.</p>
         </div>
       )}
 
       {/* No Data State */}
       {!loading && employeesWithLeave.length === 0 && !error && (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
           <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 text-lg">{selectedMonth} ayında izni olan çalışan bulunamadı.</p>
+          <p className="text-gray-500 text-lg">{selectedMonth} ayında izni olan çalışan bulunamadı.</p>
           <p className="text-gray-400 text-sm mt-2">
             Farklı bir ay seçin veya API bağlantısını kontrol edin.
           </p>
@@ -696,26 +696,26 @@ export const KolayIKEmployees: React.FC = () => {
 
       {/* Department Summary */}
       {!loading && departments.length > 0 && showDetails && employeesWithLeave.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Departman Dağılımı</h3>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Departman Dağılımı</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {departments.map(dept => {
               const deptEmployees = employeesWithLeave.filter(emp => emp.department === dept);
               const activeDeptEmployees = deptEmployees.filter(emp => emp.isActive);
               
               return (
-                <div key={dept} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <div key={dept} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center space-x-2 mb-2">
                     <Building className="h-4 w-4 text-blue-600" />
-                    <h4 className="font-medium text-gray-900 dark:text-gray-100">{dept}</h4>
+                    <h4 className="font-medium text-gray-900">{dept}</h4>
                   </div>
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Toplam:</span>
+                      <span className="text-gray-600">Toplam:</span>
                       <span className="font-medium">{deptEmployees.length}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Aktif:</span>
+                      <span className="text-gray-600">Aktif:</span>
                       <span className="font-medium text-green-600">{activeDeptEmployees.length}</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2 mt-2">

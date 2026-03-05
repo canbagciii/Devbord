@@ -21,7 +21,7 @@ export const Header: React.FC = () => {
   };
  
   return (
-<header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+<header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 <div className="flex justify-between items-center h-14">
             {/* Left Side - Logo and Title */}
@@ -31,22 +31,22 @@ export const Header: React.FC = () => {
 <BarChart3 className="h-4 w-4 text-white" />
 </div>
 <div>
-<h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">Devbord</h1>
-<p className="text-xs text-gray-600 dark:text-gray-400">Sprint Ve Yazılımcı Takip Sistemi</p>
+<h1 className="text-base font-semibold text-gray-900">Devbord</h1>
+<p className="text-xs text-gray-600">Sprint Ve Yazılımcı Takip Sistemi</p>
 </div>
 </div>
 </div>
-
+ 
             {/* Right Side - Controls and User */}
 <div className="flex items-center space-x-4">
             {/* Sprint Type Selector + Refresh */}
 <div className="flex items-center space-x-3">
   <div className="flex items-center space-x-1.5">
-<Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+<Calendar className="h-4 w-4 text-gray-500" />
 <select
                     value={sprintType}
                     onChange={(e) => setSprintType(e.target.value as 'active' | 'closed')}
-                    className={`text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2.5 py-1.5 focus:ring-2 ${getRingClass()} focus:border-transparent bg-white dark:bg-gray-700 dark:text-gray-100`}
+                    className={`text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 focus:ring-2 ${getRingClass()} focus:border-transparent bg-white`}
                     disabled={loading}
 >
 <option value="active">Aktif Sprintler</option>
@@ -55,7 +55,7 @@ export const Header: React.FC = () => {
 </div>
 
   {/* Son yenileme bilgisi */}
-  <div className="text-[11px] text-gray-500 dark:text-gray-400">
+  <div className="text-[11px] text-gray-500">
     Son yenileme: {formatLastRefresh()}
   </div>
  
