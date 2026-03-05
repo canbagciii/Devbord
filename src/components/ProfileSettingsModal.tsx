@@ -25,7 +25,7 @@ interface ProfileSettingsModalProps {
 
 export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ open, onClose }) => {
   const { user, refreshKolayIK } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, darkMode, setDarkMode } = useTheme();
   const { updateUser } = useUsers();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -196,12 +196,12 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ open
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-900">Profil & Entegrasyon Ayarları</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Profil & Entegrasyon Ayarları</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1"
           >
             <X className="h-5 w-5" />
           </button>
@@ -211,7 +211,9 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ open
           {message && (
             <div
               className={`rounded-lg p-3 text-sm ${
-                message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+                message.type === 'success'
+                  ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                  : 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
               }`}
             >
               {message.text}
@@ -220,37 +222,37 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ open
 
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 dark:border-blue-400" />
             </div>
           ) : (
             <>
               {/* Profil Bilgileri */}
               <section>
                 <div className="flex items-center gap-2 mb-3">
-                  <User className="h-5 w-5 text-blue-600" />
-                  <h3 className="text-lg font-medium text-gray-900">Profil Bilgileri</h3>
+                  <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Profil Bilgileri</h3>
                 </div>
                 <form onSubmit={handleSaveProfile} className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ad Soyad</label>
                     <input
                       type="text"
                       value={profileName}
                       onChange={e => setProfileName(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Ad Soyad"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">E-posta</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-posta</label>
                     <input
                       type="email"
                       value={profileEmail}
                       disabled
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-500"
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
                       title="E-posta değiştirilemez"
                     />
-                    <p className="text-xs text-gray-500 mt-1">E-posta adresi değiştirilemez.</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">E-posta adresi değiştirilemez.</p>
                   </div>
                   <button
                     type="submit"
@@ -268,85 +270,126 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ open
               </section>
 
               {/* Tema Ayarları */}
-              <section className="border-t border-gray-200 pt-6">
+              <section className="border-t border-gray-200 dark:border-gray-700 pt-6">
                 <div className="flex items-center gap-2 mb-3">
-                  <Palette className="h-5 w-5 text-blue-600" />
-                  <h3 className="text-lg font-medium text-gray-900">Tema Rengi</h3>
+                  <Palette className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Tema Ayarları</h3>
                 </div>
-                <p className="text-sm text-gray-600 mb-4">
-                  Uygulamanın ana rengini seçin. Seçtiğiniz renk tüm sayfalarda kullanılacaktır.
-                </p>
-                <div className="grid grid-cols-5 gap-3">
-                  {[
-                    { name: 'blue', label: 'Mavi', color: 'bg-blue-600', hoverColor: 'hover:bg-blue-700', ringColor: 'ring-blue-600' },
-                    { name: 'green', label: 'Yeşil', color: 'bg-green-600', hoverColor: 'hover:bg-green-700', ringColor: 'ring-green-600' },
-                    { name: 'orange', label: 'Turuncu', color: 'bg-orange-600', hoverColor: 'hover:bg-orange-700', ringColor: 'ring-orange-600' },
-                    { name: 'red', label: 'Kırmızı', color: 'bg-red-600', hoverColor: 'hover:bg-red-700', ringColor: 'ring-red-600' },
-                    { name: 'slate', label: 'Gri', color: 'bg-slate-600', hoverColor: 'hover:bg-slate-700', ringColor: 'ring-slate-600' }
-                  ].map((themeOption) => (
+
+                {/* Dark Mode Toggle */}
+                <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">Karanlık Mod</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Arayüzü koyu renk temasında görüntüle
+                      </p>
+                    </div>
                     <button
-                      key={themeOption.name}
                       type="button"
                       onClick={async () => {
-                        setSaving('theme');
+                        setSaving('darkMode');
                         try {
-                          await setTheme(themeOption.name as ThemeColor);
-                          showMessage('success', 'Tema rengi güncellendi.');
+                          await setDarkMode(!darkMode);
+                          showMessage('success', darkMode ? 'Açık mod etkinleştirildi.' : 'Karanlık mod etkinleştirildi.');
                         } catch (e) {
-                          showMessage('error', 'Tema güncellenemedi.');
+                          showMessage('error', 'Mod değiştirilemedi.');
                         } finally {
                           setSaving(null);
                         }
                       }}
-                      disabled={saving === 'theme'}
-                      className={`relative flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
-                        theme === themeOption.name
-                          ? `border-${themeOption.name}-600 ${themeOption.color} bg-opacity-10`
-                          : 'border-gray-200 hover:border-gray-300'
-                      } ${saving === 'theme' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={saving === 'darkMode'}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        darkMode ? 'bg-blue-600' : 'bg-gray-300'
+                      } ${saving === 'darkMode' ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      <div className={`w-10 h-10 rounded-full ${themeOption.color} ${themeOption.hoverColor} transition-transform ${theme === themeOption.name ? 'ring-2 ' + themeOption.ringColor + ' ring-offset-2 scale-110' : ''}`} />
-                      <span className={`mt-2 text-xs font-medium ${theme === themeOption.name ? 'text-gray-900' : 'text-gray-600'}`}>
-                        {themeOption.label}
-                      </span>
-                      {theme === themeOption.name && (
-                        <div className="absolute top-1 right-1">
-                          <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      )}
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          darkMode ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
                     </button>
-                  ))}
+                  </div>
+                </div>
+
+                {/* Tema Rengi */}
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Tema Rengi</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Uygulamanın ana rengini seçin. Seçtiğiniz renk tüm sayfalarda kullanılacaktır.
+                  </p>
+                  <div className="grid grid-cols-5 gap-3">
+                    {[
+                      { name: 'blue', label: 'Mavi', color: 'bg-blue-600', hoverColor: 'hover:bg-blue-700', ringColor: 'ring-blue-600' },
+                      { name: 'green', label: 'Yeşil', color: 'bg-green-600', hoverColor: 'hover:bg-green-700', ringColor: 'ring-green-600' },
+                      { name: 'orange', label: 'Turuncu', color: 'bg-orange-600', hoverColor: 'hover:bg-orange-700', ringColor: 'ring-orange-600' },
+                      { name: 'red', label: 'Kırmızı', color: 'bg-red-600', hoverColor: 'hover:bg-red-700', ringColor: 'ring-red-600' },
+                      { name: 'slate', label: 'Gri', color: 'bg-slate-600', hoverColor: 'hover:bg-slate-700', ringColor: 'ring-slate-600' }
+                    ].map((themeOption) => (
+                      <button
+                        key={themeOption.name}
+                        type="button"
+                        onClick={async () => {
+                          setSaving('theme');
+                          try {
+                            await setTheme(themeOption.name as ThemeColor);
+                            showMessage('success', 'Tema rengi güncellendi.');
+                          } catch (e) {
+                            showMessage('error', 'Tema güncellenemedi.');
+                          } finally {
+                            setSaving(null);
+                          }
+                        }}
+                        disabled={saving === 'theme'}
+                        className={`relative flex flex-col items-center p-3 rounded-lg border-2 transition-all dark:bg-gray-800 ${
+                          theme === themeOption.name
+                            ? `border-${themeOption.name}-600 ${themeOption.color} bg-opacity-10`
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        } ${saving === 'theme' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className={`w-10 h-10 rounded-full ${themeOption.color} ${themeOption.hoverColor} transition-transform ${theme === themeOption.name ? 'ring-2 ' + themeOption.ringColor + ' ring-offset-2 dark:ring-offset-gray-800 scale-110' : ''}`} />
+                        <span className={`mt-2 text-xs font-medium ${theme === themeOption.name ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}>
+                          {themeOption.label}
+                        </span>
+                        {theme === themeOption.name && (
+                          <div className="absolute top-1 right-1">
+                            <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </section>
 
               {/* Şirket Bilgileri - Sadece admin */}
               {user?.role === 'admin' && (
                 <>
-                  <section className="border-t border-gray-200 pt-6">
+                  <section className="border-t border-gray-200 dark:border-gray-700 pt-6">
                     <div className="flex items-center gap-2 mb-3">
-                      <Building2 className="h-5 w-5 text-blue-600" />
-                      <h3 className="text-lg font-medium text-gray-900">Şirket Bilgileri</h3>
+                      <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Şirket Bilgileri</h3>
                     </div>
                     <form onSubmit={handleSaveCompany} className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Şirket Adı</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şirket Adı</label>
                         <input
                           type="text"
                           value={companyName}
                           onChange={e => setCompanyName(e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="Şirket Adı"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Şirket E-postası</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şirket E-postası</label>
                         <input
                           type="email"
                           value={companyEmail}
                           onChange={e => setCompanyEmail(e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="info@firma.com"
                         />
                       </div>
@@ -366,38 +409,38 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ open
                   </section>
 
                   {/* Jira Entegrasyonu */}
-                  <section className="border-t border-gray-200 pt-6">
+                  <section className="border-t border-gray-200 dark:border-gray-700 pt-6">
                     <div className="flex items-center gap-2 mb-3">
-                      <ExternalLink className="h-5 w-5 text-blue-600" />
-                      <h3 className="text-lg font-medium text-gray-900">Jira Entegrasyonu</h3>
+                      <ExternalLink className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Jira Entegrasyonu</h3>
                       {jiraConnected && (
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">Bağlı</span>
+                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-0.5 rounded-full">Bağlı</span>
                       )}
                     </div>
                     <form onSubmit={handleSaveJira} className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Jira E-posta</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Jira E-posta</label>
                         <input
                           type="email"
                           value={jiraEmail}
                           onChange={e => setJiraEmail(e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="email@domain.com"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Jira API Token</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Jira API Token</label>
                         <input
                           type="password"
                           value={jiraTokenFocused ? jiraApiToken : (jiraApiToken || (jiraConnected ? MASKED_TOKEN : ''))}
                           onChange={e => setJiraApiToken(e.target.value)}
                           onFocus={() => setJiraTokenFocused(true)}
                           onBlur={() => setJiraTokenFocused(false)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder={!jiraConnected ? 'Atlassian API token' : ''}
                           autoComplete="off"
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           {jiraConnected && (
                             <>Mevcut token kayıtlı. Değiştirmek için alana tıklayıp yeni token girin. </>
                           )}
@@ -405,7 +448,7 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ open
                             href="https://id.atlassian.com/manage-profile/security/api-tokens"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
+                            className="text-blue-600 dark:text-blue-400 hover:underline"
                           >
                             Atlassian hesabınızdan
                           </a>{' '}
@@ -413,12 +456,12 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ open
                         </p>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Jira Base URL</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Jira Base URL</label>
                         <input
                           type="url"
                           value={jiraBaseUrl}
                           onChange={e => setJiraBaseUrl(e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="https://your-domain.atlassian.net"
                         />
                       </div>
@@ -438,38 +481,38 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ open
                   </section>
 
                   {/* Kolay İK Entegrasyonu */}
-                  <section className="border-t border-gray-200 pt-6">
+                  <section className="border-t border-gray-200 dark:border-gray-700 pt-6">
                     <div className="flex items-center gap-2 mb-3">
-                      <Users className="h-5 w-5 text-blue-600" />
-                      <h3 className="text-lg font-medium text-gray-900">Kolay İK Entegrasyonu</h3>
+                      <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Kolay İK Entegrasyonu</h3>
                       {kolayikConnected && (
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">Bağlı</span>
+                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-0.5 rounded-full">Bağlı</span>
                       )}
                     </div>
                     <form onSubmit={handleSaveKolayIK} className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Kolay İK Base URL</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kolay İK Base URL</label>
                         <input
                           type="url"
                           value={kolayikBaseUrl}
                           onChange={e => setKolayikBaseUrl(e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="https://api.kolayik.com/v2"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">API Token</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Token</label>
                         <input
                           type="password"
                           value={kolayikTokenFocused ? kolayikApiToken : (kolayikApiToken || (kolayikConnected ? MASKED_TOKEN : ''))}
                           onChange={e => setKolayikApiToken(e.target.value)}
                           onFocus={() => setKolayikTokenFocused(true)}
                           onBlur={() => setKolayikTokenFocused(false)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder={!kolayikConnected ? 'Kolay İK API token' : ''}
                           autoComplete="off"
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           {kolayikConnected && (
                             <>Mevcut token kayıtlı. Değiştirmek için alana tıklayıp yeni token girin. </>
                           )}

@@ -7,6 +7,8 @@ export type ThemeColor = 'blue' | 'green' | 'orange' | 'red' | 'slate';
 interface ThemeContextType {
   theme: ThemeColor;
   setTheme: (theme: ThemeColor) => Promise<void>;
+  darkMode: boolean;
+  setDarkMode: (dark: boolean) => Promise<void>;
   themeColors: {
     primary: string;
     primaryHover: string;
@@ -72,22 +74,34 @@ const themeConfig: Record<ThemeColor, {
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [theme, setThemeState] = useState<ThemeColor>('blue');
+  const [darkMode, setDarkModeState] = useState(false);
 
   useEffect(() => {
     const loadTheme = async () => {
       if (!user?.id) {
         setThemeState('blue');
+        setDarkModeState(false);
+        document.documentElement.classList.remove('dark');
         return;
       }
 
       const { data, error } = await supabase
         .from('users')
-        .select('theme_preference')
+        .select('theme_preference, dark_mode')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (!error && data?.theme_preference) {
-        setThemeState(data.theme_preference as ThemeColor);
+      if (!error && data) {
+        if (data.theme_preference) {
+          setThemeState(data.theme_preference as ThemeColor);
+        }
+        const isDark = data.dark_mode || false;
+        setDarkModeState(isDark);
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
       }
     };
 
@@ -107,8 +121,26 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const setDarkMode = async (dark: boolean) => {
+    if (!user?.id) return;
+
+    const { error } = await supabase
+      .from('users')
+      .update({ dark_mode: dark })
+      .eq('id', user.id);
+
+    if (!error) {
+      setDarkModeState(dark);
+      if (dark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, themeColors: themeConfig[theme] }}>
+    <ThemeContext.Provider value={{ theme, setTheme, darkMode, setDarkMode, themeColors: themeConfig[theme] }}>
       {children}
     </ThemeContext.Provider>
   );

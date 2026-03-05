@@ -76,10 +76,10 @@ const [activeTab, setActiveTab] = useState<
 
   if (loading || checkingSelections) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Yükleniyor...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Yükleniyor...</p>
         </div>
       </div>
     );
@@ -93,14 +93,14 @@ const [activeTab, setActiveTab] = useState<
   // Sadece veri yoksa ve henüz onboarding tamamlanmamışsa Jira filtre sayfasını göster
   if (user && needsOnboarding) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6 bg-white rounded-lg shadow-sm p-6 border border-blue-200">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-blue-200 dark:border-blue-800">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               {!user.onboardingCompleted ? 'Devbord\'a Hoş Geldiniz!' : 'Proje ve Yazılımcı Seçimi Gerekli'}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               {!user.onboardingCompleted
                 ? 'Başlamak için lütfen Jira projeleri ve yazılımcıları seçin. Bu seçimler tüm raporlarınızı filtreleyecektir.'
                 : 'Sistemde proje veya yazılımcı seçimi bulunmuyor. Devam edebilmek için lütfen en az bir proje ve bir yazılımcı seçin.'
@@ -144,15 +144,15 @@ const [activeTab, setActiveTab] = useState<
   const tabs = hasRole('admin') ? adminTabs : developerTabs;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
       {['projects', 'dashboard', 'assignment'].includes(activeTab) && (
         <SprintNotification />
       )}
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tab Navigation */}
-        <div className="mb-8 bg-white sticky top-16 z-30 py-4 border-b border-gray-200 shadow-sm">
+        <div className="mb-8 bg-white dark:bg-gray-800 sticky top-16 z-30 py-4 border-b border-gray-200 dark:border-gray-700 shadow-sm">
           <nav className="flex space-x-8 max-w-7xl mx-auto">
             {tabs.map((tab) => (
               <button
@@ -161,7 +161,7 @@ const [activeTab, setActiveTab] = useState<
                 className={`flex items-center space-x-2 px-1 py-2 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === tab.id
                     ? `${getBorderClass()} ${getTextClass()}`
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
                 <tab.icon className="h-5 w-5" />
@@ -182,14 +182,14 @@ const [activeTab, setActiveTab] = useState<
           <div className={activeTab === 'projects' ? '' : 'hidden'}>
             <div>
               {/* Sub-tabs for Projects */}
-              <div className="mb-6 bg-white sticky top-32 z-20 py-3 border-b border-gray-100">
-                <nav className="flex space-x-1 bg-gray-100 p-1 rounded-lg max-w-fit">
+              <div className="mb-6 bg-white dark:bg-gray-800 sticky top-32 z-20 py-3 border-b border-gray-100 dark:border-gray-700">
+                <nav className="flex space-x-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg max-w-fit">
                   <button
                     onClick={() => handleSubTabChange('projects', 'overview')}
                     className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium text-sm transition-colors ${
                       activeSubTab.projects === 'overview'
-                        ? `bg-white ${getTextClass()} shadow-sm`
-                        : 'text-gray-600 hover:text-gray-900'
+                        ? `bg-white dark:bg-gray-600 ${getTextClass()} shadow-sm`
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                     }`}
                   >
                     <Activity className="h-4 w-4" />
@@ -200,8 +200,8 @@ const [activeTab, setActiveTab] = useState<
                       onClick={() => handleSubTabChange('projects', 'evaluations')}
                       className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium text-sm transition-colors ${
                         activeSubTab.projects === 'evaluations'
-                          ? `bg-white ${getTextClass()} shadow-sm`
-                          : 'text-gray-600 hover:text-gray-900'
+                          ? `bg-white dark:bg-gray-600 ${getTextClass()} shadow-sm`
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                       }`}
                     >
                       <MessageSquare className="h-4 w-4" />
