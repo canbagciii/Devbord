@@ -389,9 +389,7 @@ class JiraFilterService {
 
     developers.forEach(dev => {
       if (dev.project_keys && dev.project_keys.length > 0) {
-        // Normalize edilmiş ismi kullan (context'te arama yaparken aynı format kullanılıyor)
-        const normalizedName = JiraFilterService.normalizeName(dev.developer_name);
-        map.set(normalizedName, dev.project_keys);
+        map.set(dev.developer_name, dev.project_keys);
       }
     });
 

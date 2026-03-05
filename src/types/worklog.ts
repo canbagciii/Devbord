@@ -13,13 +13,11 @@ export interface WorklogEntry {
   comment?: string;
   project: string;
   issueType: string;
-  storyPoints?: number;
 }
 
 export interface DailyWorklogSummary {
   date: string;
   totalHours: number;
-  totalStoryPoints?: number;
   status: 'sufficient' | 'insufficient' | 'excessive' | 'missing';
   statusText: string;
   statusColor: string;
@@ -31,7 +29,6 @@ export interface DeveloperWorklogData {
   email: string;
   dailySummaries: DailyWorklogSummary[];
   weeklyTotal: number;
-  weeklyTotalStoryPoints?: number;
   weeklyTarget: number;
   weeklyStatus: 'sufficient' | 'insufficient' | 'excessive';
 }
