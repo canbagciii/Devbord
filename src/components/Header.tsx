@@ -1,12 +1,10 @@
 import React from 'react';
-import { BarChart3, Calendar, Clock, Target } from 'lucide-react';
+import { BarChart3, Calendar } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
-import { useCapacityMetric, CapacityMetricType } from '../context/CapacityMetricContext';
 import { UserProfile } from './UserProfile';
-
+ 
 export const Header: React.FC = () => {
   const { refresh, loading, sprintType, setSprintType, lastRefreshAt } = useJiraData();
-  const { capacityMetric, setCapacityMetric } = useCapacityMetric();
 
   const formatLastRefresh = () => {
     if (!lastRefreshAt) return 'Henüz yenilenmedi';
@@ -39,49 +37,6 @@ export const Header: React.FC = () => {
  
             {/* Right Side - Controls and User */}
 <div className="flex items-center space-x-4">
-            {/* Capacity Metric Selector */}
-<div className="flex items-center space-x-2">
-  <Target className="h-4 w-4 text-gray-500" />
-  <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
-    <button
-      onClick={() => setCapacityMetric('hours')}
-      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-        capacityMetric === 'hours'
-          ? 'bg-white text-blue-700 shadow-sm'
-          : 'text-gray-600 hover:text-gray-900'
-      }`}
-      title="Sadece saat bazlı hesaplama"
-    >
-      <Clock className="h-3.5 w-3.5 inline mr-1" />
-      Saat
-    </button>
-    <button
-      onClick={() => setCapacityMetric('storyPoints')}
-      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-        capacityMetric === 'storyPoints'
-          ? 'bg-white text-blue-700 shadow-sm'
-          : 'text-gray-600 hover:text-gray-900'
-      }`}
-      title="Sadece story point bazlı hesaplama"
-    >
-      <Target className="h-3.5 w-3.5 inline mr-1" />
-      Story Point
-    </button>
-    <button
-      onClick={() => setCapacityMetric('both')}
-      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-        capacityMetric === 'both'
-          ? 'bg-white text-blue-700 shadow-sm'
-          : 'text-gray-600 hover:text-gray-900'
-      }`}
-      title="Hem saat hem story point göster"
-    >
-      <BarChart3 className="h-3.5 w-3.5 inline mr-1" />
-      Her İkisi
-    </button>
-  </div>
-</div>
-
             {/* Sprint Type Selector + Refresh */}
 <div className="flex items-center space-x-3">
   <div className="flex items-center space-x-1.5">

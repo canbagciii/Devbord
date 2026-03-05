@@ -24,14 +24,6 @@ class SupabaseJiraService {
     return null;
   }
 
-  private addToCache<T>(key: string, data: T): void {
-    cache.set(key, {
-      data,
-      timestamp: Date.now(),
-      expiry: Date.now() + CACHE_DURATION
-    });
-  }
-
   private toLocalYMD(isoString: string): string {
     const d = new Date(isoString);
     const y = d.getFullYear();
@@ -42,9 +34,6 @@ class SupabaseJiraService {
 
   // Developer to project mapping - dynamically loaded from database
   private static developerProjectCache: Map<string, string[]> | null = null;
-
-  // Story Point field mapping cache - project_key -> field_name
-  private static storyPointFieldCache: Map<string, string> | null = null;
 
   // Proje adından proje anahtarını bul (ters eşleme)
   private getProjectKeyFromName(name: string): string {
@@ -75,76 +64,6 @@ class SupabaseJiraService {
 
   clearCache(): void {
     cache.clear();
-    SupabaseJiraService.storyPointFieldCache = null;
-  }
-
-  private async getStoryPointFieldMapping(): Promise<Map<string, string>> {
-    if (SupabaseJiraService.storyPointFieldCache) {
-      return SupabaseJiraService.storyPointFieldCache;
-    }
-
-    const companyId = localStorage.getItem('companyId');
-    if (!companyId) {
-      SupabaseJiraService.storyPointFieldCache = new Map();
-      return SupabaseJiraService.storyPointFieldCache;
-    }
-
-    const { data, error } = await supabase
-      .from('project_story_point_config')
-      .select('project_key, story_point_field')
-      .eq('company_id', companyId);
-
-    if (error || !data) {
-      console.error('Error fetching story point field mapping:', error);
-      SupabaseJiraService.storyPointFieldCache = new Map();
-      return SupabaseJiraService.storyPointFieldCache;
-    }
-
-    const mapping = new Map<string, string>();
-    data.forEach((row: any) => {
-      mapping.set(row.project_key, row.story_point_field);
-    });
-
-    SupabaseJiraService.storyPointFieldCache = mapping;
-    return mapping;
-  }
-
-  async getStoryPointFields(): Promise<Array<{ id: string; name: string }>> {
-    const cacheKey = 'story-point-fields';
-    const cached = this.getFromCache<Array<{ id: string; name: string }>>(cacheKey);
-    if (cached) return cached;
-
-    try {
-      const response = await this.callEdgeFunction<any[]>('jira-proxy', {
-        body: {
-          endpoint: '/rest/api/3/field',
-          method: 'GET'
-        }
-      });
-
-      if (!Array.isArray(response)) {
-        return [];
-      }
-
-      // Story Point ile ilgili field'ları filtrele
-      const storyPointFields = response
-        .filter((field: any) => {
-          const name = field.name?.toLowerCase() || '';
-          return (
-            name.includes('story') && name.includes('point')
-          ) || name.includes('storypoint');
-        })
-        .map((field: any) => ({
-          id: field.id,
-          name: field.name
-        }));
-
-      this.addToCache(cacheKey, storyPointFields);
-      return storyPointFields;
-    } catch (error) {
-      console.error('Error fetching Jira fields:', error);
-      return [];
-    }
   }
 
   private async callEdgeFunction<T>(functionName: string, options: any = {}): Promise<T> {
@@ -830,19 +749,16 @@ class SupabaseJiraService {
       if (IS_DEV) {
         console.log(`🔄 Fetching issues for sprint ${sprintId}...`);
       }
-
-      // Story Point field mapping'i al
-      const spFieldMapping = await this.getStoryPointFieldMapping();
-
+      
       // OPTIMIZE: JQL string building - template literal kullan
       const [start, end] = createdDateRange || [null, null];
       let jql = `sprint = ${sprintId}`;
       if (start) jql += ` AND created >= "${start}"`;
       if (end) jql += ` AND created <= "${end} 23:59"`;
       jql += ' ORDER BY created DESC';
-
-      // Single API call - expand=all kullanarak tüm field'ları al (story point için gerekli)
-      const fieldsParam = 'summary,description,status,assignee,project,priority,created,updated,timeoriginalestimate,timespent,subtasks,issuetype,parent,*all';
+      
+      // Single API call to get all issues with subtasks (GET: POST /search/jql 400 Invalid payload dönüyor)
+      const fieldsParam = 'summary,description,status,assignee,project,priority,created,updated,timeoriginalestimate,timespent,subtasks,issuetype,parent';
       const searchUrl = `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=500&fields=${encodeURIComponent(fieldsParam)}`;
       const response = await this.callEdgeFunction<{ issues: any[] }>('jira-proxy', {
         body: {
@@ -890,37 +806,13 @@ class SupabaseJiraService {
                           issueTypeName.toLowerCase() !== 'epic';
         
         // OPTIMIZE: Saat hesaplamalarını önceden yap
-        const estimatedHours = issue.fields.timeoriginalestimate
-          ? parseFloat((issue.fields.timeoriginalestimate / 3600).toFixed(2))
+        const estimatedHours = issue.fields.timeoriginalestimate 
+          ? parseFloat((issue.fields.timeoriginalestimate / 3600).toFixed(2)) 
           : 0;
-        const actualHours = issue.fields.timespent
-          ? parseFloat((issue.fields.timespent / 3600).toFixed(2))
+        const actualHours = issue.fields.timespent 
+          ? parseFloat((issue.fields.timespent / 3600).toFixed(2)) 
           : 0;
-
-        // Story Point field'ı oku (proje bazında farklı field adı olabilir)
-        const projectKey = issue.fields.project.key;
-        const spFieldName = spFieldMapping.get(projectKey);
-        let storyPoints: number | undefined = undefined;
-
-        if (spFieldName) {
-          // Field adı customfield_XXXXX formatında ise direkt oku
-          if (spFieldName.startsWith('customfield_')) {
-            const fieldValue = issue.fields[spFieldName];
-            if (typeof fieldValue === 'number') {
-              storyPoints = fieldValue;
-            }
-          } else {
-            // Field adı "Story Points" gibi user-friendly ise, tüm custom fieldlar arasında ara
-            for (const [key, value] of Object.entries(issue.fields)) {
-              if (key.startsWith('customfield_') && typeof value === 'number') {
-                // Jira metadata'dan field name kontrol edilebilir ama basitleştirmek için numeric değer kabul edelim
-                storyPoints = value;
-                break;
-              }
-            }
-          }
-        }
-
+        
         const task: JiraTask = {
           id: issue.id,
           key: issue.key,
@@ -933,7 +825,6 @@ class SupabaseJiraService {
           sprint: sprintId,
           estimatedHours,
           actualHours,
-          storyPoints,
           priority: issue.fields.priority?.name || 'Medium',
           created: issue.fields.created,
           updated: issue.fields.updated,
@@ -1452,26 +1343,22 @@ class SupabaseJiraService {
         // OPTIMIZE: Tek geçişte tüm hesaplamaları yap
         let totalHours = 0;
         let totalActualHours = 0;
-        let totalStoryPoints = 0;
         const projectSprintMap = new Map<string, Map<string, JiraTask[]>>();
-
+        
         for (const task of tasks) {
           totalHours += task.estimatedHours;
           totalActualHours += task.actualHours;
-          if (task.storyPoints) {
-            totalStoryPoints += task.storyPoints;
-          }
-
+          
           // Group by project and sprint
           if (!projectSprintMap.has(task.project)) {
             projectSprintMap.set(task.project, new Map());
           }
-
+          
           const sprintMap = projectSprintMap.get(task.project)!;
           if (!sprintMap.has(task.sprint)) {
             sprintMap.set(task.sprint, []);
           }
-
+          
           sprintMap.get(task.sprint)!.push(task);
         }
 
@@ -1481,23 +1368,18 @@ class SupabaseJiraService {
           for (const [sprint, sprintTasks] of sprintMap) {
             let sprintHours = 0;
             let sprintActualHours = 0;
-            let sprintStoryPoints = 0;
-
+            
             for (const task of sprintTasks) {
               sprintHours += task.estimatedHours;
               sprintActualHours += task.actualHours;
-              if (task.storyPoints) {
-                sprintStoryPoints += task.storyPoints;
-              }
             }
-
+            
             details.push({
               project,
               sprint,
               taskCount: sprintTasks.length,
               hours: sprintHours,
               actualHours: sprintActualHours,
-              storyPoints: sprintStoryPoints > 0 ? sprintStoryPoints : undefined,
               tasks: sprintTasks
             });
           }
@@ -1522,7 +1404,6 @@ class SupabaseJiraService {
           totalTasks,
           totalHours,
           totalActualHours,
-          totalStoryPoints: totalStoryPoints > 0 ? totalStoryPoints : undefined,
           status,
           details
         });

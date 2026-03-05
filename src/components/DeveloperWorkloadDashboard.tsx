@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Users, Clock, TrendingUp, AlertTriangle, CheckCircle, Download, RefreshCw, ChevronDown, ChevronUp, CreditCard as Edit, Save, X, Loader, Search, Calendar } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
 import { useAuth } from '../context/AuthContext';
-import { useCapacityMetric } from '../context/CapacityMetricContext';
 import { useDeveloperCapacities } from '../hooks/useDeveloperCapacities';
 import { exportDeveloperWorkloadToCSV } from '../utils/csvExport';
 import { worklogService } from '../services/worklogService';
@@ -39,7 +38,6 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
     lastRefreshAt
   } = useJiraData();
   const { canViewDeveloperData, user, hasKolayIK } = useAuth();
-  const { capacityMetric } = useCapacityMetric();
   const { getCapacity, updateCapacity, canEdit } = useDeveloperCapacities();
   const [expandedDeveloper, setExpandedDeveloper] = useState<string | null>(null);
   const [editingCapacity, setEditingCapacity] = useState<string | null>(null);
@@ -322,34 +320,11 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {capacityMetric === 'both' ? (
-                  <>
-                    <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-left">Yazılımcı</th>
-                    <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center">Görev Sayısı</th>
-                    <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center">Tahmini (h)</th>
-                    <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center">Tahmini (SP)</th>
-                    <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center">Harcanan (h)</th>
-                    <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center">Harcanan (SP)</th>
-                    <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center">Kapasite (h)</th>
-                    <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center">Kapasite (SP)</th>
-                    <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center">Durum</th>
-                    <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center">Detay</th>
-                  </>
-                ) : (
-                  [
-                    'Yazılımcı',
-                    'Görev Sayısı',
-                    capacityMetric === 'storyPoints' ? 'Tahmini (SP)' : 'Tahmini (h)',
-                    capacityMetric === 'storyPoints' ? 'Harcanan (SP)' : 'Harcanan (h)',
-                    capacityMetric === 'storyPoints' ? 'Kapasite (SP)' : 'Kapasite (h)',
-                    'Durum',
-                    'Detay'
-                  ].map((h, i) => (
-                    <th key={i} className={`px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider ${i === 0 ? 'text-left' : 'text-center'}`}>
-                      {h}
-                    </th>
-                  ))
-                )}
+                {['Yazılımcı', 'Görev Sayısı', 'Analist Tahmini', 'Harcanan Süre', 'Kapasite', 'Durum', 'Detay'].map((h, i) => (
+                  <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider ${i === 0 ? 'text-left' : 'text-center'}`}>
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -388,154 +363,61 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
                         <span className="text-base font-bold text-slate-700 tabular-nums">{developer.totalTasks}</span>
                       </td>
 
-                      {capacityMetric === 'both' ? (
-                        <>
-                          {/* Tahmini (h) */}
-                          <td className="px-5 py-3.5 text-center">
-                            <span className="text-base font-bold text-blue-600 tabular-nums">{Math.round(developer.totalHours * 100) / 100}h</span>
-                          </td>
-                          {/* Tahmini (SP) */}
-                          <td className="px-5 py-3.5 text-center">
-                            <span className="text-base font-bold text-blue-600 tabular-nums">{Math.round(developer.totalHours * 100) / 100} SP</span>
-                          </td>
-                          {/* Harcanan (h) */}
-                          <td className="px-5 py-3.5 text-center">
-                            {actualHoursLoading ? (
-                              <div className="flex items-center justify-center gap-1.5 text-slate-400">
-                                <Loader className="h-3.5 w-3.5 animate-spin" />
-                              </div>
-                            ) : actualHoursError ? (
-                              <span className="text-xs text-red-500">Hata</span>
-                            ) : (
-                              <div>
-                                <p className="text-base font-bold text-violet-600 tabular-nums">{actualHours}h</p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">{getDeveloperProjectKey(developer.developer)}</p>
-                              </div>
-                            )}
-                          </td>
-                          {/* Harcanan (SP) */}
-                          <td className="px-5 py-3.5 text-center">
-                            {actualHoursLoading ? (
-                              <div className="flex items-center justify-center gap-1.5 text-slate-400">
-                                <Loader className="h-3.5 w-3.5 animate-spin" />
-                              </div>
-                            ) : actualHoursError ? (
-                              <span className="text-xs text-red-500">Hata</span>
-                            ) : (
-                              <span className="text-base font-bold text-violet-600 tabular-nums">{Math.round(actualHours * 100) / 100} SP</span>
-                            )}
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          {/* Analist Tahmini */}
-                          <td className="px-5 py-3.5 text-center">
-                            {capacityMetric === 'storyPoints' ? (
-                              <span className="text-base font-bold text-blue-600 tabular-nums">{Math.round(developer.totalHours * 100) / 100} SP</span>
-                            ) : (
-                              <span className="text-base font-bold text-blue-600 tabular-nums">{Math.round(developer.totalHours * 100) / 100}h</span>
-                            )}
-                          </td>
+                      {/* Analist Tahmini */}
+                      <td className="px-5 py-3.5 text-center">
+                        <span className="text-base font-bold text-blue-600 tabular-nums">{Math.round(developer.totalHours * 100) / 100}h</span>
+                      </td>
 
-                          {/* Harcanan Süre */}
-                          <td className="px-5 py-3.5 text-center">
-                            {actualHoursLoading ? (
-                              <div className="flex items-center justify-center gap-1.5 text-slate-400">
-                                <Loader className="h-3.5 w-3.5 animate-spin" />
-                                <span className="text-xs">Yükleniyor…</span>
-                              </div>
-                            ) : actualHoursError ? (
-                              <span className="text-xs text-red-500">Hata</span>
-                            ) : capacityMetric === 'storyPoints' ? (
-                              <span className="text-sm font-semibold text-slate-700 tabular-nums">{Math.round(actualHours * 100) / 100} SP</span>
-                            ) : (
-                              <div>
-                                <p className="text-base font-bold text-violet-600 tabular-nums">{actualHours}h</p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">{getDeveloperProjectKey(developer.developer)}</p>
-                              </div>
-                            )}
-                          </td>
-                        </>
-                      )}
+                      {/* Harcanan Süre */}
+                      <td className="px-5 py-3.5 text-center">
+                        {actualHoursLoading ? (
+                          <div className="flex items-center justify-center gap-1.5 text-slate-400">
+                            <Loader className="h-3.5 w-3.5 animate-spin" />
+                            <span className="text-xs">Yükleniyor…</span>
+                          </div>
+                        ) : actualHoursError ? (
+                          <span className="text-xs text-red-500">Hata</span>
+                        ) : (
+                          <div>
+                            <p className="text-base font-bold text-violet-600 tabular-nums">{actualHours}h</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">{getDeveloperProjectKey(developer.developer)}</p>
+                          </div>
+                        )}
+                      </td>
 
-                      {capacityMetric === 'both' ? (
-                        <>
-                          {/* Kapasite (h) */}
-                          <td className="px-5 py-3.5 text-center">
-                            {editingCapacity === developer.developer ? (
-                              <div className="flex items-center justify-center gap-1.5">
-                                <input
-                                  type="number"
-                                  value={capacityValue}
-                                  onChange={(e) => setCapacityValue(e.target.value)}
-                                  className="w-14 text-center border border-slate-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                  min="1" max="200"
-                                />
-                                <button onClick={() => handleCapacitySave(developer.developer)} className="text-emerald-600 hover:text-emerald-700 p-1 rounded" title="Kaydet">
-                                  <Save className="h-4 w-4" />
-                                </button>
-                                <button onClick={handleCapacityCancel} className="text-slate-400 hover:text-slate-600 p-1 rounded" title="İptal">
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center gap-1.5">
-                                <span className="text-sm font-semibold text-slate-700 tabular-nums">
-                                  {hasKolayIK && showKolayIKIntegration && capacityCalculations.length > 0
-                                    ? (() => { const calc = capacityCalculations.find(c => c.developerName === developer.developer); return calc ? calc.adjustedCapacity : capacity; })()
-                                    : capacity}h
-                                </span>
-                                {canEdit && (
-                                  <button onClick={() => handleCapacityEdit(developer.developer)} className="text-slate-300 hover:text-blue-500 transition-colors p-0.5 rounded" title="Kapasiteyi düzenle">
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                          {/* Kapasite (SP) */}
-                          <td className="px-5 py-3.5 text-center">
+                      {/* Kapasite */}
+                      <td className="px-5 py-3.5 text-center">
+                        {editingCapacity === developer.developer ? (
+                          <div className="flex items-center justify-center gap-1.5">
+                            <input
+                              type="number"
+                              value={capacityValue}
+                              onChange={(e) => setCapacityValue(e.target.value)}
+                              className="w-14 text-center border border-slate-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              min="1" max="200"
+                            />
+                            <button onClick={() => handleCapacitySave(developer.developer)} className="text-emerald-600 hover:text-emerald-700 p-1 rounded" title="Kaydet">
+                              <Save className="h-4 w-4" />
+                            </button>
+                            <button onClick={handleCapacityCancel} className="text-slate-400 hover:text-slate-600 p-1 rounded" title="İptal">
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1.5">
                             <span className="text-sm font-semibold text-slate-700 tabular-nums">
                               {hasKolayIK && showKolayIKIntegration && capacityCalculations.length > 0
                                 ? (() => { const calc = capacityCalculations.find(c => c.developerName === developer.developer); return calc ? calc.adjustedCapacity : capacity; })()
-                                : capacity} SP
+                                : capacity}h
                             </span>
-                          </td>
-                        </>
-                      ) : (
-                        <td className="px-5 py-3.5 text-center">
-                          {editingCapacity === developer.developer ? (
-                            <div className="flex items-center justify-center gap-1.5">
-                              <input
-                                type="number"
-                                value={capacityValue}
-                                onChange={(e) => setCapacityValue(e.target.value)}
-                                className="w-14 text-center border border-slate-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                min="1" max="200"
-                              />
-                              <button onClick={() => handleCapacitySave(developer.developer)} className="text-emerald-600 hover:text-emerald-700 p-1 rounded" title="Kaydet">
-                                <Save className="h-4 w-4" />
+                            {canEdit && (
+                              <button onClick={() => handleCapacityEdit(developer.developer)} className="text-slate-300 hover:text-blue-500 transition-colors p-0.5 rounded" title="Kapasiteyi düzenle">
+                                <Edit className="h-3.5 w-3.5" />
                               </button>
-                              <button onClick={handleCapacityCancel} className="text-slate-400 hover:text-slate-600 p-1 rounded" title="İptal">
-                                <X className="h-4 w-4" />
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center gap-1.5">
-                              <span className="text-sm font-semibold text-slate-700 tabular-nums">
-                                {hasKolayIK && showKolayIKIntegration && capacityCalculations.length > 0
-                                  ? (() => { const calc = capacityCalculations.find(c => c.developerName === developer.developer); return calc ? calc.adjustedCapacity : capacity; })()
-                                  : capacity}{capacityMetric === 'storyPoints' ? ' SP' : 'h'}
-                              </span>
-                              {canEdit && (
-                                <button onClick={() => handleCapacityEdit(developer.developer)} className="text-slate-300 hover:text-blue-500 transition-colors p-0.5 rounded" title="Kapasiteyi düzenle">
-                                  <Edit className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                      )}
+                            )}
+                          </div>
+                        )}
+                      </td>
 
                       {/* Durum */}
                       <td className="px-5 py-3.5 text-center">
@@ -564,7 +446,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
                     {/* Expanded Details */}
                     {isExpanded && (
                       <tr className="bg-slate-50/50">
-                        <td colSpan={capacityMetric === 'both' ? 10 : 7} className="px-6 py-5">
+                        <td colSpan={7} className="px-6 py-5">
                           <div className="space-y-4">
                             <h4 className="text-sm font-semibold text-slate-700">
                               {developer.developer} — Proje Detayları

@@ -5,7 +5,6 @@ import { jiraFilterService } from '../lib/jiraFilterService';
 import { Plus, Save, X, User, Clock, AlertTriangle, CheckCircle, ExternalLink, Loader, Download, RefreshCw } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
 import { useAuth } from '../context/AuthContext';
-import { useCapacityMetric } from '../context/CapacityMetricContext';
 import { useDeveloperCapacities } from '../hooks/useDeveloperCapacities';
 import { exportManualAssignmentsToCSV } from '../utils/csvExport';
 import { DeveloperCapacityAdjustment } from './DeveloperCapacityAdjustment';
@@ -20,7 +19,6 @@ export const ManualTaskAssignment: React.FC = () => {
     capacityReady, capacityCacheKey
   } = useJiraData();
   const { hasRole, canAccessProject, getAccessibleProjects, hasKolayIK } = useAuth();
-  const { capacityMetric } = useCapacityMetric();
   const { getCapacity } = useDeveloperCapacities();
   const [assignments, setAssignments] = useState<TaskAssignment[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -366,27 +364,11 @@ export const ManualTaskAssignment: React.FC = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  {capacityMetric === 'both' ? (
-                    <>
-                      <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-left">Yazılımcı</th>
-                      <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-right">Tahmini (h)</th>
-                      <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-right">Tahmini (SP)</th>
-                      <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-right">Kapasite (h)</th>
-                      <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-right">Kapasite (SP)</th>
-                      <th className="px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center">Durum</th>
-                    </>
-                  ) : (
-                    [
-                      'Yazılımcı',
-                      capacityMetric === 'storyPoints' ? 'Tahmini Süre (SP)' : 'Tahmini Süre (h)',
-                      capacityMetric === 'storyPoints' ? 'Kapasite (SP)' : 'Kapasite (h)',
-                      'Durum'
-                    ].map((h, i) => (
-                      <th key={i} className={`px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider ${i === 0 ? 'text-left' : i < 3 ? 'text-right' : 'text-center'}`}>
-                        {h}
-                      </th>
-                    ))
-                  )}
+                  {['Yazılımcı', 'Tahmini Süre', 'İzin Düşürülmüş Kapasite', 'Durum'].map((h, i) => (
+                    <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider ${i === 0 ? 'text-left' : i < 3 ? 'text-right' : 'text-center'}`}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -407,55 +389,20 @@ export const ManualTaskAssignment: React.FC = () => {
                           <span className="text-sm font-semibold text-slate-800">{dev.developer}</span>
                         </div>
                       </td>
-                      {capacityMetric === 'both' ? (
-                        <>
-                          <td className="px-5 py-3 text-right">
-                            <span className="text-sm font-bold text-blue-600 tabular-nums">{estimatedHours}h</span>
-                          </td>
-                          <td className="px-5 py-3 text-right">
-                            <span className="text-sm font-bold text-blue-600 tabular-nums">{estimatedHours} SP</span>
-                          </td>
-                          <td className="px-5 py-3 text-right">
-                            <div className="flex items-center justify-end gap-3">
-                              <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full transition-all duration-500 ${dev.status === 'Aşırı Yük' ? 'bg-red-500' : dev.status === 'Yeterli' ? 'bg-emerald-500' : 'bg-amber-400'}`}
-                                  style={{ width: `${fillPct}%` }}
-                                />
-                              </div>
-                              <span className="text-sm font-semibold text-slate-700 tabular-nums">{capacity}h</span>
-                            </div>
-                          </td>
-                          <td className="px-5 py-3 text-right">
-                            <span className="text-sm font-semibold text-slate-700 tabular-nums">{capacity} SP</span>
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="px-5 py-3 text-right">
-                            {capacityMetric === 'storyPoints' ? (
-                              <span className="text-sm font-bold text-blue-600 tabular-nums">{estimatedHours} SP</span>
-                            ) : (
-                              <span className="text-sm font-bold text-blue-600 tabular-nums">{estimatedHours}h</span>
-                            )}
-                          </td>
-                          <td className="px-5 py-3 text-right">
-                            <div className="flex items-center justify-end gap-3">
-                              <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full transition-all duration-500 ${dev.status === 'Aşırı Yük' ? 'bg-red-500' : dev.status === 'Yeterli' ? 'bg-emerald-500' : 'bg-amber-400'}`}
-                                  style={{ width: `${fillPct}%` }}
-                                />
-                              </div>
-                              {capacityMetric === 'storyPoints' ? (
-                                <span className="text-sm font-semibold text-slate-700 tabular-nums">{capacity} SP</span>
-                              ) : (
-                                <span className="text-sm font-semibold text-slate-700 tabular-nums">{capacity}h</span>
-                              )}
-                            </div>
-                          </td>
-                        </>
-                      )}
+                      <td className="px-5 py-3 text-right">
+                        <span className="text-sm font-bold text-blue-600 tabular-nums">{estimatedHours}h</span>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${dev.status === 'Aşırı Yük' ? 'bg-red-500' : dev.status === 'Yeterli' ? 'bg-emerald-500' : 'bg-amber-400'}`}
+                              style={{ width: `${fillPct}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-semibold text-slate-700 tabular-nums">{capacity}h</span>
+                        </div>
+                      </td>
                       <td className="px-5 py-3 text-center">
                         <span className={`inline-flex px-2.5 py-0.5 text-[11px] font-semibold rounded-full border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
                           {dev.status}
@@ -548,11 +495,7 @@ export const ManualTaskAssignment: React.FC = () => {
                       ? workload.map(dev => {
                           const capacity = getAdjustedCapacity(dev.developer);
                           const estimatedHours = Math.round((dev.totalHours || 0) * 100) / 100;
-                          const suffix = capacityMetric === 'storyPoints' ? ' SP' : capacityMetric === 'both' ? '' : 'h';
-                          const displayText = capacityMetric === 'both'
-                            ? `${dev.developer} (${estimatedHours}h / ${capacity}h | ${estimatedHours} SP / ${capacity} SP)`
-                            : `${dev.developer} (${estimatedHours}${suffix} / ${capacity}${suffix})`;
-                          return <option key={dev.developer} value={dev.developer}>{displayText}</option>;
+                          return <option key={dev.developer} value={dev.developer}>{dev.developer} ({estimatedHours}h / {capacity}h)</option>;
                         })
                       : fallbackDeveloperNames.map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
