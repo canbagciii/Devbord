@@ -6,7 +6,7 @@ import { UserProfile } from './UserProfile';
 
 export const Header: React.FC = () => {
   const { refresh, loading, sprintType, setSprintType, lastRefreshAt } = useJiraData();
-  const { getBgClass, getHoverBgClass, getRingClass } = useThemeClasses();
+  const { getBgClass, getHoverBgClass, getRingClass, getAccentBgClass } = useThemeClasses();
 
   const formatLastRefresh = () => {
     if (!lastRefreshAt) return 'Henüz yenilenmedi';
@@ -21,7 +21,7 @@ export const Header: React.FC = () => {
   };
  
   return (
-<header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+<header className={`${getAccentBgClass()} shadow-sm border-b border-gray-200 sticky top-0 z-40 backdrop-blur-sm`}>
 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 <div className="flex justify-between items-center h-14">
             {/* Left Side - Logo and Title */}

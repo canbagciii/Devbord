@@ -82,6 +82,36 @@ export const useThemeClasses = () => {
     }[theme];
   };
 
+  const getPageBgClass = () => {
+    return {
+      blue: 'bg-blue-50/30',
+      green: 'bg-green-50/30',
+      orange: 'bg-orange-50/30',
+      red: 'bg-red-50/30',
+      slate: 'bg-slate-50/30'
+    }[theme];
+  };
+
+  const getCardBgClass = () => {
+    return {
+      blue: 'bg-white',
+      green: 'bg-white',
+      orange: 'bg-white',
+      red: 'bg-white',
+      slate: 'bg-white'
+    }[theme];
+  };
+
+  const getAccentBgClass = () => {
+    return {
+      blue: 'bg-blue-100/50',
+      green: 'bg-green-100/50',
+      orange: 'bg-orange-100/50',
+      red: 'bg-red-100/50',
+      slate: 'bg-slate-100/50'
+    }[theme];
+  };
+
   return {
     theme,
     getButtonClass,
@@ -90,6 +120,9 @@ export const useThemeClasses = () => {
     getBgLightClass,
     getBorderClass,
     getRingClass,
-    getHoverBgClass
+    getHoverBgClass,
+    getPageBgClass,
+    getCardBgClass,
+    getAccentBgClass
   };
 };
