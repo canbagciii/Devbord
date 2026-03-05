@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, Zap, Users, LinkIcon, Building2, TrendingUp, Bell, LayoutGrid, UserCog } from 'lucide-react';
+import { BarChart3, Zap, Users, Link as LinkIcon, Building2, TrendingUp, Bell, LayoutGrid, UserCog } from 'lucide-react';
 import { RegistrationModal } from './RegistrationModal';
 import { LoginModal } from './LoginModal';
 import { useAuth } from '../context/AuthContext';
