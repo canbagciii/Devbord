@@ -236,7 +236,7 @@ export const KolayIKEmployees: React.FC = () => {
       className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
     >
       <CalendarDays className="h-4 w-4" />
-      <span>İzinler CSV</span>
+      <span>CSV İndir</span>
     </button>
 
     {/* DETAYLI GÖRÜNÜM BUTONU DEVRE DIŞI */}
