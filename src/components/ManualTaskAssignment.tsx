@@ -319,7 +319,7 @@ export const ManualTaskAssignment: React.FC = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Jira'da İş Açma</h2>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Yazılımcı Kapasite Özeti</h2>
           <p className="text-slate-500 mt-0.5 text-sm max-w-xl">
             Yazılımcının izinlerle düşürülmüş kapasitesi ile atanan işlerin analist tahmin toplamı kıyaslanarak eksik yükü olan yazılımcılar listelenir.
           </p>
