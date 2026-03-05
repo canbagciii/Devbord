@@ -554,7 +554,7 @@ export const ProjectSprintOverview: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Proje & Sprint Genel Bakış</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Sprint & Değerlendirme Genel Bakış</h2>
           <p className="text-gray-600 mt-1">
             {sprintType === 'active' 
               ? 'Aktif sprintlerin proje bazlı analizi'
