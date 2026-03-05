@@ -135,7 +135,7 @@ const [activeTab, setActiveTab] = useState<
 ];
 
   const developerTabs = [
-    { id: 'daily-tracking', label: 'Günlük Süre Takibi', icon: BarChart3 },
+    { id: 'daily-tracking', label: 'Günlük / Haftalık Süre Takibi', icon: BarChart3 },
     { id: 'projects', label: 'Proje & Sprint Genel Bakış', icon: Activity },
     { id: 'dashboard', label: 'Yazılımcı Analizi', icon: Users },
     { id: 'my-evaluations', label: 'Sprint Değerlendirmelerim', icon: MessageSquare }
