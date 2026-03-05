@@ -306,7 +306,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Yazılımcı İş Yükü Analizi</h2>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Yazılımcı Sprint Özeti</h2>
           <p className="text-slate-500 mt-0.5 text-sm">
             {viewMode === 'weekly' ? 'Haftalık' : 'Aylık'} görev dağılımı ve iş yükü analizi
           </p>
