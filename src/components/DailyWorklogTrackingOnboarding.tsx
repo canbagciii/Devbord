@@ -42,13 +42,14 @@ interface DailyWorklogOnboardingProps {
 /* ─── Mini görseller ─────────────────────────────────────── */
 
 const AnalyticsCardVisual = () => (
-  <div className="flex gap-2.5 justify-center">
+  <div className="grid grid-cols-4 gap-2 justify-center">
     {[
       { label: 'Yazılımcı', value: '12', color: 'text-violet-600', bg: 'bg-violet-50', bar: 'bg-violet-400' },
       { label: 'Toplam Süre', value: '380h', color: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-400' },
       { label: 'Ort. Günlük', value: '7.2h', color: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-400' },
+      { label: 'Çalışılan İş', value: '94', color: 'text-orange-600', bg: 'bg-orange-50', bar: 'bg-orange-400' },
     ].map((c) => (
-      <div key={c.label} className={`${c.bg} rounded-xl px-3 py-2.5 flex flex-col items-center gap-1 min-w-[80px] border border-white shadow-sm`}>
+      <div key={c.label} className={`${c.bg} rounded-xl px-2 py-2.5 flex flex-col items-center gap-1 border border-white shadow-sm`}>
         <span className={`text-xl font-bold ${c.color}`}>{c.value}</span>
         <span className="text-[10px] text-slate-500 text-center leading-tight">{c.label}</span>
         <div className="w-full h-1 bg-white rounded-full mt-0.5">
