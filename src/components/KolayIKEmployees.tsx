@@ -191,62 +191,76 @@ export const KolayIKEmployees: React.FC = () => {
       <KolayIKOnboarding isOpen={isOnboardingOpen} onClose={closeOnboarding} />
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Kolay IK</h2>
-          <p className="text-gray-600 mt-1">Seçilen ayda izni olan çalışanlar</p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700">Ay:</label>
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-            />
-          </div>
-          <button
-            onClick={openOnboarding}
-            className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-sm"
-            title="Sayfayı nasıl kullanacağınızı öğrenin"
-          >
-            <HelpCircle className="h-4 w-4" />
-            <span>Nasıl Kullanılır?</span>
-          </button>
-          <button
-            onClick={exportEmployeesToCSV}
-            disabled={filteredEmployees.length === 0}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-          >
-            <Download className="h-4 w-4" />
-            <span>Çalışanlar CSV</span>
-          </button>
-          <button
-            onClick={exportLeaveDataToCSV}
-            disabled={leaveData.length === 0}
-            className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
-          >
-            <CalendarDays className="h-4 w-4" />
-            <span>İzinler CSV</span>
-          </button>
-          <button
-            onClick={() => setShowDetails(!showDetails)}
-            className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            {showDetails ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            <span>{showDetails ? 'Basit Görünüm' : 'Detaylı Görünüm'}</span>
-          </button>
-          <button
-            onClick={refresh}
-            disabled={loading}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Yenile</span>
-          </button>
-        </div>
-      </div>
+     <div className="flex items-center justify-between">
+  <div>
+    <h2 className="text-2xl font-bold text-gray-900">Kolay IK</h2>
+    <p className="text-gray-600 mt-1">Seçilen ayda izni olan çalışanlar</p>
+  </div>
+
+  <div className="flex items-center space-x-3">
+
+    <div className="flex items-center space-x-2">
+      <label className="text-sm font-medium text-gray-700">Ay:</label>
+      <input
+        type="month"
+        value={selectedMonth}
+        onChange={(e) => setSelectedMonth(e.target.value)}
+        className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+      />
+    </div>
+
+    <button
+      onClick={openOnboarding}
+      className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-sm"
+      title="Sayfayı nasıl kullanacağınızı öğrenin"
+    >
+      <HelpCircle className="h-4 w-4" />
+      <span>Nasıl Kullanılır?</span>
+    </button>
+
+    {/* ÇALIŞANLAR CSV BUTONU DEVRE DIŞI */}
+    {/*
+    <button
+      onClick={exportEmployeesToCSV}
+      disabled={filteredEmployees.length === 0}
+      className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+    >
+      <Download className="h-4 w-4" />
+      <span>Çalışanlar CSV</span>
+    </button>
+    */}
+
+    <button
+      onClick={exportLeaveDataToCSV}
+      disabled={leaveData.length === 0}
+      className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+    >
+      <CalendarDays className="h-4 w-4" />
+      <span>İzinler CSV</span>
+    </button>
+
+    {/* DETAYLI GÖRÜNÜM BUTONU DEVRE DIŞI */}
+    {/*
+    <button
+      onClick={() => setShowDetails(!showDetails)}
+      className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+    >
+      {showDetails ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      <span>{showDetails ? 'Basit Görünüm' : 'Detaylı Görünüm'}</span>
+    </button>
+    */}
+
+    <button
+      onClick={refresh}
+      disabled={loading}
+      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+    >
+      <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+      <span>Yenile</span>
+    </button>
+
+  </div>
+</div>
 
       {/* Connection Status */}
       {connectionStatus && (
