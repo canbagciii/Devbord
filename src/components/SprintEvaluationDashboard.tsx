@@ -475,7 +475,7 @@ export const SprintEvaluationDashboard: React.FC = () => {
           </p>
           <p className="text-gray-400 text-sm mt-2">
             {selectedProject === 'all'
-              ? 'Sadece değerlendirme yapılmış kapatılmış sprintler burada görünür.'
+              ? 'Yalnızca sprintte çalışan ekip üyeleri tarafından değerlendirilen sprint geri bildirimleri gözükür.”'
               : 'Bu proje için henüz değerlendirme yapılmamış.'
             }
           </p>
