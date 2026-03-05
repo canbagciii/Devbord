@@ -179,8 +179,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="flex flex-col gap-2">
                 {[
                   { initials: 'CB', color: 'bg-blue-600', name: 'Can Bağcı', task: 'AUTH-124', logged: 12, est: 13, status: 'Bitti', statusClass: 'bg-green-50 text-green-600' },
+       { initials: 'CÖ', color: 'bg-green-600', name: 'Cem Özbey', task: 'UI-201', logged: 6, est: 10, status: 'Review', statusClass: 'bg-purple-50 text-purple-600' },
                   { initials: 'CÇ', color: 'bg-purple-600', name: 'Cihan Çelen', task: 'API-88', logged: 8, est: 16, status: 'Devam', statusClass: 'bg-amber-50 text-amber-600' },
-                  { initials: 'CÖ', color: 'bg-green-600', name: 'Cem Özbey', task: 'UI-201', logged: 6, est: 10, status: 'Review', statusClass: 'bg-purple-50 text-purple-600' },
+                 
                 ].map((dev) => (
                   <div key={dev.initials} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
                     <div className={`w-8 h-8 rounded-full ${dev.color} flex items-center justify-center text-white text-[0.7rem] font-bold flex-shrink-0`}>{dev.initials}</div>
