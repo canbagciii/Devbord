@@ -6,7 +6,7 @@ import { supabaseEvaluationService } from '../lib/supabaseEvaluationService';
 import { Activity, Calendar, Users, Clock, Loader, RefreshCw, ChevronRight, Download, FileText, Bug, Zap, Target, CheckCircle, HelpCircle } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
 import { useAuth } from '../context/AuthContext';
-import { exportProjectSprintToCSV } from '../utils/csvExport';
+
 import { getPlainTextFromJiraAdf } from '../utils/jiraUtils';
 import ProjectSprintOnboarding, { useProjectSprintOnboarding } from './ProjectSprintOverviewOnboarding';
 
@@ -460,6 +460,176 @@ export const ProjectSprintOverview: React.FC = () => {
     };
   }, [sortedSprints]);
 
+  const exportToCSV = () => {
+    if (sortedSprints.length === 0) { alert('İndirilecek veri bulunamadı.'); return; }
+
+    const q = (val: string | number | null | undefined) =>
+      `"${String(val ?? '').replace(/"/g, '""')}"`;
+
+    const now = new Date().toLocaleString('tr-TR');
+    const sprintTypeLabel = sprintType === 'active' ? 'Aktif' : 'Kapatılmış';
+
+    const stateLabel = (s: string) =>
+      s === 'active' ? 'Aktif' : s === 'closed' ? 'Kapatıldı' : s;
+
+    const successLabel = (rate: number) =>
+      rate >= 80 ? 'İyi' : rate >= 60 ? 'Orta' : 'Düşük';
+
+    const fmtDate = (d?: string | null) =>
+      d ? new Date(d).toLocaleDateString('tr-TR') : '—';
+
+    const fmtH = (h?: number | null) =>
+      h != null && h > 0 ? `${Math.round(h * 10) / 10}h` : '—';
+
+    /* ── BÖLÜM 1: GENEL ÖZET ── */
+    const sec1: string[] = [
+      [q(`=== SPRINT GENEL ÖZET (${sprintTypeLabel.toUpperCase()}) ===`), q(`Oluşturma: ${now}`)].join(','),
+      '',
+      [q('Sprint Tipi'), q('Toplam Sprint'), q('Toplam Ana Görev'),
+       q('Toplam Tahmin (h)'), q('Toplam Harcanan (h)'), q('Toplam Yazılımcı')].join(','),
+      [q(sprintTypeLabel), q(stats.totalSprints), q(stats.totalTasks),
+       q(fmtH(stats.totalHours)), q(fmtH(stats.totalActualHours)), q(stats.totalDevelopers)].join(','),
+    ];
+
+    /* ── BÖLÜM 2: SPRINT DETAYLARI ── */
+    const sec2: string[] = [
+      '', '',
+      [q('=== SPRINT DETAYLARI ===')].join(','),
+      '',
+      [
+        q('Proje Anahtarı'), q('Proje Adı'), q('Sprint Adı'), q('Durum'),
+        q('Başlangıç Tarihi'), q('Bitiş Tarihi'),
+        q('Ana Görev Sayısı'), q('Tamamlanan Görev'), q('Eksik Görev'),
+        q('Başarı Oranı (%)'), q('Başarı Değerlendirmesi'),
+        q('Toplam Tahmin (h)'), q('Harcanan Süre (h)'), q('Saat Farkı (h)'),
+        q('Yazılımcı Sayısı'), q('Yazılımcılar'),
+      ].join(','),
+      ...sortedSprints.map(sprint => {
+        const remaining = sprint.taskCount - (sprint.doneTaskCount || 0);
+        const hourDiff = (sprint.totalActualHours || 0) - sprint.totalHours;
+        const devList = sprint.assignedDevelopers.join('; ');
+        return [
+          q(sprint.projectKey), q(sprint.projectName), q(sprint.name),
+          q(stateLabel(sprint.state)),
+          q(fmtDate(sprint.startDate)), q(fmtDate(sprint.endDate)),
+          q(sprint.taskCount), q(sprint.doneTaskCount || 0), q(remaining),
+          q(sprint.successRate), q(successLabel(sprint.successRate)),
+          q(fmtH(sprint.totalHours)), q(fmtH(sprint.totalActualHours)),
+          q(hourDiff !== 0 ? `${hourDiff > 0 ? '+' : ''}${Math.round(hourDiff * 10) / 10}h` : '—'),
+          q(sprint.assignedDevelopers.length), q(devList || '—'),
+        ].join(',');
+      }),
+    ];
+
+    /* ── BÖLÜM 3: ISSUE TİPİ DAĞILIMI ── */
+    const sec3: string[] = [
+      '', '',
+      [q('=== ISSUE TİPİ DAĞILIMI ===')].join(','),
+      '',
+      [q('Proje'), q('Sprint Adı'), q('Issue Tipi'),
+       q('Toplam'), q('Tamamlanan'), q('Tamamlanmayan'), q('Tamamlanma (%)'),
+      ].join(','),
+    ];
+
+    sortedSprints.forEach(sprint => {
+      const breakdown = sprint.issueTypeBreakdown || {};
+      const types = Object.entries(breakdown).filter(([t]) => {
+        const tl = t.toLowerCase();
+        return tl !== 'epic' && tl !== 'epik';
+      });
+      if (types.length === 0) {
+        sec3.push([q(sprint.projectKey), q(sprint.name), q('—'), q(0), q(0), q(0), q('—')].join(','));
+        return;
+      }
+      types.forEach(([type, data]: [string, any], idx) => {
+        const incomplete = data.count - data.completed;
+        const rate = data.count > 0 ? Math.round((data.completed / data.count) * 100) : 0;
+        sec3.push([
+          q(idx === 0 ? sprint.projectKey : ''),
+          q(idx === 0 ? sprint.name : ''),
+          q(type), q(data.count), q(data.completed), q(incomplete), q(`${rate}%`),
+        ].join(','));
+      });
+    });
+
+    /* ── BÖLÜM 4: YAZILIMCI BAZLI SPRINT KATILIMI ── */
+    const sec4: string[] = [
+      '', '',
+      [q('=== YAZILIMCI BAZLI SPRINT KATILIMI ===')].join(','),
+      '',
+      [q('Yazılımcı'), q('Katıldığı Sprint Sayısı'), q('Sprintler')].join(','),
+    ];
+
+    const devSprintMap: Record<string, string[]> = {};
+    sortedSprints.forEach(sprint => {
+      sprint.assignedDevelopers.forEach(dev => {
+        if (!devSprintMap[dev]) devSprintMap[dev] = [];
+        devSprintMap[dev].push(`${sprint.projectKey} – ${sprint.name}`);
+      });
+    });
+    Object.entries(devSprintMap)
+      .sort(([, a], [, b]) => b.length - a.length)
+      .forEach(([dev, sprintNames]) => {
+        sec4.push([q(dev), q(sprintNames.length), q(sprintNames.join('; '))].join(','));
+      });
+
+    /* ── BÖLÜM 5: PROJE BAZLI ÖZET ── */
+    const sec5: string[] = [
+      '', '',
+      [q('=== PROJE BAZLI ÖZET ===')].join(','),
+      '',
+      [q('Proje Anahtarı'), q('Proje Adı'), q('Sprint Sayısı'),
+       q('Toplam Ana Görev'), q('Tamamlanan Görev'), q('Ortalama Başarı (%)'),
+       q('Toplam Tahmin (h)'), q('Toplam Harcanan (h)'),
+      ].join(','),
+    ];
+
+    const projectMap: Record<string, {
+      name: string; sprintCount: number; totalTasks: number;
+      doneTasks: number; successRateSum: number;
+      totalHours: number; totalActualHours: number;
+    }> = {};
+
+    sortedSprints.forEach(sprint => {
+      const key = sprint.projectKey || 'Bilinmeyen';
+      if (!projectMap[key]) {
+        projectMap[key] = {
+          name: sprint.projectName, sprintCount: 0, totalTasks: 0,
+          doneTasks: 0, successRateSum: 0, totalHours: 0, totalActualHours: 0,
+        };
+      }
+      const p = projectMap[key];
+      p.sprintCount++;
+      p.totalTasks += sprint.taskCount;
+      p.doneTasks += sprint.doneTaskCount || 0;
+      p.successRateSum += sprint.successRate;
+      p.totalHours += sprint.totalHours;
+      p.totalActualHours += sprint.totalActualHours || 0;
+    });
+
+    Object.entries(projectMap)
+      .sort(([, a], [, b]) => b.sprintCount - a.sprintCount)
+      .forEach(([key, p]) => {
+        const avgSuccess = Math.round(p.successRateSum / p.sprintCount);
+        sec5.push([
+          q(key), q(p.name), q(p.sprintCount),
+          q(p.totalTasks), q(p.doneTasks), q(`${avgSuccess}%`),
+          q(fmtH(p.totalHours)), q(fmtH(Math.round(p.totalActualHours * 10) / 10)),
+        ].join(','));
+      });
+
+    const allRows = [...sec1, ...sec2, ...sec3, ...sec4, ...sec5];
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + allRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.setAttribute('href', URL.createObjectURL(blob));
+    link.setAttribute('download', `sprint_ozet_${sprintTypeLabel.toLowerCase()}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -496,7 +666,7 @@ export const ProjectSprintOverview: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Sprint & Değerlendirmeler</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Proje & Sprint Genel Bakış</h2>
           <p className="text-gray-600 mt-1">
             {sprintType === 'active' 
               ? 'Aktif sprintlerin proje bazlı analizi'
@@ -525,8 +695,8 @@ export const ProjectSprintOverview: React.FC = () => {
             <span>Nasıl Kullanılır?</span>
           </button>
           <button
-            onClick={() => sprints && sprintTasks && exportProjectSprintToCSV(sprints, sprintTasks)}
-            disabled={!sprints || sortedSprints.length === 0}
+            onClick={exportToCSV}
+            disabled={sortedSprints.length === 0}
             className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
           >
             <Download className="h-4 w-4" />
