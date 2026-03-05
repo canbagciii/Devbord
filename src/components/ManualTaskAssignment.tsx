@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { ManualTaskAssignment as TaskAssignment, DeveloperWorkload, JiraSprint } from '../types';
 import { supabaseJiraService } from '../lib/supabaseJiraService';
 import { jiraFilterService } from '../lib/jiraFilterService';
-import { Plus, Save, X, User, Clock, AlertTriangle, CheckCircle, ExternalLink, Loader, Download, RefreshCw } from 'lucide-react';
+import { Plus, Save, X, User, Clock, AlertTriangle, CheckCircle, ExternalLink, Loader, Download, RefreshCw, HelpCircle } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
 import { useAuth } from '../context/AuthContext';
 import { useDeveloperCapacities } from '../hooks/useDeveloperCapacities';
 import { exportManualAssignmentsToCSV } from '../utils/csvExport';
 import { DeveloperCapacityAdjustment } from './DeveloperCapacityAdjustment';
 import { getOverallSprintDateRange } from '../utils/sprintDateUtils';
+import ManualTaskOnboarding, { useManualTaskOnboarding } from './ManualTaskAssignmentOnboarding';
 
 const underloadedDevelopersCache = new Map<string, DeveloperWorkload[]>();
 
@@ -20,6 +21,7 @@ export const ManualTaskAssignment: React.FC = () => {
   } = useJiraData();
   const { hasRole, canAccessProject, getAccessibleProjects, hasKolayIK } = useAuth();
   const { getCapacity } = useDeveloperCapacities();
+  const { isOnboardingOpen, openOnboarding, closeOnboarding } = useManualTaskOnboarding();
   const [assignments, setAssignments] = useState<TaskAssignment[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [creatingJiraIssue, setCreatingJiraIssue] = useState(false);
@@ -202,7 +204,6 @@ export const ManualTaskAssignment: React.FC = () => {
     }
   };
 
-  // KolayIK entegrasyonu aktifse ve capacityCalculations varsa izin düşürülmüş kapasiteyi kullan
   const getAdjustedCapacity = (developerName: string): number => {
     if (hasKolayIK && capacityCalculations && capacityCalculations.length > 0) {
       const calc = capacityCalculations.find(c => c.developerName === developerName);
@@ -258,14 +259,12 @@ export const ManualTaskAssignment: React.FC = () => {
   }
 
   if (pageLoading) {
-    // KolayIK varsa: cache eşleşmiyorsa VEYA capacityCalculations henüz boşsa bootstrap çalıştır
-  const shouldBootstrapCapacities = workloadReady && overallSprintRange && (
-    !localCacheKey ||
-    capacityCacheKey !== localCacheKey ||
-    (hasKolayIK && (!capacityCalculations || capacityCalculations.length === 0))
-  );
-  // Kapasite hesaplaması hâlâ devam ediyorsa tablo "yükleniyor" göstermeli
-  const capacityStillLoading = hasKolayIK && workloadReady && (!capacityCalculations || capacityCalculations.length === 0);
+    const shouldBootstrapCapacities = workloadReady && overallSprintRange && (
+      !localCacheKey ||
+      capacityCacheKey !== localCacheKey ||
+      (hasKolayIK && (!capacityCalculations || capacityCalculations.length === 0))
+    );
+    const capacityStillLoading = hasKolayIK && workloadReady && (!capacityCalculations || capacityCalculations.length === 0);
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-4">
@@ -291,17 +290,18 @@ export const ManualTaskAssignment: React.FC = () => {
     );
   }
 
-  // KolayIK varsa: cache eşleşmiyorsa VEYA capacityCalculations henüz boşsa bootstrap çalıştır
   const shouldBootstrapCapacities = workloadReady && overallSprintRange && (
     !localCacheKey ||
     capacityCacheKey !== localCacheKey ||
     (hasKolayIK && (!capacityCalculations || capacityCalculations.length === 0))
   );
-  // Kapasite hesaplaması hâlâ devam ediyorsa tablo "yükleniyor" göstermeli
   const capacityStillLoading = hasKolayIK && workloadReady && (!capacityCalculations || capacityCalculations.length === 0);
 
   return (
     <div className="space-y-5 p-1">
+      {/* Onboarding Modal */}
+      <ManualTaskOnboarding isOpen={isOnboardingOpen} onClose={closeOnboarding} />
+
       {/* Hidden bootstrap */}
       {shouldBootstrapCapacities && (
         <div className="hidden">
@@ -324,13 +324,23 @@ export const ManualTaskAssignment: React.FC = () => {
             Yazılımcının izinlerle düşürülmüş kapasitesi ile atanan işlerin analist tahmin toplamı kıyaslanarak eksik yükü olan yazılımcılar listelenir.
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all shadow-sm hover:shadow"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Görev
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={openOnboarding}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
+            title="Sayfayı nasıl kullanacağınızı öğrenin"
+          >
+            <HelpCircle className="h-4 w-4" />
+            Nasıl Kullanılır?
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all shadow-sm hover:shadow"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Görev
+          </button>
+        </div>
       </div>
 
       {/* Info banner - veri yoksa */}
