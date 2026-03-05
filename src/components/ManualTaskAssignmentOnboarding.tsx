@@ -416,4 +416,4 @@ export const useManualTaskOnboarding = () => {
   return { isOnboardingOpen, openOnboarding, closeOnboarding };
 };
 
-export default ManualTaskOnboarding;
+export default ManualTaskOnboarding; 
