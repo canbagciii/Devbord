@@ -469,25 +469,43 @@ export const ProjectSprintOverview: React.FC = () => {
     const fmtDate = (d?: string | null) =>
       d ? new Date(d).toLocaleDateString('tr-TR') : '—';
 
+    // Tüm sprint'lerde geçen issue tiplerini topla (Epic hariç)
+    const allTypes = Array.from(new Set(
+      sortedSprints.flatMap(s =>
+        Object.keys(s.issueTypeBreakdown || {}).filter(t => {
+          const tl = t.toLowerCase();
+          return tl !== 'epic' && tl !== 'epik';
+        })
+      )
+    )).sort();
+
     const headers = [
       q('Proje'), q('Sprint Adı'),
       q('Ana Görev'), q('Tamamlanan'),
       q('Başarı Oranı (%)'),
       q('Toplam Tahmin (h)'), q('Harcanan Süre (h)'),
       q('Sprint Başlangıç'), q('Sprint Bitiş'),
+      ...allTypes.flatMap(t => [q(`${t} (Toplam)`), q(`${t} (Tamamlanan)`)]),
     ].join(',');
 
-    const rows = sortedSprints.map(sprint => [
-      q(`${sprint.projectKey} – ${sprint.projectName}`),
-      q(sprint.name),
-      q(sprint.taskCount),
-      q(sprint.doneTaskCount || 0),
-      q(`%${sprint.successRate}`),
-      q(sprint.totalHours > 0 ? `${Math.round(sprint.totalHours * 10) / 10}h` : '—'),
-      q(sprint.totalActualHours > 0 ? `${Math.round((sprint.totalActualHours || 0) * 10) / 10}h` : '—'),
-      q(fmtDate(sprint.startDate)),
-      q(fmtDate(sprint.endDate)),
-    ].join(','));
+    const rows = sortedSprints.map(sprint => {
+      const breakdown = sprint.issueTypeBreakdown || {};
+      return [
+        q(`${sprint.projectKey} – ${sprint.projectName}`),
+        q(sprint.name),
+        q(sprint.taskCount),
+        q(sprint.doneTaskCount || 0),
+        q(`%${sprint.successRate}`),
+        q(sprint.totalHours > 0 ? `${Math.round(sprint.totalHours * 10) / 10}h` : '—'),
+        q(sprint.totalActualHours > 0 ? `${Math.round((sprint.totalActualHours || 0) * 10) / 10}h` : '—'),
+        q(fmtDate(sprint.startDate)),
+        q(fmtDate(sprint.endDate)),
+        ...allTypes.flatMap(t => {
+          const data = breakdown[t];
+          return [q(data?.count ?? 0), q(data?.completed ?? 0)];
+        }),
+      ].join(',');
+    });
 
     const csvContent = [headers, ...rows].join('\n');
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
