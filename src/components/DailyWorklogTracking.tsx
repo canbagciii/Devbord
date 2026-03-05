@@ -302,7 +302,7 @@ const DailyWorklogTracking: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Günlük / Haftalık / Aylık Süre Takibi</h2>
           <p className="text-slate-500 mt-0.5 text-sm">
-            Yazılımcıların günlük worklog kayıtları ve haftalık hedef takibi
+            Yazılımcıların günlük, haftalık ve aylık hedef takibi
           </p>
         </div>
         <div className="flex items-center gap-2">
