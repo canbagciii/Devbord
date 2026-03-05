@@ -16,8 +16,9 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight, 
-  ChevronDown,
-  ChevronUp,
+  Eye,
+  EyeOff,
+
   AlertTriangle,
   CheckCircle,
   Info,
@@ -300,9 +301,9 @@ const DailyWorklogTracking: React.FC = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Günlük & Haftalık & Aylık Süre Takibi</h2>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Günlük Süre Takibi</h2>
           <p className="text-slate-500 mt-0.5 text-sm">
-            Yazılımcıların günlük, haftalık ve aylık hedef takibi
+            Yazılımcıların günlük worklog kayıtları ve haftalık hedef takibi
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -362,26 +363,22 @@ const DailyWorklogTracking: React.FC = () => {
             </div>
 
             {/* Capacity Adjustment Toggle */}
-          {/*
-{viewMode === 'weekly' && hasKolayIK && (
-  <label className="flex items-center gap-2 cursor-pointer select-none">
-    <div className="relative">
-      <input
-        type="checkbox"
-        id="capacityAdjustment"
-        checked={capacityAdjustmentEnabled}
-        onChange={(e) => setCapacityAdjustmentEnabled(e.target.checked)}
-        className="sr-only peer"
-      />
-      <div className="w-9 h-5 bg-slate-200 peer-checked:bg-blue-600 rounded-full transition-colors peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-1"></div>
-      <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4"></div>
-    </div>
-    <span className="text-sm text-slate-600 font-medium">
-      İzin Günlerine Göre Kapasite Ayarla
-    </span>
-  </label>
-)}
-*/}
+            {viewMode === 'weekly' && hasKolayIK && (
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    id="capacityAdjustment"
+                    checked={capacityAdjustmentEnabled}
+                    onChange={(e) => setCapacityAdjustmentEnabled(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-200 peer-checked:bg-blue-600 rounded-full transition-colors peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-1"></div>
+                  <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4"></div>
+                </div>
+                <span className="text-sm text-slate-600 font-medium">İzin Günlerine Göre Kapasite Ayarla</span>
+              </label>
+            )}
 
             {/* Developer Filter */}
             <div className="flex items-center gap-2">
@@ -563,9 +560,7 @@ const DailyWorklogTracking: React.FC = () => {
                   </th>
                   <th className="px-4 py-3 text-center text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Hedef</th>
                   <th className="px-4 py-3 text-center text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Durum</th>
-                  {viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && (
-                    <th className="px-4 py-3 text-center text-[11px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">İzin Etkisi</th>
-                  )}
+
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -610,9 +605,14 @@ const DailyWorklogTracking: React.FC = () => {
                           <div className="flex items-center gap-3">
                             <button
                               onClick={toggleExpanded}
-                              className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                              title={isExpanded ? 'Detayları gizle' : 'Detayları göster'}
+                              className={`flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-all border ${
+                                isExpanded
+                                  ? 'bg-blue-50 border-blue-200 text-blue-600 shadow-sm'
+                                  : 'bg-slate-100 border-slate-200 text-slate-400 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-500'
+                              }`}
                             >
-                              {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                              {isExpanded ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                             </button>
                             <div className={`flex-shrink-0 w-8 h-8 bg-gradient-to-br ${avatarGradient} rounded-full flex items-center justify-center shadow-sm`}>
                               <span className="text-[11px] font-bold text-white">{getInitials(developer.developerName)}</span>
@@ -652,7 +652,13 @@ const DailyWorklogTracking: React.FC = () => {
                         <td className="px-4 py-3.5 text-center">
                           <span className="text-sm font-medium text-slate-600 tabular-nums">{developer.weeklyTarget}h</span>
                           {hasLeave && viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && (
-                            <p className="text-[11px] text-amber-500 mt-0.5">(orijinal: {originalTarget}h)</p>
+                            <div className="flex flex-col items-center gap-0.5 mt-1">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded-full">
+                                <CalendarDays className="h-2.5 w-2.5 text-amber-500" />
+                                <span className="text-[10px] font-semibold text-amber-600">-{developerLeave.leaveDays * 7}h</span>
+                              </span>
+                              <span className="text-[10px] text-slate-400 line-through">{originalTarget}h</span>
+                            </div>
                           )}
                         </td>
 
@@ -671,25 +677,12 @@ const DailyWorklogTracking: React.FC = () => {
                           </div>
                         </td>
 
-                        {/* Leave Impact */}
-                        {viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && (
-                          <td className="px-4 py-3.5 text-center">
-                            {hasLeave ? (
-                              <div>
-                                <p className="text-sm font-semibold text-amber-600">-{developerLeave.leaveDays * 7}h</p>
-                                <p className="text-[11px] text-slate-400">{developerLeave.leaveDays} gün izin</p>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-slate-300">İzin yok</span>
-                            )}
-                          </td>
-                        )}
                       </tr>
 
                       {/* Expanded Details */}
                       {isExpanded && (
                         <tr className="bg-slate-50/60">
-                          <td colSpan={dateRange.dates.length + 4 + (viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK ? 1 : 0)} className="px-6 py-4">
+                          <td colSpan={dateRange.dates.length + 4} className="px-6 py-4">
                             <div className="space-y-4">
                               {/* Leave Details */}
                               {hasLeave && viewMode === 'weekly' && capacityAdjustmentEnabled && hasKolayIK && (
