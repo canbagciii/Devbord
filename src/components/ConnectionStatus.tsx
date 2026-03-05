@@ -32,9 +32,9 @@ export const ConnectionStatus: React.FC = () => {
   return (
     <div className="fixed bottom-4 right-4 z-50">
       <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg shadow-lg ${
-        isConnected 
-          ? 'bg-green-100 text-green-800 border border-green-200' 
-          : 'bg-red-100 text-red-800 border border-red-200'
+        isConnected
+          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-700'
+          : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-700'
       }`}>
         {isConnected ? (
           <Wifi className="h-4 w-4" />

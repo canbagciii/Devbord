@@ -232,7 +232,7 @@ export const ManualTaskAssignment: React.FC = () => {
   // Yetki kontrolü
   if (!hasRole('admin') && !hasRole('analyst')) {
     return (
-      <div className="bg-amber-50 border border-amber-200 dark:border-amber-700 rounded-xl p-6">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
         <div className="flex items-center gap-2 mb-2">
           <AlertTriangle className="h-5 w-5 text-amber-500" />
           <p className="text-amber-800 font-medium">Bu sayfaya erişim yetkiniz bulunmuyor.</p>
@@ -244,7 +244,7 @@ export const ManualTaskAssignment: React.FC = () => {
 
   if (componentError) {
     return (
-      <div className="bg-red-50 border border-red-200 dark:border-red-700 rounded-xl p-6">
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6">
         <div className="flex items-center gap-2 mb-3">
           <AlertTriangle className="h-5 w-5 text-red-500" />
           <p className="text-red-800 font-medium">{componentError}</p>
@@ -347,7 +347,7 @@ export const ManualTaskAssignment: React.FC = () => {
 
       {/* Kapasite Özeti Tablosu */}
       {workloadReady && workload && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <h3 className="text-base font-semibold text-slate-800">Yazılımcı Kapasite Özeti</h3>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -421,7 +421,7 @@ export const ManualTaskAssignment: React.FC = () => {
       {/* Modal Form */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex justify-between items-center px-6 py-5 border-b border-slate-100">
               <div>
@@ -595,7 +595,7 @@ export const ManualTaskAssignment: React.FC = () => {
       )}
 
       {/* Assignments Listesi */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-base font-semibold text-slate-800">Manuel Atanan Görevler</h3>
           {assignments.length > 0 && (

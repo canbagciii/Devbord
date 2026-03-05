@@ -178,7 +178,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 dark:border-red-700 rounded-xl p-6">
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6">
         <div className="flex items-center gap-2 mb-3">
           <AlertTriangle className="h-5 w-5 text-red-500" />
           <p className="text-red-800 font-medium">{error}</p>
@@ -258,7 +258,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
       )}
 
       {/* Search */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 shadow-sm p-4">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -294,7 +294,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
           { label: 'Aşırı Yük', value: stats.overloaded, suffix: '', icon: TrendingUp, color: 'text-red-600', iconBg: 'bg-red-50' },
           { label: 'Toplam Harcanan', value: stats.totalActualHours, suffix: 'h', icon: Clock, color: 'text-violet-600', iconBg: 'bg-violet-50', sub: 'Sprint tarihleri' },
         ].map((card) => (
-          <div key={card.label} className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-3">
+          <div key={card.label} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-3">
             <div className={`w-10 h-10 ${card.iconBg} rounded-xl flex items-center justify-center flex-shrink-0`}>
               <card.icon className={`h-5 w-5 ${card.color}`} />
             </div>
@@ -308,7 +308,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
       </div>
 
       {/* Workload Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">
           <h3 className="text-base font-semibold text-slate-800">Yazılımcı İş Yükü Detayları</h3>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -463,7 +463,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
                                     : detail.actualHours > 0 ? '∞' : '0%';
 
                                   return (
-                                    <div key={detailIndex} className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 p-4">
+                                    <div key={detailIndex} className="bg-white rounded-xl border border-slate-200 p-4">
                                       {/* Kart başlık */}
                                       <div className="flex items-start justify-between mb-3">
                                         <div>
@@ -585,7 +585,7 @@ export const DeveloperWorkloadDashboard: React.FC = () => {
 
       {/* Empty State */}
       {filteredWorkload.length === 0 && (
-        <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-slate-200">
+        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
           <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Users className="h-7 w-7 text-slate-400" />
           </div>

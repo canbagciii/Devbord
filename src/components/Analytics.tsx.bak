@@ -77,35 +77,35 @@ export const Analytics: React.FC<AnalyticsProps> = ({ tasks }) => {
     <div className="space-y-6">
       <div className="flex items-center space-x-2 mb-6">
         <BarChart className="h-6 w-6 text-blue-600" />
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Analiz & Raporlar</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Analiz & Raporlar</h2>
       </div>
 
       {/* Time Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Tahmini Süre</p>
+              <p className="text-sm font-medium text-gray-600">Toplam Tahmini Süre</p>
               <p className="text-2xl font-bold text-blue-600">{timeStats.totalEstimated}h</p>
             </div>
             <Clock className="h-8 w-8 text-blue-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Gerçekleşen</p>
+              <p className="text-sm font-medium text-gray-600">Toplam Gerçekleşen</p>
               <p className="text-2xl font-bold text-green-600">{timeStats.totalActual}h</p>
             </div>
             <TrendingUp className="h-8 w-8 text-green-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Ortalama Sapma</p>
+              <p className="text-sm font-medium text-gray-600">Ortalama Sapma</p>
               <p className="text-2xl font-bold text-orange-600">{avgVariance}h</p>
             </div>
             <PieChart className="h-8 w-8 text-orange-600" />
@@ -114,26 +114,26 @@ export const Analytics: React.FC<AnalyticsProps> = ({ tasks }) => {
       </div>
 
       {/* Developer Workload */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Yazılımcı İş Yükü Analizi</h3>
+      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Yazılımcı İş Yükü Analizi</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left py-2 px-4 font-medium text-gray-600 dark:text-gray-400">Yazılımcı</th>
-                <th className="text-center py-2 px-4 font-medium text-gray-600 dark:text-gray-400">Toplam</th>
-                <th className="text-center py-2 px-4 font-medium text-gray-600 dark:text-gray-400">Tamamlandı</th>
-                <th className="text-center py-2 px-4 font-medium text-gray-600 dark:text-gray-400">Devam Eden</th>
-                <th className="text-center py-2 px-4 font-medium text-gray-600 dark:text-gray-400">Bekleyen</th>
-                <th className="text-center py-2 px-4 font-medium text-gray-600 dark:text-gray-400">Tahmini</th>
-                <th className="text-center py-2 px-4 font-medium text-gray-600 dark:text-gray-400">Gerçekleşen</th>
-                <th className="text-center py-2 px-4 font-medium text-gray-600 dark:text-gray-400">Tamamlanma</th>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-2 px-4 font-medium text-gray-600">Yazılımcı</th>
+                <th className="text-center py-2 px-4 font-medium text-gray-600">Toplam</th>
+                <th className="text-center py-2 px-4 font-medium text-gray-600">Tamamlandı</th>
+                <th className="text-center py-2 px-4 font-medium text-gray-600">Devam Eden</th>
+                <th className="text-center py-2 px-4 font-medium text-gray-600">Bekleyen</th>
+                <th className="text-center py-2 px-4 font-medium text-gray-600">Tahmini</th>
+                <th className="text-center py-2 px-4 font-medium text-gray-600">Gerçekleşen</th>
+                <th className="text-center py-2 px-4 font-medium text-gray-600">Tamamlanma</th>
               </tr>
             </thead>
             <tbody>
               {Object.entries(developerStats).map(([developer, stats]: [string, any]) => (
                 <tr key={developer} className="border-b border-gray-100">
-                  <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{developer}</td>
+                  <td className="py-3 px-4 font-medium text-gray-900">{developer}</td>
                   <td className="py-3 px-4 text-center">{stats.total}</td>
                   <td className="py-3 px-4 text-center text-green-600">{stats.completed}</td>
                   <td className="py-3 px-4 text-center text-yellow-600">{stats.inProgress}</td>
@@ -161,19 +161,19 @@ export const Analytics: React.FC<AnalyticsProps> = ({ tasks }) => {
       </div>
 
       {/* Bank Distribution */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Banka Görev Dağılımı</h3>
+      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Banka Görev Dağılımı</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.entries(bankStats).map(([bank, stats]: [string, any]) => (
-            <div key={bank} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">{bank}</h4>
+            <div key={bank} className="border border-gray-200 rounded-lg p-4">
+              <h4 className="font-medium text-gray-900 mb-2">{bank}</h4>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Toplam Görev:</span>
+                  <span className="text-sm text-gray-600">Toplam Görev:</span>
                   <span className="font-medium">{stats.count}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Tamamlanan:</span>
+                  <span className="text-sm text-gray-600">Tamamlanan:</span>
                   <span className="font-medium text-green-600">{stats.completed}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">

@@ -214,11 +214,11 @@ export const JiraReport: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <ExternalLink className="h-6 w-6 text-blue-600" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Jira Raporu</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Jira Raporu</h2>
         </div>
         <div className="flex items-center space-x-4">
           {lastUpdate && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-gray-500">
               Son güncelleme: {lastUpdate.toLocaleTimeString('tr-TR')}
             </span>
           )}
@@ -234,7 +234,7 @@ export const JiraReport: React.FC = () => {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 dark:border-red-700 rounded-lg p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <AlertCircle className="h-5 w-5 text-red-600" />
             <p className="text-red-800">{error}</p>
@@ -243,17 +243,17 @@ export const JiraReport: React.FC = () => {
       )}
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+      <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               <FolderOpen className="inline h-4 w-4 mr-1" />
               Proje Filtresi
             </label>
             <select
               value={selectedProject}
               onChange={(e) => setSelectedProject(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Tüm Projeler</option>
               {projects.map(project => (
@@ -265,14 +265,14 @@ export const JiraReport: React.FC = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               <Users className="inline h-4 w-4 mr-1" />
               Yazılımcı Filtresi
             </label>
             <select
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Tüm Yazılımcılar</option>
               {visibleUsers.map(u => (
@@ -287,50 +287,50 @@ export const JiraReport: React.FC = () => {
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Görev</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalIssues}</p>
+              <p className="text-sm font-medium text-gray-600">Toplam Görev</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.totalIssues}</p>
             </div>
             <FolderOpen className="h-8 w-8 text-blue-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Devam Eden</p>
+              <p className="text-sm font-medium text-gray-600">Devam Eden</p>
               <p className="text-2xl font-bold text-yellow-600">{stats.inProgress}</p>
             </div>
             <Clock className="h-8 w-8 text-yellow-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Tamamlanan</p>
+              <p className="text-sm font-medium text-gray-600">Tamamlanan</p>
               <p className="text-2xl font-bold text-green-600">{stats.done}</p>
             </div>
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Harcanan Süre</p>
+              <p className="text-sm font-medium text-gray-600">Harcanan Süre</p>
               <p className="text-2xl font-bold text-purple-600">{formatTime(stats.totalTimeSpent)}</p>
             </div>
             <Clock className="h-8 w-8 text-purple-600" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Tahmini Süre</p>
+              <p className="text-sm font-medium text-gray-600">Tahmini Süre</p>
               <p className="text-2xl font-bold text-indigo-600">{formatTime(stats.totalTimeEstimate)}</p>
             </div>
             <Clock className="h-8 w-8 text-indigo-600" />
@@ -340,34 +340,34 @@ export const JiraReport: React.FC = () => {
 
       {/* Issues Table */}
       {/* Developer Summary Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yazılımcı Özeti</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Seçilen filtreye göre yazılımcıların proje bazlı görev dağılımı</p>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Yazılımcı Özeti</h3>
+          <p className="text-sm text-gray-600 mt-1">Seçilen filtreye göre yazılımcıların proje bazlı görev dağılımı</p>
         </div>
         
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Yazılımcı
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Projeler
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Toplam Görev
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Toplam Süre
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Tamamlanan
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-200">
               {(() => {
                 // Group issues by developer
                 const developerStats = issues.reduce((acc, issue) => {
@@ -424,24 +424,24 @@ export const JiraReport: React.FC = () => {
                           </span>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{developer.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{Object.keys(developer.projects).length} proje</p>
+                          <p className="text-sm font-medium text-gray-900">{developer.name}</p>
+                          <p className="text-xs text-gray-500">{Object.keys(developer.projects).length} proje</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="space-y-1">
                         {Object.entries(developer.projects).map(([projectKey, projectData]: [string, any]) => (
-                          <div key={projectKey} className="flex items-center justify-between bg-gray-50 dark:bg-gray-900 rounded px-2 py-1">
+                          <div key={projectKey} className="flex items-center justify-between bg-gray-50 rounded px-2 py-1">
                             <div className="flex items-center space-x-2">
                               <span className="text-xs font-medium text-blue-600">{projectKey}</span>
-                              <span className="text-xs text-gray-600 dark:text-gray-400">{projectData.name}</span>
+                              <span className="text-xs text-gray-600">{projectData.name}</span>
                             </div>
                             <div className="flex items-center space-x-2 text-xs">
-                              <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                              <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
                                 {projectData.taskCount} görev
                               </span>
-                              <span className="text-gray-500 dark:text-gray-400">
+                              <span className="text-gray-500">
                                 {formatTime(projectData.timeSpent + projectData.timeEstimate)}
                               </span>
                             </div>
@@ -450,17 +450,17 @@ export const JiraReport: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">{developer.totalTasks}</span>
+                      <span className="text-lg font-semibold text-gray-900">{developer.totalTasks}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="text-sm">
-                        <div className="font-medium text-gray-900 dark:text-gray-100">
+                        <div className="font-medium text-gray-900">
                           {formatTime(developer.totalTimeSpent + developer.totalTimeEstimate)}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-gray-500">
                           Harcanan: {formatTime(developer.totalTimeSpent)}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-gray-500">
                           Tahmini: {formatTime(developer.totalTimeEstimate)}
                         </div>
                       </div>
@@ -476,7 +476,7 @@ export const JiraReport: React.FC = () => {
                             style={{ width: `${(developer.completedTasks / developer.totalTasks) * 100}%` }}
                           />
                         </div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="text-xs text-gray-500">
                           {Math.round((developer.completedTasks / developer.totalTasks) * 100)}%
                         </span>
                       </div>
@@ -490,7 +490,7 @@ export const JiraReport: React.FC = () => {
         
         {issues.length === 0 && !loading && (
           <div className="text-center py-8">
-            <p className="text-gray-500 dark:text-gray-400">Seçilen filtreye göre yazılımcı bulunamadı.</p>
+            <p className="text-gray-500">Seçilen filtreye göre yazılımcı bulunamadı.</p>
           </div>
         )}
       </div>

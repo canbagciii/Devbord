@@ -39,24 +39,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   }, [authError, isAuthenticated]);
 
   return (
-    <div className="min-h-screen bg-white">
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 flex items-center justify-between h-17">
-          <a href="#" className="flex items-center gap-2.5 font-bold text-xl text-gray-900">
+          <a href="#" className="flex items-center gap-2.5 font-bold text-xl text-gray-900 dark:text-gray-100">
             <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-600/30">
               <Zap className="w-5 h-5 text-white fill-white" />
             </div>
             Devbord
           </a>
           <ul className="hidden md:flex items-center gap-8 list-none">
-            <li><a href="#problem" className="text-gray-600 text-sm font-medium hover:text-blue-600 transition-colors">Sorunlar</a></li>
-            <li><a href="#how" className="text-gray-600 text-sm font-medium hover:text-blue-600 transition-colors">Nasıl Çalışır</a></li>
-            <li><a href="#features" className="text-gray-600 text-sm font-medium hover:text-blue-600 transition-colors">Özellikler</a></li>
+            <li><a href="#problem" className="text-gray-600 dark:text-gray-400 text-sm font-medium hover:text-blue-600 transition-colors">Sorunlar</a></li>
+            <li><a href="#how" className="text-gray-600 dark:text-gray-400 text-sm font-medium hover:text-blue-600 transition-colors">Nasıl Çalışır</a></li>
+            <li><a href="#features" className="text-gray-600 dark:text-gray-400 text-sm font-medium hover:text-blue-600 transition-colors">Özellikler</a></li>
           </ul>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsLoginModalOpen(true)}
-              className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-900 bg-transparent border-[1.5px] border-gray-300 hover:border-blue-600 hover:text-blue-600 transition-all"
+              className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-[1.5px] border-gray-300 dark:border-gray-600 hover:border-blue-600 hover:text-blue-600 transition-all"
             >
               Giriş Yap
             </button>
@@ -72,9 +72,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* Opsiyonel bilgi mesajı (ör. oturum süresi doldu, tekrar giriş yapın) */}
       {infoMessage && (
-        <div className="mt-16 bg-amber-50 border-b border-amber-200">
+        <div className="mt-16 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-700">
           <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-3">
-            <p className="text-xs sm:text-sm text-amber-800 font-medium">
+            <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-300 font-medium">
               {infoMessage}
             </p>
           </div>
@@ -84,14 +84,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section id="free-start" className="pt-[140px] pb-[100px]">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
           <div className="animate-in fade-in slide-in-from-left duration-700">
-            <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-3.5 py-1.5 rounded-full text-xs font-semibold mb-6 border border-blue-600/15">
+            <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-3.5 py-1.5 rounded-full text-xs font-semibold mb-6 border border-blue-600/15 dark:border-blue-600/30">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
               Jira + Kolay İK entegrasyonu
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-gray-900 mb-5">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-gray-900 dark:text-gray-100 mb-5">
               Ekibinizin <span className="text-blue-600">nabzını</span> gerçek zamanlı takip edin
             </h1>
-            <p className="text-lg text-gray-600 leading-relaxed mb-9 max-w-md">
+            <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed mb-9 max-w-md">
               Sprint yönetimi, yazılımcı performans takibi ve İK entegrasyonunu tek platformda birleştirin. Karar vermek için saatlerce rapor hazırlamayı bırakın.
             </p>
             <div className="flex gap-3 flex-wrap mb-4">
@@ -101,22 +101,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               >
                 Hemen Başla — Ücretsiz
               </button>
-              <a href="#how" className="px-6 py-3.5 rounded-xl text-base font-semibold text-gray-900 bg-transparent border-[1.5px] border-gray-300 hover:border-blue-600 hover:text-blue-600 transition-all no-underline">
+              <a href="#how" className="px-6 py-3.5 rounded-xl text-base font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-[1.5px] border-gray-300 dark:border-gray-600 hover:border-blue-600 hover:text-blue-600 transition-all no-underline">
                 Nasıl çalışır?
               </a>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-600 mt-4">
+            <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 mt-4">
               <svg className="w-3.5 h-3.5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
               Kurulum yok · Kredi kartı yok · Dakikalar içinde hazır
             </div>
             <div className="mt-12">
               <div className="text-[0.7rem] font-semibold text-gray-400 uppercase tracking-widest mb-3.5">Desteklenen entegrasyonlar</div>
               <div className="flex gap-2.5 flex-wrap">
-                <div className="flex items-center gap-2 bg-gray-50 border-[1.5px] border-gray-200 rounded-lg px-3.5 py-2 text-[0.82rem] font-semibold text-gray-900">
+                <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border-[1.5px] border-gray-200 dark:border-gray-700 rounded-lg px-3.5 py-2 text-[0.82rem] font-semibold text-gray-900 dark:text-gray-100">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="#2563EB"><path d="M11.571 11.513H0a5.218 5.218 0 005.232 5.215h2.13v2.057A5.215 5.215 0 0012.575 24V12.518a1.005 1.005 0 00-1.004-1.005zm5.723-5.756H5.757a5.215 5.215 0 005.215 5.214h2.129v2.058a5.218 5.218 0 005.215 5.214V6.762a1.005 1.005 0 00-1.022-1.005zM23.012 0H11.455a5.215 5.215 0 005.215 5.214h2.129v2.058A5.218 5.218 0 0024 12.487V1.005A1.005 1.005 0 0023.012 0z"/></svg>
                   Jira
                 </div>
-                <div className="flex items-center gap-2 bg-gray-50 border-[1.5px] border-gray-200 rounded-lg px-3.5 py-2 text-[0.82rem] font-semibold text-gray-900">
+                <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border-[1.5px] border-gray-200 dark:border-gray-700 rounded-lg px-3.5 py-2 text-[0.82rem] font-semibold text-gray-900 dark:text-gray-100">
                   <div className="w-4 h-4 rounded bg-green-600 flex items-center justify-center text-white text-[0.65rem] font-bold">İK</div>
                   Kolay İK
                 </div>
@@ -126,19 +126,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="relative animate-in fade-in slide-in-from-bottom duration-800">
             {/* Floating — Sprint durumu */}
-            <div className="absolute top-[-20px] left-[-30px] bg-white border-[1.5px] border-gray-200 rounded-xl p-3 pr-4 shadow-lg flex items-center gap-2.5 z-10">
-              <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center text-base">🚀</div>
+            <div className="absolute top-[-20px] left-[-30px] bg-white dark:bg-gray-800 border-[1.5px] border-gray-200 dark:border-gray-700 rounded-xl p-3 pr-4 shadow-lg flex items-center gap-2.5 z-10">
+              <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-base">🚀</div>
               <div>
-                <div className="text-base font-extrabold">Sprint 14</div>
-                <div className="text-[0.7rem] text-gray-500">5 gün kaldı</div>
+                <div className="text-base font-extrabold text-gray-900 dark:text-gray-100">Sprint 14</div>
+                <div className="text-[0.7rem] text-gray-500 dark:text-gray-400">5 gün kaldı</div>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border-[1.5px] border-gray-200 shadow-2xl p-6 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border-[1.5px] border-gray-200 dark:border-gray-700 shadow-2xl p-6 overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
-                <div className="font-bold text-[0.95rem]">Sprint 14 — Genel Bakış</div>
-                <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md text-xs font-semibold">Aktif</span>
+                <div className="font-bold text-[0.95rem] text-gray-900 dark:text-gray-100">Sprint 14 — Genel Bakış</div>
+                <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-2.5 py-1 rounded-md text-xs font-semibold">Aktif</span>
               </div>
 
               {/* Sprint ilerleme barları */}
@@ -146,12 +146,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 {[
                   { label: 'Tamamlandı', value: 18, total: 25, color: 'bg-green-500', pct: '72%' },
                   { label: 'Devam', value: 5, total: 25, color: 'bg-blue-500', pct: '20%' },
-                  { label: 'Bekliyor', value: 2, total: 25, color: 'bg-gray-300', pct: '8%' },
+                  { label: 'Bekliyor', value: 2, total: 25, color: 'bg-gray-300 dark:bg-gray-600', pct: '8%' },
                 ].map((item) => (
-                  <div key={item.label} className="bg-gray-50 rounded-xl p-3 text-center">
-                    <div className="text-lg font-extrabold text-gray-900">{item.value}</div>
-                    <div className="text-[0.65rem] text-gray-500 mb-2">{item.label}</div>
-                    <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div key={item.label} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-3 text-center">
+                    <div className="text-lg font-extrabold text-gray-900 dark:text-gray-100">{item.value}</div>
+                    <div className="text-[0.65rem] text-gray-500 dark:text-gray-400 mb-2">{item.label}</div>
+                    <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div className={`h-full ${item.color} rounded-full`} style={{ width: item.pct }} />
                     </div>
                   </div>
@@ -160,11 +160,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
               {/* Genel progress */}
               <div className="mb-4">
-                <div className="flex justify-between text-[0.78rem] text-gray-600 mb-1.5">
+                <div className="flex justify-between text-[0.78rem] text-gray-600 dark:text-gray-400 mb-1.5">
                   <span className="font-medium">Sprint tamamlanma</span>
                   <span className="font-bold text-blue-600">72%</span>
                 </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full" style={{ width: '72%' }} />
                 </div>
               </div>
@@ -172,7 +172,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {/* Ayırıcı */}
               <div className="flex items-center gap-2 mb-3">
                 <div className="text-[0.7rem] font-bold text-gray-400 uppercase tracking-widest">Yazılımcı Süreleri</div>
-                <div className="flex-1 h-px bg-gray-100" />
+                <div className="flex-1 h-px bg-gray-100 dark:bg-gray-700" />
               </div>
 
               {/* Developer satırları — süre bilgisiyle */}
