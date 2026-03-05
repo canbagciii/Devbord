@@ -21,7 +21,7 @@ import { jiraFilterService } from './lib/jiraFilterService';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading, hasRole, hasKolayIK, user } = useAuth();
-  const { getBorderClass, getTextClass, getPageBgClass, getCardBgClass } = useThemeClasses();
+  const { getBorderClass, getTextClass } = useThemeClasses();
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [checkingSelections, setCheckingSelections] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -76,9 +76,9 @@ const [activeTab, setActiveTab] = useState<
 
   if (loading || checkingSelections) {
     return (
-      <div className={`min-h-screen ${getPageBgClass()} flex items-center justify-center`}>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${getBorderClass()} mx-auto`}></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Yükleniyor...</p>
         </div>
       </div>
@@ -93,10 +93,10 @@ const [activeTab, setActiveTab] = useState<
   // Sadece veri yoksa ve henüz onboarding tamamlanmamışsa Jira filtre sayfasını göster
   if (user && needsOnboarding) {
     return (
-      <div className={`min-h-screen ${getPageBgClass()}`}>
+      <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className={`mb-6 ${getCardBgClass()} rounded-lg shadow-sm p-6 border ${getBorderClass()} border-opacity-30`}>
+          <div className="mb-6 bg-white rounded-lg shadow-sm p-6 border border-blue-200">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               {!user.onboardingCompleted ? 'Devbord\'a Hoş Geldiniz!' : 'Proje ve Yazılımcı Seçimi Gerekli'}
             </h1>
@@ -144,15 +144,15 @@ const [activeTab, setActiveTab] = useState<
   const tabs = hasRole('admin') ? adminTabs : developerTabs;
 
   return (
-    <div className={`min-h-screen ${getPageBgClass()}`}>
+    <div className="min-h-screen bg-gray-50">
       <Header />
       {['projects', 'dashboard', 'assignment'].includes(activeTab) && (
         <SprintNotification />
       )}
-
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tab Navigation */}
-        <div className={`mb-8 ${getCardBgClass()} sticky top-16 z-30 py-4 border-b border-gray-200 shadow-sm backdrop-blur-sm bg-opacity-95`}>
+        <div className="mb-8 bg-white sticky top-16 z-30 py-4 border-b border-gray-200 shadow-sm">
           <nav className="flex space-x-8 max-w-7xl mx-auto">
             {tabs.map((tab) => (
               <button
@@ -182,7 +182,7 @@ const [activeTab, setActiveTab] = useState<
           <div className={activeTab === 'projects' ? '' : 'hidden'}>
             <div>
               {/* Sub-tabs for Projects */}
-              <div className={`mb-6 ${getCardBgClass()} sticky top-32 z-20 py-3 border-b border-gray-100 backdrop-blur-sm bg-opacity-95`}>
+              <div className="mb-6 bg-white sticky top-32 z-20 py-3 border-b border-gray-100">
                 <nav className="flex space-x-1 bg-gray-100 p-1 rounded-lg max-w-fit">
                   <button
                     onClick={() => handleSubTabChange('projects', 'overview')}

@@ -278,11 +278,11 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ open
                 </p>
                 <div className="grid grid-cols-5 gap-3">
                   {[
-                    { name: 'blue', label: 'Mavi', color: 'bg-blue-600', hoverColor: 'hover:bg-blue-700', ringColor: 'ring-blue-600', borderColor: 'border-blue-600', bgLight: 'bg-blue-50' },
-                    { name: 'green', label: 'Yeşil', color: 'bg-green-600', hoverColor: 'hover:bg-green-700', ringColor: 'ring-green-600', borderColor: 'border-green-600', bgLight: 'bg-green-50' },
-                    { name: 'orange', label: 'Turuncu', color: 'bg-orange-600', hoverColor: 'hover:bg-orange-700', ringColor: 'ring-orange-600', borderColor: 'border-orange-600', bgLight: 'bg-orange-50' },
-                    { name: 'red', label: 'Kırmızı', color: 'bg-red-600', hoverColor: 'hover:bg-red-700', ringColor: 'ring-red-600', borderColor: 'border-red-600', bgLight: 'bg-red-50' },
-                    { name: 'slate', label: 'Gri', color: 'bg-slate-600', hoverColor: 'hover:bg-slate-700', ringColor: 'ring-slate-600', borderColor: 'border-slate-600', bgLight: 'bg-slate-50' }
+                    { name: 'blue', label: 'Mavi', color: 'bg-blue-600', hoverColor: 'hover:bg-blue-700', ringColor: 'ring-blue-600' },
+                    { name: 'green', label: 'Yeşil', color: 'bg-green-600', hoverColor: 'hover:bg-green-700', ringColor: 'ring-green-600' },
+                    { name: 'orange', label: 'Turuncu', color: 'bg-orange-600', hoverColor: 'hover:bg-orange-700', ringColor: 'ring-orange-600' },
+                    { name: 'red', label: 'Kırmızı', color: 'bg-red-600', hoverColor: 'hover:bg-red-700', ringColor: 'ring-red-600' },
+                    { name: 'slate', label: 'Gri', color: 'bg-slate-600', hoverColor: 'hover:bg-slate-700', ringColor: 'ring-slate-600' }
                   ].map((themeOption) => (
                     <button
                       key={themeOption.name}
@@ -301,11 +301,11 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ open
                       disabled={saving === 'theme'}
                       className={`relative flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
                         theme === themeOption.name
-                          ? `${themeOption.borderColor} ${themeOption.bgLight}`
+                          ? `border-${themeOption.name}-600 ${themeOption.color} bg-opacity-10`
                           : 'border-gray-200 hover:border-gray-300'
                       } ${saving === 'theme' ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      <div className={`w-10 h-10 rounded-full ${themeOption.color} ${themeOption.hoverColor} transition-transform ${theme === themeOption.name ? `ring-2 ${themeOption.ringColor} ring-offset-2 scale-110` : ''}`} />
+                      <div className={`w-10 h-10 rounded-full ${themeOption.color} ${themeOption.hoverColor} transition-transform ${theme === themeOption.name ? 'ring-2 ' + themeOption.ringColor + ' ring-offset-2 scale-110' : ''}`} />
                       <span className={`mt-2 text-xs font-medium ${theme === themeOption.name ? 'text-gray-900' : 'text-gray-600'}`}>
                         {themeOption.label}
                       </span>
