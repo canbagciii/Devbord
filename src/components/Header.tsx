@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { BarChart3, Calendar, ChevronDown, Zap, Archive } from 'lucide-react';
+import { BarChart3, Calendar, ChevronDown, Zap, Archive, Clock, RefreshCw } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
 import { useThemeClasses } from '../hooks/useThemeClasses';
 import { UserProfile } from './UserProfile';
@@ -208,6 +208,90 @@ export const Header: React.FC = () => {
           from { transform: scale(0); opacity: 0; }
           to   { transform: scale(1); opacity: 1; }
         }
+
+        /* Last refresh pill */
+        .refresh-time-pill {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          padding: 4px 9px 4px 7px;
+          background: #f8fafc;
+          border: 1.5px solid #e5e7eb;
+          border-radius: 8px;
+        }
+        .refresh-time-pill-dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: #22c55e;
+          flex-shrink: 0;
+          animation: pulse-green 2s infinite;
+        }
+        .refresh-time-pill-label {
+          font-size: 10px;
+          font-weight: 500;
+          color: #9ca3af;
+          letter-spacing: 0.2px;
+          white-space: nowrap;
+        }
+        .refresh-time-pill-value {
+          font-size: 11px;
+          font-weight: 600;
+          color: #4b5563;
+          white-space: nowrap;
+          letter-spacing: -0.1px;
+        }
+        .refresh-time-sep {
+          width: 1px;
+          height: 10px;
+          background: #e5e7eb;
+          flex-shrink: 0;
+        }
+
+        /* Refresh button */
+        .refresh-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 0;
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-family: inherit;
+          position: relative;
+          outline: none;
+        }
+        .refresh-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+
+        .refresh-btn-inner {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 13px 6px 10px;
+          background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+          border-radius: 10px;
+          box-shadow: 0 1px 3px rgba(99,102,241,0.3), 0 4px 12px rgba(99,102,241,0.2);
+          transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+        }
+        .refresh-btn:hover:not(:disabled) .refresh-btn-inner {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 6px rgba(99,102,241,0.35), 0 6px 18px rgba(99,102,241,0.25);
+        }
+        .refresh-btn:active:not(:disabled) .refresh-btn-inner {
+          transform: translateY(0);
+          box-shadow: 0 1px 3px rgba(99,102,241,0.3);
+        }
+        .refresh-btn-text {
+          font-size: 12px;
+          font-weight: 600;
+          color: white;
+          letter-spacing: 0.1px;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        .spin { animation: spin 0.8s linear infinite; }
       `}</style>
 
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
@@ -294,19 +378,25 @@ export const Header: React.FC = () => {
                 {/* === / YENİ SPRINT SELECTOR === */}
 
                 {/* Son yenileme bilgisi */}
-                <div className="text-[11px] text-gray-500">
-                  Son yenileme: {formatLastRefresh()}
+                <div className="refresh-time-pill">
+                  <Clock size={11} color="#9ca3af" />
+                  <span className="refresh-time-pill-label">Son güncelleme</span>
+                  <div className="refresh-time-sep" />
+                  <span className="refresh-time-pill-value">{formatLastRefresh()}</span>
+                  {lastRefreshAt && <div className="refresh-time-pill-dot" />}
                 </div>
 
                 {/* Refresh Button */}
                 <button
+                  className="refresh-btn"
                   onClick={refresh}
                   disabled={loading}
-                  className={`flex items-center space-x-1.5 px-3 py-1.5 ${getBgClass()} text-white rounded-lg ${getHoverBgClass()} disabled:opacity-50 transition-colors text-xs font-medium`}
                   title="Tüm verileri yenile"
                 >
-                  <BarChart3 className={`h-3.5 w-3.5 ${loading ? 'animate-pulse' : ''}`} />
-                  <span>{loading ? 'Yenileniyor...' : 'Yenile'}</span>
+                  <div className="refresh-btn-inner">
+                    <RefreshCw size={13} color="white" strokeWidth={2.5} className={loading ? 'spin' : ''} />
+                    <span className="refresh-btn-text">{loading ? 'Yenileniyor...' : 'Yenile'}</span>
+                  </div>
                 </button>
               </div>
 
