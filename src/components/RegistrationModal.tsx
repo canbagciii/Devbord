@@ -11,6 +11,7 @@ interface RegistrationModalProps {
 export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose, onSwitchToLogin }) => {
   const { login, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState<'idle' | 'validating' | 'registering'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<CompanyRegistrationData>({
     companyName: '',
@@ -43,12 +44,51 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose, o
     setLoading(true);
     setError(null);
 
+    // 1. ADIM: Jira bağlantısını doğrula
+    setLoadingStep('validating');
+    try {
+      const credentials = btoa(`${formData.jiraEmail}:${formData.jiraApiToken}`);
+      const jiraRes = await fetch(`${formData.jiraBaseUrl}/rest/api/3/myself`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${credentials}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!jiraRes.ok) {
+        const status = jiraRes.status;
+        if (status === 401) {
+          setError('Jira kimlik doğrulaması başarısız. E-posta veya API token hatalı.');
+        } else if (status === 403) {
+          setError('Jira erişim izni reddedildi. API token yetkilerini kontrol edin.');
+        } else if (status === 404) {
+          setError("Jira Base URL bulunamadı. URL'yi kontrol edin.");
+        } else {
+          setError(`Jira bağlantısı başarısız (HTTP ${status}). Bilgilerinizi kontrol edin.`);
+        }
+        setLoading(false);
+        setLoadingStep('idle');
+        return;
+      }
+    } catch {
+      setError(
+        "Jira'ya bağlanılamadı. Base URL'yi ve internet bağlantınızı kontrol edin."
+      );
+      setLoading(false);
+      setLoadingStep('idle');
+      return;
+    }
+
+    // 2. ADIM: Jira doğrulandı, hesap oluşturmaya devam et
+    setLoadingStep('registering');
     try {
       const result = await registrationService.registerCompany(formData);
 
       if (!result.success) {
         setError(result.error || 'Kayıt işlemi başarısız oldu');
         setLoading(false);
+        setLoadingStep('idle');
         return;
       }
 
@@ -59,6 +99,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose, o
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bir hata oluştu');
       setLoading(false);
+      setLoadingStep('idle');
     }
   };
 
@@ -66,6 +107,12 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose, o
     if (e.target === e.currentTarget) {
       onClose();
     }
+  };
+
+  const getButtonLabel = () => {
+    if (loadingStep === 'validating') return 'Jira doğrulanıyor...';
+    if (loadingStep === 'registering') return 'Hesap Oluşturuluyor...';
+    return 'Hesap Oluştur ve Başla →';
   };
 
   return (
@@ -210,7 +257,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose, o
               </div>
               <div>
                 <label className="block text-[0.82rem] font-semibold text-gray-900 mb-1.5">Jira Base URL</label>
-                <input 
+                <input
                   type="url"
                   name="jiraBaseUrl"
                   value={formData.jiraBaseUrl}
@@ -265,7 +312,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose, o
             disabled={loading}
             className="w-full py-3 rounded-xl text-[0.95rem] font-bold text-white bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
-            {loading ? 'Hesap Oluşturuluyor...' : 'Hesap Oluştur ve Başla →'}
+            {getButtonLabel()}
           </button>
 
           <div className="text-center mt-4 text-[0.83rem] text-gray-600">
