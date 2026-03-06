@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ThemeProvider } from './context/ThemeContext';
-import { useThemeClasses } from './hooks/useThemeClasses';
 import { LandingPage } from './components/LandingPage';
 import { Header } from './components/Header';
 import { DeveloperWorkloadDashboard } from './components/DeveloperWorkloadDashboard';
@@ -21,13 +19,16 @@ import { jiraFilterService } from './lib/jiraFilterService';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading, hasRole, hasKolayIK, user } = useAuth();
-  const { getBorderClass, getTextClass } = useThemeClasses();
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const [checkingSelections, setCheckingSelections] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-const [activeTab, setActiveTab] = useState<
-  'dashboard' | 'projects' | 'assignment' | 'analytics' | 'evaluations' | 'my-evaluations' | 'daily-tracking' | 'user-management' | 'kolayik-employees'
->('daily-tracking');
+
+  // 'idle'    → henüz kontrol başlamadı (kullanıcı giriş yapmamış)
+  // 'pending' → kontrol devam ediyor (spinner göster)
+  // 'done'    → kontrol tamamlandı
+  const [selectionCheckStatus, setSelectionCheckStatus] = useState<'idle' | 'pending' | 'done'>('idle');
+
+  const [activeTab, setActiveTab] = useState<
+    'dashboard' | 'projects' | 'assignment' | 'analytics' | 'evaluations' | 'my-evaluations' | 'daily-tracking' | 'user-management' | 'kolayik-employees'
+  >('daily-tracking');
   const [activeSubTab, setActiveSubTab] = useState<{
     dashboard: 'workload';
     projects: 'overview' | 'evaluations';
@@ -37,44 +38,46 @@ const [activeTab, setActiveTab] = useState<
   });
 
   const handleSubTabChange = (mainTab: 'dashboard' | 'projects', subTab: string) => {
-    setActiveSubTab(prev => ({
-      ...prev,
-      [mainTab]: subTab
-    }));
+    setActiveSubTab(prev => ({ ...prev, [mainTab]: subTab }));
   };
 
   useEffect(() => {
+    if (!isAuthenticated || !user) {
+      // Kullanıcı çıkış yaptıysa sıfırla
+      setSelectionCheckStatus('idle');
+      return;
+    }
+
+    // Authenticated olur olmaz hemen 'pending' yap → spinner göster
+    setSelectionCheckStatus('pending');
+
     const checkSelections = async () => {
-      if (!isAuthenticated || !user) {
-        setCheckingSelections(false);
-        return;
-      }
       try {
         const [projects, developers] = await Promise.all([
           jiraFilterService.getSelectedProjects(),
           jiraFilterService.getSelectedDevelopers()
         ]);
         const hasData = projects.length >= 1 && developers.length >= 1;
-        // En az bir proje ve bir yazılımcı varsa ana uygulamaya geç (onboardingCompleted'a bakmadan)
-        if (hasData) {
-          setNeedsOnboarding(false);
-        } else if (user.onboardingCompleted) {
-          // Onboarding tamamlanmış ama veri silinmişse yine de zorla filtreye atma
-          setNeedsOnboarding(false);
+        if (hasData || user.onboardingCompleted) {
+          setNeedsOnboarding(!hasData);
         } else {
           setNeedsOnboarding(true);
         }
       } catch (error) {
         console.error('Error checking selections:', error);
         setNeedsOnboarding(false);
+      } finally {
+        setSelectionCheckStatus('done');
       }
-      setCheckingSelections(false);
     };
 
     checkSelections();
   }, [isAuthenticated, user]);
 
-  if (loading || checkingSelections) {
+  // Auth yükleniyor VEYA kullanıcı giriş yapmış ama selection kontrolü bitmedi
+  const isLoading = loading || (isAuthenticated && selectionCheckStatus === 'pending');
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -86,11 +89,9 @@ const [activeTab, setActiveTab] = useState<
   }
 
   if (!isAuthenticated) {
-    // Henüz giriş yapılmadan sadece Landing göster; kullanıcı kendi butonlarıyla login/register açsın
     return <LandingPage />;
   }
 
-  // Sadece veri yoksa ve henüz onboarding tamamlanmamışsa Jira filtre sayfasını göster
   if (user && needsOnboarding) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -124,18 +125,17 @@ const [activeTab, setActiveTab] = useState<
     );
   }
 
-  // Rol bazlı tab listesi
   const adminTabs = [
-  { id: 'daily-tracking', label: 'Zaman Takibi', icon: BarChart3 },
-  { id: 'projects', label: 'Sprintler', icon: Activity },
-  { id: 'dashboard', label: 'Ekip Analizi', icon: Users },
-  { id: 'assignment', label: 'Kapasite', icon: Plus },
-  { id: 'user-management', label: 'Kullanıcılar', icon: Settings },
-  ...(hasKolayIK ? [{ id: 'kolayik-employees' as const, label: 'İzin Takibi', icon: Users }] : []),
-];
+    { id: 'daily-tracking', label: 'Zaman Takibi', icon: BarChart3 },
+    { id: 'projects', label: 'Sprintler', icon: Activity },
+    { id: 'dashboard', label: 'Ekip Analizi', icon: Users },
+    { id: 'assignment', label: 'Kapasite', icon: Plus },
+    { id: 'user-management', label: 'Kullanıcılar', icon: Settings },
+    ...(hasKolayIK ? [{ id: 'kolayik-employees' as const, label: 'İzin Takibi', icon: Users }] : []),
+  ];
 
   const developerTabs = [
-    { id: 'daily-tracking', label: 'Günlük / Haftalık Süre Takibi', icon: BarChart3 },
+    { id: 'daily-tracking', label: 'Günlük Süre Takibi', icon: BarChart3 },
     { id: 'projects', label: 'Proje & Sprint Genel Bakış', icon: Activity },
     { id: 'dashboard', label: 'Yazılımcı Analizi', icon: Users },
     { id: 'my-evaluations', label: 'Sprint Değerlendirmelerim', icon: MessageSquare }
@@ -149,7 +149,7 @@ const [activeTab, setActiveTab] = useState<
       {['projects', 'dashboard', 'assignment'].includes(activeTab) && (
         <SprintNotification />
       )}
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tab Navigation */}
         <div className="mb-8 bg-white sticky top-16 z-30 py-4 border-b border-gray-200 shadow-sm">
@@ -160,7 +160,7 @@ const [activeTab, setActiveTab] = useState<
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`flex items-center space-x-2 px-1 py-2 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === tab.id
-                    ? `${getBorderClass()} ${getTextClass()}`
+                    ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -171,24 +171,21 @@ const [activeTab, setActiveTab] = useState<
           </nav>
         </div>
 
-        {/* Tab Content - bileşenleri unmount etmeden sadece gizle */}
+        {/* Tab Content */}
         <div>
-          {/* Yazılımcı Analizi */}
           <div className={activeTab === 'dashboard' ? '' : 'hidden'}>
             <DeveloperWorkloadDashboard />
           </div>
 
-          {/* Proje & Sprint Genel Bakış / Sprint Değerlendirmeleri */}
           <div className={activeTab === 'projects' ? '' : 'hidden'}>
             <div>
-              {/* Sub-tabs for Projects */}
               <div className="mb-6 bg-white sticky top-32 z-20 py-3 border-b border-gray-100">
                 <nav className="flex space-x-1 bg-gray-100 p-1 rounded-lg max-w-fit">
                   <button
                     onClick={() => handleSubTabChange('projects', 'overview')}
                     className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium text-sm transition-colors ${
                       activeSubTab.projects === 'overview'
-                        ? `bg-white ${getTextClass()} shadow-sm`
+                        ? 'bg-white text-blue-600 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -200,8 +197,8 @@ const [activeTab, setActiveTab] = useState<
                       onClick={() => handleSubTabChange('projects', 'evaluations')}
                       className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium text-sm transition-colors ${
                         activeSubTab.projects === 'evaluations'
-                          ? `bg-white ${getTextClass()} shadow-sm`
-                          : 'text-gray-600 hover:text-gray-900'
+                          ? 'bg-white text-blue-600 shadow-sm'
+                          : 'text-gray-600 hover:text-gray:900'
                       }`}
                     >
                       <MessageSquare className="h-4 w-4" />
@@ -210,8 +207,7 @@ const [activeTab, setActiveTab] = useState<
                   )}
                 </nav>
               </div>
-              
-              {/* Sub-tab Content */}
+
               <div>
                 {activeSubTab.projects === 'overview' && <ProjectSprintOverview />}
                 {activeSubTab.projects === 'evaluations' && hasRole('admin') && <SprintEvaluationDashboard />}
@@ -219,33 +215,28 @@ const [activeTab, setActiveTab] = useState<
             </div>
           </div>
 
-          {/* Jirada Görev Atama */}
           {hasRole('admin') && (
             <div className={activeTab === 'assignment' ? '' : 'hidden'}>
               <ManualTaskAssignment />
             </div>
           )}
 
-          {/* Kullanıcı & Filtre Yönetimi */}
           {hasRole('admin') && (
             <div className={activeTab === 'user-management' ? '' : 'hidden'}>
               <UserManagement />
             </div>
           )}
 
-          {/* Kolay İK */}
           {hasRole('admin') && hasKolayIK && (
             <div className={activeTab === 'kolayik-employees' ? '' : 'hidden'}>
               <KolayIKEmployees />
             </div>
           )}
 
-          {/* Günlük Süre Takibi */}
           <div className={activeTab === 'daily-tracking' ? '' : 'hidden'}>
             <DailyWorklogTracking />
           </div>
 
-          {/* Sprint Değerlendirmelerim (developer) */}
           {!hasRole('admin') && (
             <div className={activeTab === 'my-evaluations' ? '' : 'hidden'}>
               <UserSprintEvaluations />
@@ -254,17 +245,15 @@ const [activeTab, setActiveTab] = useState<
         </div>
       </div>
     </div>
-  ); 
+  );
 };
 
 function App() {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <JiraDataProvider>
-          <AppContent />
-        </JiraDataProvider>
-      </ThemeProvider>
+      <JiraDataProvider>
+        <AppContent />
+      </JiraDataProvider>
     </AuthProvider>
   );
 }
