@@ -466,56 +466,130 @@ export const JiraFilterManagement: React.FC<JiraFilterManagementProps> = ({
       )}
 
       {/* STEP 2 */}
-      {currentStep === 2 && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-8 py-8">
-          <div className="mb-6">
-            <h3 className="text-base font-bold text-gray-900">Analiz Ayarları</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Günlük çalışma süresini ve kapasite hesaplamasında kullanılacak birimi belirleyin.</p>
+    {currentStep === 2 && (
+  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-8 py-8">
+    <div className="mb-6">
+      <h3 className="text-base font-bold text-gray-900">Analiz Ayarları</h3>
+      <p className="text-xs text-gray-400 mt-0.5">
+        Günlük çalışma süresini ve kapasite hesaplamasında kullanılacak birimi belirleyin.
+      </p>
+    </div>
+
+    <div className="space-y-6">
+
+      {capacityMetric === 'hours' && (
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-2">
+            Günlük çalışma süresi <span className="font-normal text-gray-400">(saat)</span>
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min={1}
+              max={24}
+              value={dailyHours}
+              onChange={e => {
+                const v = parseInt(e.target.value || '0', 10);
+                setDailyHours(Number.isNaN(v) ? 0 : v);
+              }}
+              className="w-24 px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-indigo-500 focus:outline-none"
+            />
+            <span className="text-xs text-gray-400 font-medium">saat / gün</span>
           </div>
-          <div className="space-y-6">
-            {capacityMetric === 'hours' && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">Günlük çalışma süresi <span className="font-normal text-gray-400">(saat)</span></label>
-                <div className="flex items-center gap-3">
-                  <input type="number" min={1} max={24} value={dailyHours} onChange={e => { const v = parseInt(e.target.value || '0', 10); setDailyHours(Number.isNaN(v) ? 0 : v); }} className="w-24 px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-indigo-500 focus:outline-none" />
-                  <span className="text-xs text-gray-400 font-medium">saat / gün</span>
-                </div>
-                <p className="text-xs text-gray-400 mt-2">Toplantılar ve molalar hariç, geliştirme için ayırdığınız ortalama süre.</p>
-              </div>
-            )}
-            {capacityMetric === 'storyPoints' && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">Günlük hedef <span className="font-normal text-gray-400">(kaç story point?)</span></label>
-                <div className="flex items-center gap-3">
-                  <input type="number" min={1} max={100} value={dailyStoryPoints} onChange={e => { const v = parseInt(e.target.value || '0', 10); setDailyStoryPoints(Number.isNaN(v) ? 0 : v); }} className="w-28 px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-indigo-500 focus:outline-none" />
-                  <span className="text-xs text-gray-400 font-medium">story point / gün</span>
-                </div>
-                <p className="text-xs text-gray-400 mt-2">Ortalama bir geliştiricinin günde tamamlamasını beklediğiniz story point miktarı.</p>
-              </div>
-            )}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Hesaplama tipi <span className="font-normal text-gray-400">(story point mi, saat mi?)</span></label>
-              <div className="flex gap-3">
-                {[{ value: 'hours', label: 'Saat bazlı' }, { value: 'storyPoints', label: 'Story Point bazlı' }].map(opt => (
-                  <button key={opt.value} type="button" onClick={() => setCapacityMetric(opt.value as 'hours' | 'storyPoints')} className={`flex-1 px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${capacityMetric === opt.value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-600 hover:border-indigo-200'}`}>
-                    {opt.label}{capacityMetric === opt.value && <span className="ml-2 text-xs font-bold">✓</span>}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-gray-400 mt-2">Bu seçim sadece gösterim amaçlıdır, Jira filtrelerini etkilemez.</p>
-            </div>
-          </div>
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-100">
-            <button type="button" onClick={() => setCurrentStep(1)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600 transition-all">
-              <ArrowLeft className="h-4 w-4" />Geri
-            </button>
-            <button type="button" onClick={() => setCurrentStep(3)} className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200">
-              Özeti Gör<ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            Toplantılar ve molalar hariç, geliştirme için ayırdığınız ortalama süre.
+          </p>
         </div>
       )}
 
+      {/* STORY POINT BLOĞU DEVRE DIŞI */}
+      {/*
+      {capacityMetric === 'storyPoints' && (
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-2">
+            Günlük hedef <span className="font-normal text-gray-400">(kaç story point?)</span>
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={dailyStoryPoints}
+              onChange={e => {
+                const v = parseInt(e.target.value || '0', 10);
+                setDailyStoryPoints(Number.isNaN(v) ? 0 : v);
+              }}
+              className="w-28 px-3 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-indigo-500 focus:outline-none"
+            />
+            <span className="text-xs text-gray-400 font-medium">story point / gün</span>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            Ortalama bir geliştiricinin günde tamamlamasını beklediğiniz story point miktarı.
+          </p>
+        </div>
+      )}
+      */}
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-700 mb-2">
+          Hesaplama tipi <span className="font-normal text-gray-400">(story point mi, saat mi?)</span>
+        </label>
+
+        <div className="flex gap-3">
+
+          {/* STORY POINT SEÇENEĞİ DEVRE DIŞI */}
+          {[
+            { value: 'hours', label: 'Saat bazlı' },
+            // { value: 'storyPoints', label: 'Story Point bazlı' }
+          ].map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setCapacityMetric(opt.value as 'hours' | 'storyPoints')}
+              className={`flex-1 px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
+                capacityMetric === opt.value
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                  : 'border-gray-200 text-gray-600 hover:border-indigo-200'
+              }`}
+            >
+              {opt.label}
+              {capacityMetric === opt.value && (
+                <span className="ml-2 text-xs font-bold">✓</span>
+              )}
+            </button>
+          ))}
+
+        </div>
+
+        <p className="text-xs text-gray-400 mt-2">
+          Bu seçim sadece gösterim amaçlıdır, Jira filtrelerini etkilemez.
+        </p>
+      </div>
+
+    </div>
+
+    <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-100">
+      <button
+        type="button"
+        onClick={() => setCurrentStep(1)}
+        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600 transition-all"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Geri
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setCurrentStep(3)}
+        className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200"
+      >
+        Özeti Gör
+        <ArrowRight className="h-4 w-4" />
+      </button>
+    </div>
+
+  </div>
+)}
       {/* STEP 3 */}
       {currentStep === 3 && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-8 py-8">

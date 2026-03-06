@@ -110,7 +110,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegis
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl text-[0.95rem] font-bold text-white bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 rounded-xl text-[0.95rem] font-bold text-white bg-blue-600 hover:bg-blue-800 hover:bg-blue-800 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
           </button>

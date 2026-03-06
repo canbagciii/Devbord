@@ -1,10 +1,12 @@
 import React from 'react';
 import { BarChart3, Calendar } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
+import { useThemeClasses } from '../hooks/useThemeClasses';
 import { UserProfile } from './UserProfile';
- 
+
 export const Header: React.FC = () => {
   const { refresh, loading, sprintType, setSprintType, lastRefreshAt } = useJiraData();
+  const { getBgClass, getHoverBgClass, getRingClass } = useThemeClasses();
 
   const formatLastRefresh = () => {
     if (!lastRefreshAt) return 'Henüz yenilenmedi';
@@ -25,7 +27,7 @@ export const Header: React.FC = () => {
             {/* Left Side - Logo and Title */}
 <div className="flex items-center space-x-3">
 <div className="flex items-center space-x-2">
-<div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg">
+<div className={`flex items-center justify-center w-8 h-8 ${getBgClass()} rounded-lg`}>
 <BarChart3 className="h-4 w-4 text-white" />
 </div>
 <div>
@@ -44,7 +46,7 @@ export const Header: React.FC = () => {
 <select
                     value={sprintType}
                     onChange={(e) => setSprintType(e.target.value as 'active' | 'closed')}
-                    className="text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    className={`text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 focus:ring-2 ${getRingClass()} focus:border-transparent bg-white`}
                     disabled={loading}
 >
 <option value="active">Aktif Sprintler</option>
@@ -61,7 +63,7 @@ export const Header: React.FC = () => {
 <button
                   onClick={refresh}
                   disabled={loading}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors text-xs font-medium"
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 ${getBgClass()} text-white rounded-lg ${getHoverBgClass()} disabled:opacity-50 transition-colors text-xs font-medium`}
                   title="Tüm verileri yenile"
 >
 <BarChart3 className={`h-3.5 w-3.5 ${loading ? 'animate-pulse' : ''}`} />

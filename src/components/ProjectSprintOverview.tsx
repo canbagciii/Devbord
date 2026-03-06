@@ -3,11 +3,12 @@ import { JiraSprint, JiraProject, JiraTask } from '../types';
 import { jiraService } from '../lib/jiraService';
 import { SprintEvaluationForm } from './SprintEvaluationForm';
 import { supabaseEvaluationService } from '../lib/supabaseEvaluationService';
-import { Activity, Calendar, Users, Clock, Loader, RefreshCw, ChevronRight, Download, FileText, Bug, Zap, Target, CheckCircle } from 'lucide-react';
+import { Activity, Calendar, Users, Clock, Loader, RefreshCw, ChevronRight, Download, FileText, Bug, Zap, Target, CheckCircle, HelpCircle } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
 import { useAuth } from '../context/AuthContext';
-import { exportProjectSprintToCSV } from '../utils/csvExport';
+
 import { getPlainTextFromJiraAdf } from '../utils/jiraUtils';
+import ProjectSprintOnboarding, { useProjectSprintOnboarding } from './ProjectSprintOverviewOnboarding';
 
 interface SprintWithDetails extends JiraSprint {
   boardName: string;
@@ -81,6 +82,7 @@ const filterTasksByDateRange = (tasks: JiraTask[], start: string | null, end: st
 export const ProjectSprintOverview: React.FC = () => {
   const { projects, sprints, sprintTasks, loading, error, refresh, sprintType, createdDateRange } = useJiraData();
   const { canAccessProject, getAccessibleProjects, user, hasRole } = useAuth();
+  const { isOnboardingOpen, openOnboarding, closeOnboarding } = useProjectSprintOnboarding();
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>('all');
   const [userEvaluations, setUserEvaluations] = useState<Record<string, boolean>>({});
@@ -458,6 +460,64 @@ export const ProjectSprintOverview: React.FC = () => {
     };
   }, [sortedSprints]);
 
+  const exportToCSV = () => {
+    if (sortedSprints.length === 0) { alert('İndirilecek veri bulunamadı.'); return; }
+
+    const q = (val: string | number | null | undefined) =>
+      `"${String(val ?? '').replace(/"/g, '""')}"`;
+
+    const fmtDate = (d?: string | null) =>
+      d ? new Date(d).toLocaleDateString('tr-TR') : '—';
+
+    // Tüm sprint'lerde geçen issue tiplerini topla (Epic hariç)
+    const allTypes = Array.from(new Set(
+      sortedSprints.flatMap(s =>
+        Object.keys(s.issueTypeBreakdown || {}).filter(t => {
+          const tl = t.toLowerCase();
+          return tl !== 'epic' && tl !== 'epik';
+        })
+      )
+    )).sort();
+
+    const headers = [
+      q('Proje'), q('Sprint Adı'),
+      q('Ana Görev'), q('Tamamlanan'),
+      q('Başarı Oranı (%)'),
+      q('Toplam Tahmin (h)'), q('Harcanan Süre (h)'),
+      q('Sprint Başlangıç'), q('Sprint Bitiş'),
+      ...allTypes.flatMap(t => [q(`${t} (Toplam)`), q(`${t} (Tamamlanan)`)]),
+    ].join(',');
+
+    const rows = sortedSprints.map(sprint => {
+      const breakdown = sprint.issueTypeBreakdown || {};
+      return [
+        q(`${sprint.projectKey} – ${sprint.projectName}`),
+        q(sprint.name),
+        q(sprint.taskCount),
+        q(sprint.doneTaskCount || 0),
+        q(`%${sprint.successRate}`),
+        q(sprint.totalHours > 0 ? `${Math.round(sprint.totalHours * 10) / 10}h` : '—'),
+        q(sprint.totalActualHours > 0 ? `${Math.round((sprint.totalActualHours || 0) * 10) / 10}h` : '—'),
+        q(fmtDate(sprint.startDate)),
+        q(fmtDate(sprint.endDate)),
+        ...allTypes.flatMap(t => {
+          const data = breakdown[t];
+          return [q(data?.count ?? 0), q(data?.completed ?? 0)];
+        }),
+      ].join(',');
+    });
+
+    const csvContent = [headers, ...rows].join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.setAttribute('href', URL.createObjectURL(blob));
+    link.setAttribute('download', `sprint_ozet_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -488,10 +548,13 @@ export const ProjectSprintOverview: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Onboarding Modal */}
+      <ProjectSprintOnboarding isOpen={isOnboardingOpen} onClose={closeOnboarding} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Proje & Sprint Genel Bakış</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Sprint & Değerlendirme Genel Bakış</h2>
           <p className="text-gray-600 mt-1">
             {sprintType === 'active' 
               ? 'Aktif sprintlerin proje bazlı analizi'
@@ -512,8 +575,16 @@ export const ProjectSprintOverview: React.FC = () => {
             </span>
           )}
           <button
-            onClick={() => sprints && sprintTasks && exportProjectSprintToCSV(sprints, sprintTasks)}
-            disabled={!sprints || sortedSprints.length === 0}
+            onClick={openOnboarding}
+            className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-sm"
+            title="Sayfayı nasıl kullanacağınızı öğrenin"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span>Nasıl Kullanılır?</span>
+          </button>
+          <button
+            onClick={exportToCSV}
+            disabled={sortedSprints.length === 0}
             className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
           >
             <Download className="h-4 w-4" />
@@ -763,8 +834,6 @@ export const ProjectSprintOverview: React.FC = () => {
                   <span className="text-sm text-gray-600">Harcanan Süre:</span>
                   <span className="font-medium text-orange-600">{Math.round((sprint.totalActualHours || 0) * 10) / 10}h</span>
                 </div>
-                
-               
 
                 {sprint.startDate && sprint.endDate && (
                   <div className="pt-2 border-t border-gray-100">
@@ -781,13 +850,11 @@ export const ProjectSprintOverview: React.FC = () => {
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <p className="text-xs font-medium text-gray-700 mb-2">Sprintte Çalışanlar:</p>
                   <div className="flex flex-wrap gap-1">
-      {sprint.assignedDevelopers.map((developer, idx) => (
-        <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-          {developer}
-        </span>
-      ))}
-                   
-            
+                    {sprint.assignedDevelopers.map((developer, idx) => (
+                      <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                        {developer}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}

@@ -52,6 +52,8 @@ export interface Database {
           role: 'admin' | 'analyst' | 'developer';
           assigned_projects: string[] | null;
           is_active: boolean;
+          onboarding_completed: boolean;
+          theme_preference: 'blue' | 'green' | 'orange' | 'red' | 'slate';
           created_at: string;
           updated_at: string;
         };
@@ -64,6 +66,8 @@ export interface Database {
           role: 'admin' | 'analyst' | 'developer';
           assigned_projects?: string[] | null;
           is_active?: boolean;
+          onboarding_completed?: boolean;
+          theme_preference?: 'blue' | 'green' | 'orange' | 'red' | 'slate';
           created_at?: string;
           updated_at?: string;
         };
@@ -76,6 +80,8 @@ export interface Database {
           role?: 'admin' | 'analyst' | 'developer';
           assigned_projects?: string[] | null;
           is_active?: boolean;
+          onboarding_completed?: boolean;
+          theme_preference?: 'blue' | 'green' | 'orange' | 'red' | 'slate';
           created_at?: string;
           updated_at?: string;
         };

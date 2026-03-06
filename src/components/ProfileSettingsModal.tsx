@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme, ThemeColor } from '../context/ThemeContext';
 import { useUsers } from '../hooks/useUsers';
 import { supabase } from '../lib/supabase';
-import { X, Save, User, Building2, ExternalLink, Users } from 'lucide-react';
+import { X, Save, User, Building2, ExternalLink, Users, Palette } from 'lucide-react';
 
 interface CompanyData {
   id: string;
@@ -24,6 +25,7 @@ interface ProfileSettingsModalProps {
 
 export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ open, onClose }) => {
   const { user, refreshKolayIK } = useAuth();
+  const { theme, setTheme } = useTheme();
   const { updateUser } = useUsers();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -264,6 +266,62 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ open
                   </button>
                 </form>
               </section>
+
+              {/* Tema Ayarları */}
+{/*
+<section className="border-t border-gray-200 pt-6">
+  <div className="flex items-center gap-2 mb-3">
+    <Palette className="h-5 w-5 text-blue-600" />
+    <h3 className="text-lg font-medium text-gray-900">Tema Rengi</h3>
+  </div>
+  <p className="text-sm text-gray-600 mb-4">
+    Uygulamanın ana rengini seçin. Seçtiğiniz renk tüm sayfalarda kullanılacaktır.
+  </p>
+  <div className="grid grid-cols-5 gap-3">
+    {[
+      { name: 'blue', label: 'Mavi', color: 'bg-blue-600', hoverColor: 'hover:bg-blue-700', ringColor: 'ring-blue-600' },
+      { name: 'green', label: 'Yeşil', color: 'bg-green-600', hoverColor: 'hover:bg-green-700', ringColor: 'ring-green-600' },
+      { name: 'orange', label: 'Turuncu', color: 'bg-orange-600', hoverColor: 'hover:bg-orange-700', ringColor: 'ring-orange-600' },
+      { name: 'red', label: 'Kırmızı', color: 'bg-red-600', hoverColor: 'hover:bg-red-700', ringColor: 'ring-red-600' },
+      { name: 'slate', label: 'Gri', color: 'bg-slate-600', hoverColor: 'hover:bg-slate-700', ringColor: 'ring-slate-600' }
+    ].map((themeOption) => (
+      <button
+        key={themeOption.name}
+        type="button"
+        onClick={async () => {
+          setSaving('theme');
+          try {
+            await setTheme(themeOption.name as ThemeColor);
+            showMessage('success', 'Tema rengi güncellendi.');
+          } catch (e) {
+            showMessage('error', 'Tema güncellenemedi.');
+          } finally {
+            setSaving(null);
+          }
+        }}
+        disabled={saving === 'theme'}
+        className={`relative flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
+          theme === themeOption.name
+            ? \`border-\${themeOption.name}-600 \${themeOption.color} bg-opacity-10\`
+            : 'border-gray-200 hover:border-gray-300'
+        } \${saving === 'theme' ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
+        <div className={`w-10 h-10 rounded-full ${themeOption.color} ${themeOption.hoverColor} transition-transform ${theme === themeOption.name ? 'ring-2 ' + themeOption.ringColor + ' ring-offset-2 scale-110' : ''}`} />
+        <span className={`mt-2 text-xs font-medium ${theme === themeOption.name ? 'text-gray-900' : 'text-gray-600'}`}>
+          {themeOption.label}
+        </span>
+        {theme === themeOption.name && (
+          <div className="absolute top-1 right-1">
+            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+          </div>
+        )}
+      </button>
+    ))}
+  </div>
+</section>
+*/}
 
               {/* Şirket Bilgileri - Sadece admin */}
               {user?.role === 'admin' && (

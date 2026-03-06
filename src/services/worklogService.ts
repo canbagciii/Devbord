@@ -138,7 +138,7 @@ class WorklogService {
         
         // Sayfalı issue çekme (GET: POST /search/jql 400 Invalid payload dönüyor)
         while (startAt < total) {
-          const fieldsParam = 'worklog,summary,project,issuetype,parent,updated,created';
+          const fieldsParam = 'worklog,summary,project,issuetype,parent,updated,created,customfield_10016,customfield_10026';
           const searchUrl = `/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${pageSize}&fields=${encodeURIComponent(fieldsParam)}`;
           const page = await this.invokeJiraProxy({
             body: {
@@ -215,6 +215,9 @@ class WorklogService {
               dailyEntries[worklogDate] = [];
             }
 
+            // Story point field'ını bul (customfield_10016 veya customfield_10026)
+            const storyPoints = issue.fields.customfield_10016 || issue.fields.customfield_10026 || undefined;
+
             const worklogEntry: WorklogEntry = {
               id: `${issue.key}-${worklog.started}`,
               issueKey: issue.key,
@@ -228,7 +231,8 @@ class WorklogService {
               started: worklog.started,
               comment: worklog.comment,
               project: issue.fields.project.name,
-              issueType: issue.fields.issuetype?.name || 'Task'
+              issueType: issue.fields.issuetype?.name || 'Task',
+              storyPoints: storyPoints
             };
 
             dailyEntries[worklogDate].push(worklogEntry);
@@ -238,19 +242,23 @@ class WorklogService {
         // Günlük özetleri oluştur
         const dailySummaries: DailyWorklogSummary[] = allDates.map(date => {
           const totalHours = Math.round((dailyHours[date] || 0) * 100) / 100;
-          
+          const entries = dailyEntries[date] || [];
+          const totalStoryPoints = entries.reduce((sum, entry) => sum + (entry.storyPoints || 0), 0);
+
           return {
             date,
             totalHours,
+            totalStoryPoints,
             status: 'sufficient',
             statusText: totalHours > 0 ? `${totalHours}h` : '-',
             statusColor: 'bg-gray-100 text-gray-800 border-gray-200',
-            entries: dailyEntries[date] || []
+            entries
           };
         });
         
         // Aylık toplam hesapla
         const monthlyTotal = Math.round(Object.values(dailyHours).reduce((sum: number, hours: number) => sum + hours, 0) * 100) / 100;
+        const monthlyTotalStoryPoints = dailySummaries.reduce((sum, day) => sum + (day.totalStoryPoints || 0), 0);
 
         // Sadece iş günlerini say (Pazartesi-Cuma)
         const workingDaysInMonth = allDates.filter(date => {
@@ -290,6 +298,7 @@ class WorklogService {
           email: devEmail,
           dailySummaries,
           weeklyTotal: monthlyTotal,
+          weeklyTotalStoryPoints: monthlyTotalStoryPoints,
           weeklyTarget: monthlyTarget,
           weeklyStatus: monthlyStatus
         });
@@ -362,7 +371,7 @@ class WorklogService {
       const allWorklogs: any[] = [];
       const jqlStartDate = startDate.replace(/-/g, '/');
       const jqlEndDate = endDate.replace(/-/g, '/');
-      const fieldsParam = 'worklog,summary,project,issuetype,parent,updated,created';
+      const fieldsParam = 'worklog,summary,project,issuetype,parent,updated,created,customfield_10016,customfield_10026';
 
       for (const developer of allowedDevelopers) {
         try {
@@ -416,6 +425,9 @@ class WorklogService {
               if (worklogDate < startDate || worklogDate > endDate) continue;
               if (this.normalizeName(worklog.author.displayName) !== this.normalizeName(developer)) continue;
 
+              // Story point field'ını bul
+              const storyPoints = issue.fields.customfield_10016 || issue.fields.customfield_10026 || undefined;
+
               allWorklogs.push({
                 author: { displayName: worklog.author.displayName, accountId: worklog.author.accountId },
                 timeSpentSeconds: worklog.timeSpentSeconds || 0,
@@ -427,7 +439,8 @@ class WorklogService {
                 comment: worklog.comment,
                 isSubtask: issue.fields.issuetype?.name === 'Sub-task',
                 parentKey: issue.fields.parent?.key,
-                issueTypeName: issue.fields.issuetype?.name
+                issueTypeName: issue.fields.issuetype?.name,
+                storyPoints
               });
             }
           }
@@ -498,7 +511,8 @@ class WorklogService {
         started: worklog.started,
         comment: worklog.comment,
         project: worklog.projectName,
-        issueType: worklog.issueTypeName || 'Task'
+        issueType: worklog.issueTypeName || 'Task',
+        storyPoints: worklog.storyPoints
       };
       
       devMap.get(worklogDate)!.push(worklogEntry);
@@ -533,12 +547,13 @@ class WorklogService {
       for (const date of allDates) {
         const dayEntries = devMap.get(date) || [];
         const totalHours = Math.round(dayEntries.reduce((sum: number, entry: WorklogEntry) => sum + entry.timeSpentHours, 0) * 100) / 100;
-        
-        console.log(`📊 ${developer} - ${date}: ${totalHours}h from ${dayEntries.length} entries`);
+        const totalStoryPoints = dayEntries.reduce((sum: number, entry: WorklogEntry) => sum + (entry.storyPoints || 0), 0);
+
+        console.log(`📊 ${developer} - ${date}: ${totalHours}h, ${totalStoryPoints} SP from ${dayEntries.length} entries`);
         if (dayEntries.length > 0) {
-          console.log(`  📝 Entries: ${dayEntries.map((e: WorklogEntry) => `${e.issueKey}(${e.timeSpentHours}h)`).join(', ')}`);
+          console.log(`  📝 Entries: ${dayEntries.map((e: WorklogEntry) => `${e.issueKey}(${e.timeSpentHours}h, ${e.storyPoints || 0} SP)`).join(', ')}`);
         }
-        
+
         let status: 'sufficient' | 'insufficient' | 'excessive' | 'missing';
         let statusText: string;
         let statusColor: string;
@@ -564,6 +579,7 @@ class WorklogService {
         dailySummaries.push({
           date,
           totalHours,
+          totalStoryPoints,
           status,
           statusText,
           statusColor,
@@ -573,8 +589,9 @@ class WorklogService {
       
       // Haftalık toplam hesapla
       const weeklyTotal = Math.round(dailySummaries.reduce((sum, day) => sum + day.totalHours, 0) * 100) / 100;
+      const weeklyTotalStoryPoints = dailySummaries.reduce((sum, day) => sum + (day.totalStoryPoints || 0), 0);
       const weeklyTarget = 35; // 7 saat x 5 iş günü
-      
+
       let weeklyStatus: 'sufficient' | 'insufficient' | 'excessive';
       if (weeklyTotal < weeklyTarget * 0.9) { // %90 tolerans (31.5h)
         weeklyStatus = 'insufficient';
@@ -584,14 +601,15 @@ class WorklogService {
         weeklyStatus = 'excessive';
       }
 
-      console.log(`✅ ${developer}: ${weeklyTotal}h weekly total, status: ${weeklyStatus}, days with data: ${dailySummaries.filter(d => d.totalHours > 0).length}/5`);
-      
+      console.log(`✅ ${developer}: ${weeklyTotal}h, ${weeklyTotalStoryPoints} SP weekly total, status: ${weeklyStatus}, days with data: ${dailySummaries.filter(d => d.totalHours > 0).length}/5`);
+
       const devEmail = developerEmailMap.get(this.normalizeName(developer)) || `${developer.toLowerCase().replace(/\s+/g, '.')}@company.com`;
       developerData.push({
         developerName: developer,
         email: devEmail,
         dailySummaries,
         weeklyTotal,
+        weeklyTotalStoryPoints,
         weeklyTarget,
         weeklyStatus
       });

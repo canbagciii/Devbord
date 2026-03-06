@@ -1,5 +1,4 @@
 import { supabase } from './supabase';
-import { developerProjectKeyMap } from '../data/developerProjectMap';
 import { DeveloperWorkload, JiraTask, JiraProject, JiraSprint, JiraBoard, ProjectSprintDetail } from '../types';
 import { jiraFilterService } from './jiraFilterService';
 
@@ -33,8 +32,8 @@ class SupabaseJiraService {
     return `${y}-${m}-${day}`;
   }
 
-  // Harici yapılandırılabilir geliştirici -> proje anahtarı eşlemesi
-  private static DEFAULT_DEVELOPER_PROJECT: { [name: string]: string } = developerProjectKeyMap;
+  // Developer to project mapping - dynamically loaded from database
+  private static developerProjectCache: Map<string, string[]> | null = null;
 
   // Proje adından proje anahtarını bul (ters eşleme)
   private getProjectKeyFromName(name: string): string {
@@ -1247,7 +1246,7 @@ class SupabaseJiraService {
         this.getAllSprints(sprintType)
       ]);
 
-      // Proje ataması önceliği: 1) Kullanıcı Yönetimi (users.assigned_projects), 2) Jira Filtre (selected_developers), 3) Statik harita
+      // Proje ataması önceliği: 1) Kullanıcı Yönetimi (users.assigned_projects), 2) Jira Filtre (selected_developers)
       const normalizedDeveloperProjectMap = new Map<string, Set<string>>();
       developerProjectMapFromUsers.forEach((projects, normalizedKey) => {
         normalizedDeveloperProjectMap.set(normalizedKey, new Set(projects));
@@ -1258,16 +1257,11 @@ class SupabaseJiraService {
           normalizedDeveloperProjectMap.set(n, new Set(projects));
         }
       });
-      Object.entries(SupabaseJiraService.DEFAULT_DEVELOPER_PROJECT).forEach(([name, key]) => {
-        const n = this.normalizeName(name);
-        if (!normalizedDeveloperProjectMap.has(n)) {
-          normalizedDeveloperProjectMap.set(n, new Set([key]));
-        }
-      });
       
       if (IS_DEV) {
-        console.log(`✅ Allowed developers from database: ${allowedDevelopers.length} developers`);
+        console.log(`✅ Allowed developers from database: ${allowedDevelopers.length} developers:`, allowedDevelopers);
         console.log(`📊 Found ${sprints.length} ${sprintType} sprints`);
+        console.log(`📊 Developer-Project map:`, Array.from(normalizedDeveloperProjectMap.entries()));
       }
 
       // OPTIMIZE: Sprint task'larını paralel çek (sıralı yerine)
@@ -1302,6 +1296,11 @@ class SupabaseJiraService {
       
       if (IS_DEV) {
         console.log(`✅ Toplam ${allTasks.length} görev yüklendi`);
+        console.log(`📋 Görev dağılımı:`, allTasks.reduce((acc, t) => {
+          const key = `${t.assignee} (${t.projectKey})`;
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>));
       }
 
       // OPTIMIZE: Group tasks by developer with project filtering - Set kullanarak O(1) lookup
@@ -1323,7 +1322,7 @@ class SupabaseJiraService {
         if (allowedProjects && allowedProjects.size > 0) {
           if (!allowedProjects.has(task.projectKey)) {
             if (IS_DEV) {
-              console.log(`⏭️ Skipping task for ${task.assignee} - project ${task.projectKey} not in their allowed projects`);
+              console.log(`⏭️ Skipping task for ${task.assignee} (normalized: ${normalizedAssignee}) - project ${task.projectKey} not in their allowed projects [${Array.from(allowedProjects).join(', ')}]`);
             }
             continue;
           }
