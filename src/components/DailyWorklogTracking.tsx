@@ -500,22 +500,24 @@ const DailyWorklogTracking: React.FC = () => {
             </div>
 
             {/* Capacity Adjustment Toggle */}
-            {viewMode === 'weekly' && hasKolayIK && (
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <div className="relative">
-                  <input
-                    type="checkbox"
-                    id="capacityAdjustment"
-                    checked={capacityAdjustmentEnabled}
-                    onChange={(e) => setCapacityAdjustmentEnabled(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-slate-200 peer-checked:bg-blue-600 rounded-full transition-colors peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-1"></div>
-                  <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4"></div>
-                </div>
-                <span className="text-sm text-slate-600 font-medium">İzin Günlerine Göre Kapasite Ayarla</span>
-              </label>
-            )}
+          {/* {viewMode === 'weekly' && hasKolayIK && (
+  <label className="flex items-center gap-2 cursor-pointer select-none">
+    <div className="relative">
+      <input
+        type="checkbox"
+        id="capacityAdjustment"
+        checked={capacityAdjustmentEnabled}
+        onChange={(e) => setCapacityAdjustmentEnabled(e.target.checked)}
+        className="sr-only peer"
+      />
+      <div className="w-9 h-5 bg-slate-200 peer-checked:bg-blue-600 rounded-full transition-colors peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-1"></div>
+      <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4"></div>
+    </div>
+    <span className="text-sm text-slate-600 font-medium">
+      İzin Günlerine Göre Kapasite Ayarla
+    </span>
+  </label>
+)} */}
 
             {/* Developer Filter */}
             <div className="flex items-center gap-2">
