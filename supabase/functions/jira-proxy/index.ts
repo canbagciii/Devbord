@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.52.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-company-id',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-company-id, x-jira-validate, x-jira-base-url, x-jira-credentials',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 }
 
@@ -36,20 +36,10 @@ const getJiraConfig = async (companyId: string): Promise<JiraConfig> => {
 
   const { jira_base_url, jira_email, jira_api_token } = company
 
-  console.log('🔍 Jira config check:', {
-    baseUrl: jira_base_url,
-    emailExists: !!jira_email,
-    tokenExists: !!jira_api_token,
-    emailLength: jira_email?.length || 0,
-    tokenLength: jira_api_token?.length || 0
-  })
-
   if (!jira_email || !jira_api_token) {
     const missingVars = []
     if (!jira_email) missingVars.push('jira_email')
     if (!jira_api_token) missingVars.push('jira_api_token')
-
-    console.error('❌ Missing Jira credentials:', missingVars)
     throw new Error(`Missing Jira credentials for company: ${missingVars.join(', ')}`)
   }
 
@@ -62,10 +52,9 @@ const getJiraConfig = async (companyId: string): Promise<JiraConfig> => {
 
 const makeJiraRequest = async (endpoint: string, config: JiraConfig, options: RequestInit = {}) => {
   const authHeader = btoa(`${config.email}:${config.token}`)
-  
   const finalUrl = `${config.baseUrl}${endpoint}`
   console.log(`🌐 Request: ${options.method || 'GET'} ${finalUrl}`)
-  
+
   try {
     const response = await fetch(finalUrl, {
       ...options,
@@ -77,14 +66,13 @@ const makeJiraRequest = async (endpoint: string, config: JiraConfig, options: Re
         ...options.headers,
       },
     })
-    
+
     console.log(`📡 Response: ${response.status} ${response.statusText}`)
-    
+
     if (!response.ok) {
       const errorText = await response.text()
       console.error(`❌ Jira API Error: ${response.status} - ${errorText}`)
-      
-      // Provide more specific error messages
+
       if (response.status === 401) {
         throw new Error(`Jira Authentication Failed (401): Please check your JIRA_EMAIL and JIRA_TOKEN credentials. Error: ${errorText}`)
       } else if (response.status === 403) {
@@ -97,7 +85,7 @@ const makeJiraRequest = async (endpoint: string, config: JiraConfig, options: Re
         throw new Error(`Jira API Error (${response.status}): ${errorText}`)
       }
     }
-    
+
     const data = await response.json()
     console.log('✅ Request successful')
     return data
@@ -108,7 +96,6 @@ const makeJiraRequest = async (endpoint: string, config: JiraConfig, options: Re
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -116,29 +103,77 @@ Deno.serve(async (req) => {
   try {
     console.log(`🚀 Received ${req.method} request to jira-proxy`)
 
-    // Get company ID from header
+    // ─────────────────────────────────────────────────────────────
+    // KAYIT DOĞRULAMA MODU: x-jira-validate: true header'ı varsa
+    // DB'ye gitmeden, gelen credentials ile direkt Jira'yı kontrol et
+    // ─────────────────────────────────────────────────────────────
+    const isValidationMode = req.headers.get('x-jira-validate') === 'true'
+
+    if (isValidationMode) {
+      console.log('🔑 Registration validation mode — using provided credentials')
+
+      const jiraBaseUrl = req.headers.get('x-jira-base-url')
+      const jiraCredentials = req.headers.get('x-jira-credentials') // base64 email:token
+
+      if (!jiraBaseUrl || !jiraCredentials) {
+        return new Response(
+          JSON.stringify({ error: 'Missing x-jira-base-url or x-jira-credentials header' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const finalUrl = `${jiraBaseUrl}/rest/api/3/myself`
+      console.log(`🌐 Validation request: GET ${finalUrl}`)
+
+      const jiraRes = await fetch(finalUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${jiraCredentials}`,
+          'Accept': 'application/json',
+        },
+      })
+
+      console.log(`📡 Validation response: ${jiraRes.status}`)
+
+      if (jiraRes.ok) {
+        const data = await jiraRes.json()
+        return new Response(JSON.stringify({ success: true, user: data }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const errorText = await jiraRes.text()
+      let errorMessage = `Jira API Error (${jiraRes.status}): ${errorText}`
+
+      if (jiraRes.status === 401) errorMessage = `Jira Authentication Failed (401): ${errorText}`
+      else if (jiraRes.status === 403) errorMessage = `Jira Access Forbidden (403): ${errorText}`
+      else if (jiraRes.status === 404) errorMessage = `Jira Resource Not Found (404): ${errorText}`
+
+      return new Response(
+        JSON.stringify({ success: false, error: errorMessage }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // NORMAL MOD: x-company-id ile DB'den config çek
+    // ─────────────────────────────────────────────────────────────
     const companyId = req.headers.get('x-company-id')
     if (!companyId) {
       console.error('❌ No company ID provided')
       return new Response(
-        JSON.stringify({
-          error: 'Company ID required',
-          details: 'Please provide x-company-id header'
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ error: 'Company ID required', details: 'Please provide x-company-id header' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     console.log('🏢 Company ID:', companyId)
 
-    // Parse request body
     let requestBody: any = null
     const bodyText = await req.text()
     console.log('📝 Request body length:', bodyText.length)
-    
+
     if (bodyText) {
       try {
         requestBody = JSON.parse(bodyText)
@@ -150,19 +185,12 @@ Deno.serve(async (req) => {
       } catch (e) {
         console.error('❌ Failed to parse request body as JSON:', e)
         return new Response(
-          JSON.stringify({ 
-            error: 'Invalid JSON in request body',
-            details: e.message 
-          }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
+          JSON.stringify({ error: 'Invalid JSON in request body', details: e.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
     }
 
-    // Extract endpoint from request body or URL
     let endpoint: string
     if (requestBody && requestBody.endpoint) {
       endpoint = requestBody.endpoint
@@ -174,72 +202,43 @@ Deno.serve(async (req) => {
     }
 
     if (!endpoint || endpoint === '/') {
-      console.error('❌ No endpoint specified')
       return new Response(
-        JSON.stringify({ 
-          error: 'No endpoint specified',
-          details: 'Please provide an endpoint in the request body or URL path'
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ error: 'No endpoint specified', details: 'Please provide an endpoint in the request body or URL path' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log(`🎯 Proxying request to endpoint: ${endpoint}`)
-
-    // Get Jira config for this company
     const config = await getJiraConfig(companyId)
-
-    // Use method from request body or default to GET
     const method = requestBody?.method || 'GET'
-    const requestOptions: RequestInit = {
-      method: method,
-    }
+    const requestOptions: RequestInit = { method }
 
-    // Only add body for non-GET requests
     if (method !== 'GET' && requestBody?.body) {
       requestOptions.body = JSON.stringify(requestBody.body)
-      console.log('📝 Request body added for', method, 'request')
     }
 
-    console.log(`📡 Making ${method} request to ${endpoint}`)
     const result = await makeJiraRequest(endpoint, config, requestOptions)
 
-    console.log('✅ Request completed successfully')
-
     return new Response(JSON.stringify(result), {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-      },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
+
   } catch (error) {
     console.error('🚨 Jira proxy error:', error)
-    
-    // Return detailed error information
+
     const errorResponse = {
       error: error.message || 'Internal server error',
       details: error.toString(),
       timestamp: new Date().toISOString(),
-      // Add helpful information for common issues
-      help: error.message?.includes('Missing required environment variables') 
+      help: error.message?.includes('Missing required environment variables')
         ? 'Go to Supabase Dashboard → Project Settings → Edge Functions and set JIRA_EMAIL and JIRA_TOKEN environment variables'
         : error.message?.includes('410')
         ? 'This Jira API endpoint has been deprecated. The application needs to be updated to use newer endpoints.'
         : 'Check the console logs for more details'
     }
-    
-    return new Response(
-      JSON.stringify(errorResponse),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      }
-    )
+
+    return new Response(JSON.stringify(errorResponse), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })
