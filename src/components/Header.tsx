@@ -35,7 +35,7 @@ export const Header: React.FC = () => {
   const options = [
     {
       value: 'active',
-      label: 'Aktif Sprintler',
+      label: 'Aktif Sprint',
       desc: 'Şu an devam eden sprintler',
       icon: <Zap size={14} />,
       color: '#22c55e',
