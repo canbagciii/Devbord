@@ -161,7 +161,7 @@ const computeSprintStats = (tasks: JiraTask[]) => {
   };
 };
 
-// ─── Drawer'daki her satır: tıklanınca task'ları çekip hesaplar ──────────────
+// ─── Drawer satır bileşeni: _statsLoading flag'i ile anlık durum gösterir ─────
 interface DrawerSprintRowProps {
   sprint: any;
   showProjectCol: boolean;
@@ -175,36 +175,12 @@ interface DrawerSprintRowProps {
 }
 
 const DrawerSprintRow: React.FC<DrawerSprintRowProps> = ({
-  sprint: initialSprint, showProjectCol, user, hasRole,
+  sprint, showProjectCol, user, hasRole,
   userEvaluations, onEvaluate, fmtDate, successColor, successBg
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [sprint, setSprint] = useState(initialSprint);
-  const [loadingTasks, setLoadingTasks] = useState(false);
-  const [tasksLoaded, setTasksLoaded] = useState(
-    // Context'ten zaten istatistik geldiyse yeniden yüklemeye gerek yok
-    (initialSprint.taskCount ?? 0) > 0
-  );
-
-  const handleExpand = async () => {
-    const nowExpanded = !isExpanded;
-    setIsExpanded(nowExpanded);
-
-    // Task'ları sadece bir kez yükle ve sadece gerektiğinde
-    if (nowExpanded && !tasksLoaded) {
-      setLoadingTasks(true);
-      try {
-        const tasks = await supabaseJiraService.getSprintIssues(initialSprint.id);
-        const stats = computeSprintStats(tasks);
-        setSprint((prev: any) => ({ ...prev, ...stats }));
-        setTasksLoaded(true);
-      } catch (err) {
-        console.error(`Sprint ${initialSprint.id} task yüklenemedi:`, err);
-      } finally {
-        setLoadingTasks(false);
-      }
-    }
-  };
+  const loading = sprint._statsLoading === true;
+  const hasStats = !loading && (sprint.taskCount ?? 0) > 0;
 
   const issueTypes = Object.entries(sprint.issueTypeBreakdown || {}).filter(([type]) => {
     const tl = type.toLowerCase();
@@ -215,7 +191,7 @@ const DrawerSprintRow: React.FC<DrawerSprintRowProps> = ({
     <React.Fragment>
       <tr
         className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
-        onClick={handleExpand}
+        onClick={() => setIsExpanded(e => !e)}
       >
         {showProjectCol && (
           <td className="px-4 py-3">
@@ -237,25 +213,23 @@ const DrawerSprintRow: React.FC<DrawerSprintRowProps> = ({
           <div className="text-gray-400">{fmtDate(sprint.startDate)} →</div>
         </td>
 
-        {/* Görev sayısı — yükleniyorsa spinner */}
         <td className="px-4 py-3 text-center whitespace-nowrap">
-          {loadingTasks ? (
-            <Loader className="h-4 w-4 animate-spin text-indigo-400 mx-auto" />
-          ) : tasksLoaded || (sprint.taskCount ?? 0) > 0 ? (
+          {loading ? (
+            <Loader className="h-3.5 w-3.5 animate-spin text-indigo-300 mx-auto" />
+          ) : hasStats ? (
             <>
               <span className="text-sm font-semibold text-gray-700">{sprint.doneTaskCount}</span>
               <span className="text-xs text-gray-400">/{sprint.taskCount}</span>
             </>
           ) : (
-            <span className="text-xs text-gray-400">—</span>
+            <span className="text-xs text-gray-400">0/0</span>
           )}
         </td>
 
-        {/* Başarı oranı */}
         <td className="px-4 py-3 whitespace-nowrap">
-          {loadingTasks ? (
-            <span className="text-xs text-gray-400">...</span>
-          ) : tasksLoaded || (sprint.taskCount ?? 0) > 0 ? (
+          {loading ? (
+            <div className="w-16 h-2 bg-gray-200 rounded-full animate-pulse" />
+          ) : hasStats ? (
             <div className="flex items-center space-x-2">
               <span className={`text-sm font-bold ${successColor(sprint.successRate)}`}>%{sprint.successRate}</span>
               <div className="w-12 bg-gray-200 rounded-full h-1.5">
@@ -267,10 +241,12 @@ const DrawerSprintRow: React.FC<DrawerSprintRowProps> = ({
           )}
         </td>
 
-        {/* Saat */}
         <td className="px-4 py-3 text-xs whitespace-nowrap">
-          {loadingTasks ? (
-            <span className="text-gray-400">...</span>
+          {loading ? (
+            <div className="space-y-1">
+              <div className="w-8 h-2 bg-gray-200 rounded animate-pulse" />
+              <div className="w-8 h-2 bg-orange-100 rounded animate-pulse" />
+            </div>
           ) : (
             <>
               <div className="text-gray-700 font-medium">{(sprint.totalHours ?? 0) > 0 ? `${sprint.totalHours}h` : '—'}</div>
@@ -279,7 +255,6 @@ const DrawerSprintRow: React.FC<DrawerSprintRowProps> = ({
           )}
         </td>
 
-        {/* Değerlendirme */}
         <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
           {user && !hasRole('admin') && (
             userEvaluations[sprint.id] ? (
@@ -303,14 +278,13 @@ const DrawerSprintRow: React.FC<DrawerSprintRowProps> = ({
         </td>
       </tr>
 
-      {/* Genişletilmiş detay */}
       {isExpanded && (
         <tr className="bg-indigo-50/40 border-b border-indigo-100">
           <td colSpan={showProjectCol ? 8 : 7} className="px-6 py-4">
-            {loadingTasks ? (
-              <div className="flex items-center space-x-2 text-gray-400 py-2">
-                <Loader className="h-4 w-4 animate-spin text-indigo-400" />
-                <span className="text-sm">Görev detayları yükleniyor...</span>
+            {loading ? (
+              <div className="flex items-center space-x-2 text-indigo-400 py-1">
+                <Loader className="h-4 w-4 animate-spin" />
+                <span className="text-sm">İstatistikler hesaplanıyor...</span>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -391,20 +365,27 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
   // supabaseJiraService üzerinden tüm closed sprintleri çek
   const [allClosedSprints, setAllClosedSprints] = useState<any[]>([]);
   const [fetchStatus, setFetchStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [loadedCount, setLoadedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoadedCount(0);
+    setTotalCount(0);
+
     const fetchAll = async () => {
       setFetchStatus('loading');
+      setAllClosedSprints([]);
       try {
-        // supabaseJiraService.getAllClosedSprints() tüm board'ların tüm closed sprintlerini getirir
+        // 1) Tüm closed sprint listesini çek
         const results = await supabaseJiraService.getAllClosedSprints();
+        if (cancelled) return;
 
-        // Proje filtresi uygula
         const filtered = projectKey === 'all'
           ? results
           : results.filter(r => r.projectKey === projectKey);
 
-        // Sprint objesini düzleştir ve context'teki sprintDetails ile zenginleştir
+        // Sprint listesini hemen göster (_statsLoading: true ile)
         const flat = filtered.map(({ sprint, boardName, projectKey: pk }) => {
           const fromContext = allSprintDetails.find(s => s.id === sprint.id);
           return {
@@ -412,7 +393,6 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
             boardName,
             projectKey: pk,
             projectName: getProjectNameFromKey(pk),
-            // Görev istatistikleri context'te varsa kullan, yoksa 0
             taskCount: fromContext?.taskCount ?? 0,
             doneTaskCount: fromContext?.doneTaskCount ?? 0,
             successRate: fromContext?.successRate ?? 0,
@@ -420,21 +400,51 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
             totalActualHours: fromContext?.totalActualHours ?? 0,
             assignedDevelopers: fromContext?.assignedDevelopers ?? [],
             issueTypeBreakdown: fromContext?.issueTypeBreakdown ?? {},
+            _statsLoading: true,
           };
         });
 
         setAllClosedSprints(flat);
-        setFetchStatus('done');
+        setTotalCount(flat.length);
+
+        // 2) Tüm sprint'lerin task'larını 5'erli batch ile paralel yükle
+        const BATCH = 5;
+        for (let i = 0; i < flat.length; i += BATCH) {
+          if (cancelled) return;
+          const batch = flat.slice(i, i + BATCH);
+
+          await Promise.all(batch.map(async (sprintItem) => {
+            try {
+              const tasks = await supabaseJiraService.getSprintIssues(sprintItem.id);
+              if (cancelled) return;
+              const stats = computeSprintStats(tasks);
+              setAllClosedSprints(prev =>
+                prev.map(s => s.id === sprintItem.id ? { ...s, ...stats, _statsLoading: false } : s)
+              );
+            } catch {
+              setAllClosedSprints(prev =>
+                prev.map(s => s.id === sprintItem.id ? { ...s, _statsLoading: false } : s)
+              );
+            } finally {
+              if (!cancelled) setLoadedCount(c => c + 1);
+            }
+          }));
+        }
+
+        if (!cancelled) setFetchStatus('done');
       } catch (err) {
-        console.error('Failed to fetch all closed sprints:', err);
-        setFetchStatus('error');
-        // Fallback: context'teki mevcut veriyi kullan
-        const fallback = allSprintDetails
-          .filter(s => s.state === 'closed' && (projectKey === 'all' || s.projectKey === projectKey));
-        setAllClosedSprints(fallback);
+        if (!cancelled) {
+          console.error('Failed to fetch all closed sprints:', err);
+          setFetchStatus('error');
+          const fallback = allSprintDetails
+            .filter(s => s.state === 'closed' && (projectKey === 'all' || s.projectKey === projectKey));
+          setAllClosedSprints(fallback);
+        }
       }
     };
+
     fetchAll();
+    return () => { cancelled = true; };
   }, [projectKey]);
 
   // Gösterilecek liste: Jira'dan gelen veriye context verisiyle zenginleştirilmiş
@@ -516,6 +526,25 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
             <X className="h-5 w-5 text-gray-500" />
           </button>
         </div>
+
+        {/* Progress bar — task istatistikleri yüklenirken */}
+        {fetchStatus === 'loading' && totalCount > 0 && (
+          <div className="px-6 py-2 bg-indigo-50 border-b border-indigo-100">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-indigo-600 font-medium flex items-center gap-1.5">
+                <Loader className="h-3 w-3 animate-spin" />
+                Görev istatistikleri hesaplanıyor...
+              </span>
+              <span className="text-xs text-indigo-500">{loadedCount}/{totalCount}</span>
+            </div>
+            <div className="w-full bg-indigo-100 rounded-full h-1.5">
+              <div
+                className="bg-indigo-500 h-1.5 rounded-full transition-all duration-300"
+                style={{ width: `${totalCount > 0 ? Math.round((loadedCount / totalCount) * 100) : 0}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Filtreler */}
         <div className="px-6 py-3 border-b border-gray-100 bg-white flex flex-wrap items-center gap-3">
