@@ -76,6 +76,297 @@ const getBoardNameFromProjectKey = (key: string): string => {
   return boardNames[key] || key;
 };
 
+// ─── Görev istatistiklerini task listesinden hesapla (ProjectSprintOverview ile aynı mantık) ──
+const computeSprintStats = (tasks: JiraTask[]) => {
+  const epicCache = new Map<string, boolean>();
+  const isEpicTask = (task: JiraTask): boolean => {
+    if (epicCache.has(task.key)) return epicCache.get(task.key)!;
+    if (task.issueType) {
+      const l = task.issueType.toLowerCase();
+      if (l === 'epic' || l === 'epik') { epicCache.set(task.key, true); return true; }
+    }
+    const isEpic = ['epic','epik'].includes(getIssueType(task).toLowerCase());
+    epicCache.set(task.key, isEpic);
+    return isEpic;
+  };
+
+  const mainTasks = tasks.filter(t => !t.isSubtask);
+  const epicKeys = new Set<string>();
+  const parentKeySet = new Set<string>();
+  const parentKeyMap = new Map<string, JiraTask>();
+
+  for (const t of mainTasks) {
+    if (isEpicTask(t)) epicKeys.add(t.key);
+    else { parentKeySet.add(t.key); parentKeyMap.set(t.key, t); }
+  }
+
+  const subtasksByParent = new Map<string, JiraTask[]>();
+  const orphanParentKeys = new Set<string>();
+
+  for (const t of tasks) {
+    if (t.isSubtask && t.parentKey) {
+      if (!epicKeys.has(t.parentKey) && !parentKeySet.has(t.parentKey)) orphanParentKeys.add(t.parentKey);
+      if (!subtasksByParent.has(t.parentKey)) subtasksByParent.set(t.parentKey, []);
+      subtasksByParent.get(t.parentKey)!.push(t);
+    }
+  }
+
+  for (const pk of orphanParentKeys) {
+    if (epicKeys.has(pk)) continue;
+    const parent = tasks.find(t => !t.isSubtask && t.key === pk && !isEpicTask(t));
+    if (parent && !parentKeyMap.has(parent.key)) {
+      parentKeyMap.set(parent.key, parent);
+      parentKeySet.add(parent.key);
+    }
+  }
+
+  const issueTypeBreakdown: Record<string, { count: number; completed: number }> = {};
+  let totalHours = 0, totalActualHours = 0;
+  const assignedDevelopersSet = new Set<string>();
+
+  for (const t of mainTasks) {
+    if (isEpicTask(t)) continue;
+    const typeName = getIssueType(t);
+    if (!issueTypeBreakdown[typeName]) issueTypeBreakdown[typeName] = { count: 0, completed: 0 };
+    issueTypeBreakdown[typeName].count++;
+    if (statusIsDone(t.status)) issueTypeBreakdown[typeName].completed++;
+  }
+
+  for (const t of tasks) {
+    totalHours += t.estimatedHours || 0;
+    totalActualHours += t.actualHours || 0;
+    if (t.assignee && t.assignee !== 'Unassigned' && t.assignee !== 'Atanmamış') {
+      assignedDevelopersSet.add(t.assignee);
+    }
+  }
+
+  const allParentKeys = new Set([...parentKeySet, ...orphanParentKeys]);
+  let completedParentCount = 0;
+  for (const pk of allParentKeys) {
+    const parent = parentKeyMap.get(pk);
+    const relatedSubs = subtasksByParent.get(pk) || [];
+    if ((parent && statusIsDone(parent.status)) || relatedSubs.some(st => statusIsDone(st.status))) {
+      completedParentCount++;
+    }
+  }
+
+  return {
+    taskCount: allParentKeys.size,
+    doneTaskCount: completedParentCount,
+    successRate: allParentKeys.size > 0 ? Math.round((completedParentCount / allParentKeys.size) * 100) : 0,
+    totalHours: Math.round(totalHours * 10) / 10,
+    totalActualHours: Math.round(totalActualHours * 10) / 10,
+    assignedDevelopers: Array.from(assignedDevelopersSet),
+    issueTypeBreakdown
+  };
+};
+
+// ─── Drawer'daki her satır: tıklanınca task'ları çekip hesaplar ──────────────
+interface DrawerSprintRowProps {
+  sprint: any;
+  showProjectCol: boolean;
+  user: any;
+  hasRole: (r: string) => boolean;
+  userEvaluations: Record<string, boolean>;
+  onEvaluate: (sprint: any) => void;
+  fmtDate: (d?: string | null) => string;
+  successColor: (r: number) => string;
+  successBg: (r: number) => string;
+}
+
+const DrawerSprintRow: React.FC<DrawerSprintRowProps> = ({
+  sprint: initialSprint, showProjectCol, user, hasRole,
+  userEvaluations, onEvaluate, fmtDate, successColor, successBg
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [sprint, setSprint] = useState(initialSprint);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+  const [tasksLoaded, setTasksLoaded] = useState(
+    // Context'ten zaten istatistik geldiyse yeniden yüklemeye gerek yok
+    (initialSprint.taskCount ?? 0) > 0
+  );
+
+  const handleExpand = async () => {
+    const nowExpanded = !isExpanded;
+    setIsExpanded(nowExpanded);
+
+    // Task'ları sadece bir kez yükle ve sadece gerektiğinde
+    if (nowExpanded && !tasksLoaded) {
+      setLoadingTasks(true);
+      try {
+        const tasks = await supabaseJiraService.getSprintIssues(initialSprint.id);
+        const stats = computeSprintStats(tasks);
+        setSprint((prev: any) => ({ ...prev, ...stats }));
+        setTasksLoaded(true);
+      } catch (err) {
+        console.error(`Sprint ${initialSprint.id} task yüklenemedi:`, err);
+      } finally {
+        setLoadingTasks(false);
+      }
+    }
+  };
+
+  const issueTypes = Object.entries(sprint.issueTypeBreakdown || {}).filter(([type]) => {
+    const tl = type.toLowerCase();
+    return tl !== 'epic' && tl !== 'epik';
+  });
+
+  return (
+    <React.Fragment>
+      <tr
+        className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+        onClick={handleExpand}
+      >
+        {showProjectCol && (
+          <td className="px-4 py-3">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+              {sprint.projectKey}
+            </span>
+          </td>
+        )}
+        <td className="px-4 py-3">
+          <div className="text-sm font-medium text-gray-900 truncate max-w-[200px]" title={sprint.name}>
+            {sprint.name}
+          </div>
+          {showProjectCol && (
+            <div className="text-xs text-gray-400 truncate max-w-[200px]">{sprint.projectName}</div>
+          )}
+        </td>
+        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+          <div className="font-medium text-gray-700">{fmtDate(sprint.completeDate || sprint.endDate)}</div>
+          <div className="text-gray-400">{fmtDate(sprint.startDate)} →</div>
+        </td>
+
+        {/* Görev sayısı — yükleniyorsa spinner */}
+        <td className="px-4 py-3 text-center whitespace-nowrap">
+          {loadingTasks ? (
+            <Loader className="h-4 w-4 animate-spin text-indigo-400 mx-auto" />
+          ) : tasksLoaded || (sprint.taskCount ?? 0) > 0 ? (
+            <>
+              <span className="text-sm font-semibold text-gray-700">{sprint.doneTaskCount}</span>
+              <span className="text-xs text-gray-400">/{sprint.taskCount}</span>
+            </>
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
+          )}
+        </td>
+
+        {/* Başarı oranı */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          {loadingTasks ? (
+            <span className="text-xs text-gray-400">...</span>
+          ) : tasksLoaded || (sprint.taskCount ?? 0) > 0 ? (
+            <div className="flex items-center space-x-2">
+              <span className={`text-sm font-bold ${successColor(sprint.successRate)}`}>%{sprint.successRate}</span>
+              <div className="w-12 bg-gray-200 rounded-full h-1.5">
+                <div className={`h-1.5 rounded-full ${successBg(sprint.successRate)}`} style={{ width: `${sprint.successRate}%` }} />
+              </div>
+            </div>
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
+          )}
+        </td>
+
+        {/* Saat */}
+        <td className="px-4 py-3 text-xs whitespace-nowrap">
+          {loadingTasks ? (
+            <span className="text-gray-400">...</span>
+          ) : (
+            <>
+              <div className="text-gray-700 font-medium">{(sprint.totalHours ?? 0) > 0 ? `${sprint.totalHours}h` : '—'}</div>
+              <div className="text-orange-500">{(sprint.totalActualHours ?? 0) > 0 ? `${sprint.totalActualHours}h` : '—'}</div>
+            </>
+          )}
+        </td>
+
+        {/* Değerlendirme */}
+        <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+          {user && !hasRole('admin') && (
+            userEvaluations[sprint.id] ? (
+              <span className="text-xs text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-full whitespace-nowrap">✓ Tamam</span>
+            ) : supabaseEvaluationService.isEvaluationActive(sprint) ? (
+              <button
+                onClick={() => onEvaluate(sprint)}
+                className="text-xs px-2 py-1 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors font-medium whitespace-nowrap"
+              >
+                Değerlendir
+              </button>
+            ) : (
+              <span className="text-xs text-gray-400 bg-gray-50 border border-gray-200 px-2 py-1 rounded-full whitespace-nowrap">Doldu</span>
+            )
+          )}
+        </td>
+        <td className="px-3 py-3 text-center">
+          {isExpanded
+            ? <ChevronUp className="h-4 w-4 text-gray-400 mx-auto" />
+            : <ChevronDown className="h-4 w-4 text-gray-400 mx-auto" />}
+        </td>
+      </tr>
+
+      {/* Genişletilmiş detay */}
+      {isExpanded && (
+        <tr className="bg-indigo-50/40 border-b border-indigo-100">
+          <td colSpan={showProjectCol ? 8 : 7} className="px-6 py-4">
+            {loadingTasks ? (
+              <div className="flex items-center space-x-2 text-gray-400 py-2">
+                <Loader className="h-4 w-4 animate-spin text-indigo-400" />
+                <span className="text-sm">Görev detayları yükleniyor...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Görev Tipleri</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {issueTypes.length > 0 ? issueTypes.map(([type, data]: [string, any]) => (
+                      <span key={type} className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                        type === 'Bug' ? 'text-red-700 bg-red-100' :
+                        type === 'Story' ? 'text-green-700 bg-green-100' :
+                        'text-blue-700 bg-blue-100'
+                      }`}>
+                        {type === 'Bug' && <Bug className="h-3 w-3 mr-1" />}
+                        {type === 'Story' && <Zap className="h-3 w-3 mr-1" />}
+                        {type === 'Task' && <FileText className="h-3 w-3 mr-1" />}
+                        {type}: {data.completed}/{data.count}
+                      </span>
+                    )) : <span className="text-xs text-gray-400">Veri yok</span>}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Çalışanlar</p>
+                  <div className="flex flex-wrap gap-1">
+                    {(sprint.assignedDevelopers || []).length > 0
+                      ? sprint.assignedDevelopers.map((dev: string, idx: number) => (
+                          <span key={idx} className="px-2 py-0.5 bg-white border border-gray-200 text-gray-700 text-xs rounded shadow-sm">{dev}</span>
+                        ))
+                      : <span className="text-xs text-gray-400">Atanmış kişi yok</span>}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Tarihler</p>
+                  <div className="space-y-1 text-xs text-gray-600">
+                    <div className="flex justify-between">
+                      <span>Başlangıç</span>
+                      <span className="font-medium">{sprint.startDate ? new Date(sprint.startDate).toLocaleDateString('tr-TR') : '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Bitiş (planlanan)</span>
+                      <span className="font-medium">{sprint.endDate ? new Date(sprint.endDate).toLocaleDateString('tr-TR') : '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Kapanış (gerçek)</span>
+                      <span className="font-medium text-indigo-600">{sprint.completeDate ? new Date(sprint.completeDate).toLocaleDateString('tr-TR') : '—'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </td>
+        </tr>
+      )}
+    </React.Fragment>
+  );
+};
+
 // ─── Tüm Kapatılan Sprintler Drawer ──────────────────────────────────────────
 interface AllClosedSprintsDrawerProps {
   projectKey: string;
@@ -293,132 +584,20 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {filteredSprints.map(sprint => {
-                  const isExpanded = expandedRow === sprint.id;
-                  const issueTypes = Object.entries(sprint.issueTypeBreakdown || {}).filter(([type]) => {
-                    const tl = type.toLowerCase();
-                    return tl !== 'epic' && tl !== 'epik';
-                  });
-
-                  return (
-                    <React.Fragment key={sprint.id}>
-                      <tr
-                        className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
-                        onClick={() => setExpandedRow(isExpanded ? null : sprint.id)}
-                      >
-                        {projectKey === 'all' && (
-                          <td className="px-4 py-3">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-                              {sprint.projectKey}
-                            </span>
-                          </td>
-                        )}
-                        <td className="px-4 py-3">
-                          <div className="text-sm font-medium text-gray-900 truncate max-w-[200px]" title={sprint.name}>
-                            {sprint.name}
-                          </div>
-                          {projectKey === 'all' && (
-                            <div className="text-xs text-gray-400 truncate max-w-[200px]">{sprint.projectName}</div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                          <div className="font-medium text-gray-700">{fmtDate(sprint.completeDate || sprint.endDate)}</div>
-                          <div className="text-gray-400">{fmtDate(sprint.startDate)} →</div>
-                        </td>
-                        <td className="px-4 py-3 text-center whitespace-nowrap">
-                          <span className="text-sm font-semibold text-gray-700">{sprint.doneTaskCount}</span>
-                          <span className="text-xs text-gray-400">/{sprint.taskCount}</span>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center space-x-2">
-                            <span className={`text-sm font-bold ${successColor(sprint.successRate)}`}>%{sprint.successRate}</span>
-                            <div className="w-12 bg-gray-200 rounded-full h-1.5">
-                              <div className={`h-1.5 rounded-full ${successBg(sprint.successRate)}`} style={{ width: `${sprint.successRate}%` }} />
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-xs whitespace-nowrap">
-                          <div className="text-gray-700 font-medium">{sprint.totalHours > 0 ? `${Math.round(sprint.totalHours * 10) / 10}h` : '—'}</div>
-                          <div className="text-orange-500">{sprint.totalActualHours > 0 ? `${Math.round((sprint.totalActualHours || 0) * 10) / 10}h` : '—'}</div>
-                        </td>
-                        <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
-                          {user && !hasRole('admin') && (
-                            userEvaluations[sprint.id] ? (
-                              <span className="text-xs text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-full whitespace-nowrap">✓ Tamam</span>
-                            ) : supabaseEvaluationService.isEvaluationActive(sprint) ? (
-                              <button
-                                onClick={() => onEvaluate(sprint)}
-                                className="text-xs px-2 py-1 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors font-medium whitespace-nowrap"
-                              >
-                                Değerlendir
-                              </button>
-                            ) : (
-                              <span className="text-xs text-gray-400 bg-gray-50 border border-gray-200 px-2 py-1 rounded-full whitespace-nowrap">Doldu</span>
-                            )
-                          )}
-                        </td>
-                        <td className="px-3 py-3 text-center">
-                          {isExpanded
-                            ? <ChevronUp className="h-4 w-4 text-gray-400 mx-auto" />
-                            : <ChevronDown className="h-4 w-4 text-gray-400 mx-auto" />}
-                        </td>
-                      </tr>
-
-                      {isExpanded && (
-                        <tr className="bg-indigo-50/40 border-b border-indigo-100">
-                          <td colSpan={projectKey === 'all' ? 8 : 7} className="px-6 py-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Görev Tipleri</p>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {issueTypes.length > 0 ? issueTypes.map(([type, data]: [string, any]) => (
-                                    <span key={type} className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                      type === 'Bug' ? 'text-red-700 bg-red-100' :
-                                      type === 'Story' ? 'text-green-700 bg-green-100' :
-                                      'text-blue-700 bg-blue-100'
-                                    }`}>
-                                      {type === 'Bug' && <Bug className="h-3 w-3 mr-1" />}
-                                      {type === 'Story' && <Zap className="h-3 w-3 mr-1" />}
-                                      {type === 'Task' && <FileText className="h-3 w-3 mr-1" />}
-                                      {type}: {data.completed}/{data.count}
-                                    </span>
-                                  )) : <span className="text-xs text-gray-400">Veri yok</span>}
-                                </div>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Çalışanlar</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {sprint.assignedDevelopers.length > 0
-                                    ? sprint.assignedDevelopers.map((dev: string, idx: number) => (
-                                        <span key={idx} className="px-2 py-0.5 bg-white border border-gray-200 text-gray-700 text-xs rounded shadow-sm">{dev}</span>
-                                      ))
-                                    : <span className="text-xs text-gray-400">Atanmış kişi yok</span>}
-                                </div>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Tarihler</p>
-                                <div className="space-y-1 text-xs text-gray-600">
-                                  <div className="flex justify-between">
-                                    <span>Başlangıç</span>
-                                    <span className="font-medium">{sprint.startDate ? new Date(sprint.startDate).toLocaleDateString('tr-TR') : '—'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Bitiş (planlanan)</span>
-                                    <span className="font-medium">{sprint.endDate ? new Date(sprint.endDate).toLocaleDateString('tr-TR') : '—'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Kapanış (gerçek)</span>
-                                    <span className="font-medium text-indigo-600">{sprint.completeDate ? new Date(sprint.completeDate).toLocaleDateString('tr-TR') : '—'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
+                {filteredSprints.map(sprint => (
+                  <DrawerSprintRow
+                    key={sprint.id}
+                    sprint={sprint}
+                    showProjectCol={projectKey === 'all'}
+                    user={user}
+                    hasRole={hasRole}
+                    userEvaluations={userEvaluations}
+                    onEvaluate={onEvaluate}
+                    fmtDate={fmtDate}
+                    successColor={successColor}
+                    successBg={successBg}
+                  />
+                ))}
               </tbody>
             </table>
           )}
