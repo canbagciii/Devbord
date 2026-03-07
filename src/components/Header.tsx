@@ -44,7 +44,7 @@ export const Header: React.FC = () => {
     },
     {
       value: 'closed',
-      label: 'Son Kapatılan',
+      label: 'Son Sprint',
       desc: 'Tamamlanan son sprint',
       icon: <Archive size={14} />,
       color: '#94a3b8',
