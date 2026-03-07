@@ -36,7 +36,7 @@ export const Header: React.FC = () => {
     {
       value: 'active',
       label: 'Aktif Sprint',
-      desc: 'Şu an devam eden sprintler',
+      desc: 'Şu an devam eden sprint',
       icon: <Zap size={14} />,
       color: '#22c55e',
       bg: 'rgba(34,197,94,0.08)',
