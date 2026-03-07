@@ -231,7 +231,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ onClose, o
           )}
 
           <div className="mb-7">
-            <h2 className="text-2xl font-extrabold text-gray-900 mb-1.5">Scrumlytics'a Katılın 🚀</h2>
+            <h2 className="text-2xl font-extrabold text-gray-900 mb-1.5">Scrumlytics'e Katılın 🚀</h2>
             <p className="text-sm text-gray-600">Dakikalar içinde entegrasyonunuzu tamamlayın</p>
           </div>
 
