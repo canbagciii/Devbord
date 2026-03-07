@@ -354,7 +354,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <a href="#" className="text-sm text-gray-600 hover:text-blue-600 no-underline">Destek</a>
           </li>
         </ul>
-        <p className="text-[0.82rem] text-gray-400">© 2026 Devbord. Tüm hakları saklıdır.</p>
+        <p className="text-[0.82rem] text-gray-400">© 2026 Scrumlytics. Tüm hakları saklıdır.</p>
       </footer>
 
       {isRegisterModalOpen && (
