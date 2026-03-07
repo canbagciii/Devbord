@@ -1394,7 +1394,7 @@ export const ProjectSprintOverview: React.FC = () => {
                     className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors text-sm font-medium"
                   >
                     <History className="h-4 w-4" />
-                    <span>Tüm Geçmiş Sprintleri Gör</span>
+                    <span>Geçmiş Sprintleri Gör</span>
                     <ChevronRight className="h-4 w-4 ml-auto" />
                   </button>
                 </div>
