@@ -342,7 +342,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       <footer className="py-10 px-[5%] border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">
-        <div className="font-bold text-base text-gray-900">Devbord</div>
+        <div className="font-bold text-base text-gray-900">Scrumlytics</div>
         <ul className="flex gap-6 list-none">
           <li>
             <a href="#" className="text-sm text-gray-600 hover:text-blue-600 no-underline">Gizlilik</a>
