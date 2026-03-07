@@ -601,6 +601,20 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
 
 
 
+            {/* Proje filtresi — sadece genel geçmiş (all) modunda */}
+            {projectKey === 'all' && (
+              <select
+                value={projectFilter}
+                onChange={e => setProjectFilter(e.target.value)}
+                className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent max-w-[180px]"
+              >
+                <option value="all">Tüm Projeler</option>
+                {availableProjects.map(([key, name]) => (
+                  <option key={key} value={key}>{key} – {name}</option>
+                ))}
+              </select>
+            )}
+
             {/* Getir butonu — sadece "tüm projeler" modunda göster */}
             {projectKey === 'all' && (
               <button
