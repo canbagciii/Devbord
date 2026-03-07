@@ -241,36 +241,24 @@ const DrawerSprintRow: React.FC<DrawerSprintRowProps> = ({
           )}
         </td>
 
-        <td className="px-4 py-3 text-xs whitespace-nowrap">
+        {/* Tahmin */}
+        <td className="px-4 py-3 text-right text-xs whitespace-nowrap">
           {loading ? (
-            <div className="space-y-1">
-              <div className="w-8 h-2 bg-gray-200 rounded animate-pulse" />
-              <div className="w-8 h-2 bg-orange-100 rounded animate-pulse" />
-            </div>
+            <div className="w-8 h-2 bg-gray-200 rounded animate-pulse ml-auto" />
           ) : (
-            <>
-              <div className="text-gray-700 font-medium">{(sprint.totalHours ?? 0) > 0 ? `${sprint.totalHours}h` : '—'}</div>
-              <div className="text-orange-500">{(sprint.totalActualHours ?? 0) > 0 ? `${sprint.totalActualHours}h` : '—'}</div>
-            </>
+            <span className="text-gray-700 font-medium">{(sprint.totalHours ?? 0) > 0 ? `${sprint.totalHours}h` : '—'}</span>
           )}
         </td>
 
-        <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
-          {user && !hasRole('admin') && (
-            userEvaluations[sprint.id] ? (
-              <span className="text-xs text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-full whitespace-nowrap">✓ Tamam</span>
-            ) : supabaseEvaluationService.isEvaluationActive(sprint) ? (
-              <button
-                onClick={() => onEvaluate(sprint)}
-                className="text-xs px-2 py-1 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors font-medium whitespace-nowrap"
-              >
-                Değerlendir
-              </button>
-            ) : (
-              <span className="text-xs text-gray-400 bg-gray-50 border border-gray-200 px-2 py-1 rounded-full whitespace-nowrap">Doldu</span>
-            )
+        {/* Harcanan */}
+        <td className="px-4 py-3 text-right text-xs whitespace-nowrap">
+          {loading ? (
+            <div className="w-8 h-2 bg-orange-100 rounded animate-pulse ml-auto" />
+          ) : (
+            <span className="text-orange-500 font-medium">{(sprint.totalActualHours ?? 0) > 0 ? `${sprint.totalActualHours}h` : '—'}</span>
           )}
         </td>
+
         <td className="px-3 py-3 text-center">
           {isExpanded
             ? <ChevronUp className="h-4 w-4 text-gray-400 mx-auto" />
@@ -280,7 +268,7 @@ const DrawerSprintRow: React.FC<DrawerSprintRowProps> = ({
 
       {isExpanded && (
         <tr className="bg-indigo-50/40 border-b border-indigo-100">
-          <td colSpan={showProjectCol ? 8 : 7} className="px-6 py-4">
+          <td colSpan={showProjectCol ? 7 : 6} className="px-6 py-4">
             {loading ? (
               <div className="flex items-center space-x-2 text-indigo-400 py-1">
                 <Loader className="h-4 w-4 animate-spin" />
@@ -359,8 +347,9 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
   sprintTasks, user, hasRole, onEvaluate, onClose
 }) => {
   const [yearFilter, setYearFilter] = useState<string>('all');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
+  const [projectFilter, setProjectFilter] = useState<string>('all');
   const [nameFilter, setNameFilter] = useState<string>('');
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   // supabaseJiraService üzerinden tüm closed sprintleri çek
   const [allClosedSprints, setAllClosedSprints] = useState<any[]>([]);
@@ -477,6 +466,15 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
     else if (availableYears.length > 0) setYearFilter(availableYears[0].toString());
   }, [availableYears.length]);
 
+  // Proje listesi (all modunda birden fazla proje olabilir)
+  const availableProjects = useMemo(() => {
+    const map = new Map<string, string>();
+    projectClosedSprints.forEach(s => {
+      if (s.projectKey && s.projectName) map.set(s.projectKey, s.projectName);
+    });
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [projectClosedSprints]);
+
   const filteredSprints = useMemo(() => {
     let list = [...projectClosedSprints];
     if (yearFilter !== 'all') {
@@ -486,12 +484,22 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
         return d && new Date(d).getFullYear() === y;
       });
     }
+    if (monthFilter !== 'all') {
+      const m = parseInt(monthFilter);
+      list = list.filter(s => {
+        const d = s.completeDate || s.endDate;
+        return d && new Date(d).getMonth() + 1 === m;
+      });
+    }
+    if (projectFilter !== 'all') {
+      list = list.filter(s => s.projectKey === projectFilter);
+    }
     if (nameFilter.trim()) {
       const f = nameFilter.toLowerCase().trim();
       list = list.filter(s => s.name.toLowerCase().includes(f));
     }
     return list;
-  }, [projectClosedSprints, yearFilter, nameFilter]);
+  }, [projectClosedSprints, yearFilter, monthFilter, projectFilter, nameFilter]);
 
   const fmtDate = (d?: string | null) =>
     d ? new Date(d).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—';
@@ -547,36 +555,61 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
         )}
 
         {/* Filtreler */}
-        <div className="px-6 py-3 border-b border-gray-100 bg-white flex flex-wrap items-center gap-3">
-          <div className="flex items-center space-x-2">
-            <label className="text-xs font-medium text-gray-600 whitespace-nowrap">Yıl:</label>
+        <div className="px-4 py-2.5 border-b border-gray-100 bg-white flex flex-wrap items-center gap-2">
+          {/* Yıl */}
+          <select
+            value={yearFilter}
+            onChange={e => { setYearFilter(e.target.value); setMonthFilter('all'); }}
+            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
+            <option value="all">Tüm Yıllar</option>
+            {availableYears.map(y => (
+              <option key={y} value={y.toString()}>{y}</option>
+            ))}
+          </select>
+
+          {/* Ay */}
+          <select
+            value={monthFilter}
+            onChange={e => setMonthFilter(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
+            <option value="all">Tüm Aylar</option>
+            {['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'].map((ay, i) => (
+              <option key={i+1} value={(i+1).toString()}>{ay}</option>
+            ))}
+          </select>
+
+          {/* Proje (all modunda göster, tekli projede de göster ama zaten filtreli) */}
+          {availableProjects.length > 1 && (
             <select
-              value={yearFilter}
-              onChange={e => setYearFilter(e.target.value)}
-              className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              value={projectFilter}
+              onChange={e => setProjectFilter(e.target.value)}
+              className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent max-w-[160px]"
             >
-              <option value="all">Tüm Yıllar</option>
-              {availableYears.map(y => (
-                <option key={y} value={y.toString()}>{y}</option>
+              <option value="all">Tüm Projeler</option>
+              {availableProjects.map(([key, name]) => (
+                <option key={key} value={key}>{key} – {name}</option>
               ))}
             </select>
-          </div>
+          )}
 
-          <div className="flex items-center space-x-2 flex-1">
-            <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          {/* Arama */}
+          <div className="flex items-center border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white flex-1 min-w-[160px] max-w-xs">
+            <Search className="h-3.5 w-3.5 text-gray-400 flex-shrink-0 mr-1.5" />
             <input
               type="text"
               value={nameFilter}
               onChange={e => setNameFilter(e.target.value)}
               placeholder="Sprint adında ara..."
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent flex-1 max-w-xs"
+              className="text-xs text-gray-700 placeholder-gray-400 outline-none flex-1 bg-transparent"
             />
             {nameFilter && (
-              <button onClick={() => setNameFilter('')} className="text-xs text-gray-400 hover:text-gray-600">Temizle</button>
+              <button onClick={() => setNameFilter('')} className="text-gray-300 hover:text-gray-500 ml-1 text-xs">✕</button>
             )}
           </div>
 
-          <span className="ml-auto text-xs text-gray-400">
+          <span className="ml-auto text-xs text-gray-400 whitespace-nowrap">
             <span className="font-semibold text-gray-600">{filteredSprints.length}</span> sprint
           </span>
         </div>
@@ -604,11 +637,8 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Kapanış</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide w-20">Görev</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Başarı</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">
-                    <span className="text-gray-500 block">Tahmin</span>
-                    <span className="text-orange-400 block normal-case font-normal">Harcanan</span>
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Değerl.</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Tahmin</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-orange-400 uppercase tracking-wide w-24">Harcanan</th>
                   <th className="w-8" />
                 </tr>
               </thead>
