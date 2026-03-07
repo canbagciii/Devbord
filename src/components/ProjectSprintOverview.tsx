@@ -6,6 +6,7 @@ import { supabaseEvaluationService } from '../lib/supabaseEvaluationService';
 import { Activity, Calendar, Users, Clock, Loader, RefreshCw, ChevronRight, Download, FileText, Bug, Zap, Target, CheckCircle, HelpCircle, History, X, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
 import { useAuth } from '../context/AuthContext';
+import { supabaseJiraService } from '../lib/supabaseJiraService';
 
 import { getPlainTextFromJiraAdf } from '../utils/jiraUtils';
 import ProjectSprintOnboarding, { useProjectSprintOnboarding } from './ProjectSprintOverviewOnboarding';
@@ -96,7 +97,7 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
   const [nameFilter, setNameFilter] = useState<string>('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
-  // Jira'dan tüm closed sprintleri çek
+  // supabaseJiraService üzerinden tüm closed sprintleri çek
   const [allClosedSprints, setAllClosedSprints] = useState<any[]>([]);
   const [fetchStatus, setFetchStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
 
@@ -104,24 +105,39 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
     const fetchAll = async () => {
       setFetchStatus('loading');
       try {
-        const results = await jiraService.getAllClosedSprintsHistory(
-          projectKey === 'all' ? undefined : projectKey
-        );
-        // Sprint objesini düzleştir: { sprint, boardName, projectKey } → düz obje
-        const flat = results.map(({ sprint, boardName, projectKey: pk }) => ({
-          ...sprint,
-          boardName,
-          projectKey: pk,
-          projectName: getProjectNameFromKey(pk),
-          // Görev sayısı ve istatistikler context'teki sprintDetails'ten zenginleştir
-          ...( allSprintDetails.find(s => s.id === sprint.id) || {} )
-        }));
+        // supabaseJiraService.getAllClosedSprints() tüm board'ların tüm closed sprintlerini getirir
+        const results = await supabaseJiraService.getAllClosedSprints();
+
+        // Proje filtresi uygula
+        const filtered = projectKey === 'all'
+          ? results
+          : results.filter(r => r.projectKey === projectKey);
+
+        // Sprint objesini düzleştir ve context'teki sprintDetails ile zenginleştir
+        const flat = filtered.map(({ sprint, boardName, projectKey: pk }) => {
+          const fromContext = allSprintDetails.find(s => s.id === sprint.id);
+          return {
+            ...sprint,
+            boardName,
+            projectKey: pk,
+            projectName: getProjectNameFromKey(pk),
+            // Görev istatistikleri context'te varsa kullan, yoksa 0
+            taskCount: fromContext?.taskCount ?? 0,
+            doneTaskCount: fromContext?.doneTaskCount ?? 0,
+            successRate: fromContext?.successRate ?? 0,
+            totalHours: fromContext?.totalHours ?? 0,
+            totalActualHours: fromContext?.totalActualHours ?? 0,
+            assignedDevelopers: fromContext?.assignedDevelopers ?? [],
+            issueTypeBreakdown: fromContext?.issueTypeBreakdown ?? {},
+          };
+        });
+
         setAllClosedSprints(flat);
         setFetchStatus('done');
       } catch (err) {
-        console.error('Failed to fetch all closed sprints history:', err);
+        console.error('Failed to fetch all closed sprints:', err);
         setFetchStatus('error');
-        // Fallback: context'teki veriyi kullan
+        // Fallback: context'teki mevcut veriyi kullan
         const fallback = allSprintDetails
           .filter(s => s.state === 'closed' && (projectKey === 'all' || s.projectKey === projectKey));
         setAllClosedSprints(fallback);
