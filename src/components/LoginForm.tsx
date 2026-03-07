@@ -70,7 +70,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onClose, onSwitchToRegis
 
         <div className="mb-7">
           <h2 className="text-2xl font-extrabold text-gray-900 mb-1.5">Tekrar hoş geldiniz 👋</h2>
-          <p className="text-sm text-gray-600">Devbord hesabınıza giriş yapın</p>
+          <p className="text-sm text-gray-600">Scrumlytics hesabınıza giriş yapın</p>
         </div>
 
         {error && (
