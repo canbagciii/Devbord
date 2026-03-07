@@ -98,7 +98,7 @@ const [activeTab, setActiveTab] = useState<
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-6 bg-white rounded-lg shadow-sm p-6 border border-blue-200">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {!user.onboardingCompleted ? 'Devbord\'a Hoş Geldiniz!' : 'Proje ve Yazılımcı Seçimi Gerekli'}
+              {!user.onboardingCompleted ? 'Scrumlytics\'a Hoş Geldiniz!' : 'Proje ve Yazılımcı Seçimi Gerekli'}
             </h1>
             <p className="text-gray-600">
               {!user.onboardingCompleted
