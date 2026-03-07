@@ -3,7 +3,7 @@ import { JiraSprint, JiraProject, JiraTask } from '../types';
 import { jiraService } from '../lib/jiraService';
 import { SprintEvaluationForm } from './SprintEvaluationForm';
 import { supabaseEvaluationService } from '../lib/supabaseEvaluationService';
-import { Activity, Calendar, Users, Clock, Loader, RefreshCw, ChevronRight, Download, FileText, Bug, Zap, Target, CheckCircle, HelpCircle } from 'lucide-react';
+import { Activity, Calendar, Users, Clock, Loader, RefreshCw, ChevronRight, Download, FileText, Bug, Zap, Target, CheckCircle, HelpCircle, History, X, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { useJiraData } from '../context/JiraDataContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -18,7 +18,7 @@ interface SprintWithDetails extends JiraSprint {
   assignedDevelopers: string[];
 }
 
-// Optimize edilmiş helper fonksiyonlar - component dışında tanımlanarak her render'da yeniden oluşturulmasını önler
+// ─── Helper fonksiyonlar ──────────────────────────────────────────────────────
 const statusIsDone = (statusRaw: string | undefined): boolean => {
   if (!statusRaw) return false;
   const s = statusRaw.toLowerCase();
@@ -28,57 +28,349 @@ const statusIsDone = (statusRaw: string | undefined): boolean => {
 };
 
 const getIssueType = (task: JiraTask): string => {
-  if (task.issueType) {
-    return task.issueType;
-  }
-  
-  // Sadece gerektiğinde description parse et
+  if (task.issueType) return task.issueType;
   const summary = task.summary.toLowerCase();
   if (summary.includes('bug') || summary.includes('hata') || 
-      summary.includes('düzeltme') || summary.includes('sorun')) {
-    return 'Bug';
-  }
-  
-  if (summary.includes('story') || summary.includes('öykü') || summary.includes('hikaye')) {
-    return 'Story';
-  }
-  
-  // Description parse etmek pahalı, sadece summary'de bulamazsak yap
+      summary.includes('düzeltme') || summary.includes('sorun')) return 'Bug';
+  if (summary.includes('story') || summary.includes('öykü') || summary.includes('hikaye')) return 'Story';
   if (task.description) {
     const description = getPlainTextFromJiraAdf(task.description).toLowerCase();
-    if (description.includes('bug') || description.includes('hata')) {
-      return 'Bug';
-    }
-    if (description.includes('story')) {
-      return 'Story';
-    }
+    if (description.includes('bug') || description.includes('hata')) return 'Bug';
+    if (description.includes('story')) return 'Story';
   }
-  
   return 'Task';
 };
 
 const filterTasksByDateRange = (tasks: JiraTask[], start: string | null, end: string | null): JiraTask[] => {
   if (!start && !end) return tasks;
-  
-  // Tarih objelerini önceden oluştur (her task için tekrar oluşturulmasını önle)
   const startDate = start ? new Date(start) : null;
   const endDate = end ? new Date(end + 'T23:59:59') : null;
-  
   return tasks.filter((task: JiraTask) => {
     if (!task.created) return false;
     const taskDate = new Date(task.created);
-    
-    if (startDate && endDate) {
-      return taskDate >= startDate && taskDate <= endDate;
-    } else if (startDate) {
-      return taskDate >= startDate;
-    } else if (endDate) {
-      return taskDate <= endDate;
-    }
+    if (startDate && endDate) return taskDate >= startDate && taskDate <= endDate;
+    else if (startDate) return taskDate >= startDate;
+    else if (endDate) return taskDate <= endDate;
     return true;
   });
 };
 
+const getProjectNameFromKey = (key: string): string => {
+  const projectNames: { [key: string]: string } = {
+    'ATK': 'Albaraka Türk Katılım Bankası', 'ALB': 'Alternatif Bank',
+    'AN': 'Anadolubank', 'BB': 'Burgan Bank', 'EK': 'Emlak Katılım',
+    'OB': 'Odeabank', 'QNB': 'QNB Bank', 'TFKB': 'Türkiye Finans',
+    'VK': 'Vakıf Katılım', 'ZK': 'Ziraat Katılım Bankası',
+    'DK': 'Dünya Katılım', 'HF': 'Hayat Finans'
+  };
+  return projectNames[key] || key;
+};
+
+const getBoardNameFromProjectKey = (key: string): string => {
+  const boardNames: { [key: string]: string } = {
+    'VK': 'VK board', 'AN': 'AN board', 'TFKB': 'TFKB board', 'QNB': 'QNB board',
+    'ATK': 'ATK board', 'ALB': 'ALB board', 'BB': 'BB board', 'EK': 'EK board',
+    'ZK': 'ZK board', 'DK': 'DK board', 'OB': 'OB panosu', 'HF': 'HF board'
+  };
+  return boardNames[key] || key;
+};
+
+// ─── Tüm Kapatılan Sprintler Drawer ──────────────────────────────────────────
+interface AllClosedSprintsDrawerProps {
+  projectKey: string;
+  projectName: string;
+  allSprintDetails: any[];
+  userEvaluations: Record<string, boolean>;
+  sprintTasks: Record<string, JiraTask[]> | null;
+  user: any;
+  hasRole: (role: string) => boolean;
+  onEvaluate: (sprint: any) => void;
+  onClose: () => void;
+}
+
+const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
+  projectKey, projectName, allSprintDetails, userEvaluations,
+  sprintTasks, user, hasRole, onEvaluate, onClose
+}) => {
+  const [yearFilter, setYearFilter] = useState<string>('all');
+  const [nameFilter, setNameFilter] = useState<string>('');
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  const projectClosedSprints = useMemo(() => {
+    return allSprintDetails
+      .filter(s => s.state === 'closed' && (projectKey === 'all' || s.projectKey === projectKey))
+      .sort((a, b) => {
+        const dateA = a.completeDate ? new Date(a.completeDate) : (a.endDate ? new Date(a.endDate) : new Date(0));
+        const dateB = b.completeDate ? new Date(b.completeDate) : (b.endDate ? new Date(b.endDate) : new Date(0));
+        return dateB.getTime() - dateA.getTime();
+      });
+  }, [allSprintDetails, projectKey]);
+
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    projectClosedSprints.forEach(s => {
+      const d = s.completeDate || s.endDate;
+      if (d) {
+        const y = new Date(d).getFullYear();
+        if (y > 2020) years.add(y);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [projectClosedSprints]);
+
+  useEffect(() => {
+    if (availableYears.includes(2026)) setYearFilter('2026');
+    else if (availableYears.length > 0) setYearFilter(availableYears[0].toString());
+  }, [availableYears.length]);
+
+  const filteredSprints = useMemo(() => {
+    let list = [...projectClosedSprints];
+    if (yearFilter !== 'all') {
+      const y = parseInt(yearFilter);
+      list = list.filter(s => {
+        const d = s.completeDate || s.endDate;
+        return d && new Date(d).getFullYear() === y;
+      });
+    }
+    if (nameFilter.trim()) {
+      const f = nameFilter.toLowerCase().trim();
+      list = list.filter(s => s.name.toLowerCase().includes(f));
+    }
+    return list;
+  }, [projectClosedSprints, yearFilter, nameFilter]);
+
+  const fmtDate = (d?: string | null) =>
+    d ? new Date(d).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—';
+
+  const successColor = (rate: number) =>
+    rate >= 80 ? 'text-green-600' : rate >= 60 ? 'text-yellow-600' : 'text-red-600';
+  const successBg = (rate: number) =>
+    rate >= 80 ? 'bg-green-500' : rate >= 60 ? 'bg-yellow-500' : 'bg-red-500';
+
+  return (
+    <div className="fixed inset-0 z-50 flex" onClick={onClose}>
+      <div className="flex-1 bg-black/40" />
+      <div
+        className="w-full max-w-4xl bg-white h-full flex flex-col shadow-2xl overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Panel header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+          <div>
+            <div className="flex items-center space-x-2">
+              <History className="h-5 w-5 text-indigo-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Geçmiş Sprintler</h3>
+              {projectKey !== 'all' && (
+                <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-semibold rounded">
+                  {projectKey}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-gray-500 mt-0.5">{projectName}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Filtreler */}
+        <div className="px-6 py-3 border-b border-gray-100 bg-white flex flex-wrap items-center gap-3">
+          <div className="flex items-center space-x-2">
+            <label className="text-xs font-medium text-gray-600 whitespace-nowrap">Yıl:</label>
+            <select
+              value={yearFilter}
+              onChange={e => setYearFilter(e.target.value)}
+              className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              <option value="all">Tüm Yıllar</option>
+              {availableYears.map(y => (
+                <option key={y} value={y.toString()}>{y}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center space-x-2 flex-1">
+            <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
+            <input
+              type="text"
+              value={nameFilter}
+              onChange={e => setNameFilter(e.target.value)}
+              placeholder="Sprint adında ara..."
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent flex-1 max-w-xs"
+            />
+            {nameFilter && (
+              <button onClick={() => setNameFilter('')} className="text-xs text-gray-400 hover:text-gray-600">Temizle</button>
+            )}
+          </div>
+
+          <span className="ml-auto text-xs text-gray-400">
+            <span className="font-semibold text-gray-600">{filteredSprints.length}</span> sprint
+          </span>
+        </div>
+
+        {/* Tablo */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredSprints.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+              <Activity className="h-8 w-8 mb-2" />
+              <p className="text-sm">Sprint bulunamadı.</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-gray-50 border-b border-gray-200 z-10">
+                <tr>
+                  {projectKey === 'all' && (
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-14">Proje</th>
+                  )}
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Sprint Adı</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Kapanış</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide w-20">Görev</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Başarı</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">
+                    <span className="text-gray-500 block">Tahmin</span>
+                    <span className="text-orange-400 block normal-case font-normal">Harcanan</span>
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Değerl.</th>
+                  <th className="w-8" />
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSprints.map(sprint => {
+                  const isExpanded = expandedRow === sprint.id;
+                  const issueTypes = Object.entries(sprint.issueTypeBreakdown || {}).filter(([type]) => {
+                    const tl = type.toLowerCase();
+                    return tl !== 'epic' && tl !== 'epik';
+                  });
+
+                  return (
+                    <React.Fragment key={sprint.id}>
+                      <tr
+                        className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                        onClick={() => setExpandedRow(isExpanded ? null : sprint.id)}
+                      >
+                        {projectKey === 'all' && (
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                              {sprint.projectKey}
+                            </span>
+                          </td>
+                        )}
+                        <td className="px-4 py-3">
+                          <div className="text-sm font-medium text-gray-900 truncate max-w-[200px]" title={sprint.name}>
+                            {sprint.name}
+                          </div>
+                          {projectKey === 'all' && (
+                            <div className="text-xs text-gray-400 truncate max-w-[200px]">{sprint.projectName}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                          <div className="font-medium text-gray-700">{fmtDate(sprint.completeDate || sprint.endDate)}</div>
+                          <div className="text-gray-400">{fmtDate(sprint.startDate)} →</div>
+                        </td>
+                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                          <span className="text-sm font-semibold text-gray-700">{sprint.doneTaskCount}</span>
+                          <span className="text-xs text-gray-400">/{sprint.taskCount}</span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <span className={`text-sm font-bold ${successColor(sprint.successRate)}`}>%{sprint.successRate}</span>
+                            <div className="w-12 bg-gray-200 rounded-full h-1.5">
+                              <div className={`h-1.5 rounded-full ${successBg(sprint.successRate)}`} style={{ width: `${sprint.successRate}%` }} />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-xs whitespace-nowrap">
+                          <div className="text-gray-700 font-medium">{sprint.totalHours > 0 ? `${Math.round(sprint.totalHours * 10) / 10}h` : '—'}</div>
+                          <div className="text-orange-500">{sprint.totalActualHours > 0 ? `${Math.round((sprint.totalActualHours || 0) * 10) / 10}h` : '—'}</div>
+                        </td>
+                        <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+                          {user && !hasRole('admin') && (
+                            userEvaluations[sprint.id] ? (
+                              <span className="text-xs text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-full whitespace-nowrap">✓ Tamam</span>
+                            ) : supabaseEvaluationService.isEvaluationActive(sprint) ? (
+                              <button
+                                onClick={() => onEvaluate(sprint)}
+                                className="text-xs px-2 py-1 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors font-medium whitespace-nowrap"
+                              >
+                                Değerlendir
+                              </button>
+                            ) : (
+                              <span className="text-xs text-gray-400 bg-gray-50 border border-gray-200 px-2 py-1 rounded-full whitespace-nowrap">Doldu</span>
+                            )
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          {isExpanded
+                            ? <ChevronUp className="h-4 w-4 text-gray-400 mx-auto" />
+                            : <ChevronDown className="h-4 w-4 text-gray-400 mx-auto" />}
+                        </td>
+                      </tr>
+
+                      {isExpanded && (
+                        <tr className="bg-indigo-50/40 border-b border-indigo-100">
+                          <td colSpan={projectKey === 'all' ? 8 : 7} className="px-6 py-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Görev Tipleri</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {issueTypes.length > 0 ? issueTypes.map(([type, data]: [string, any]) => (
+                                    <span key={type} className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                      type === 'Bug' ? 'text-red-700 bg-red-100' :
+                                      type === 'Story' ? 'text-green-700 bg-green-100' :
+                                      'text-blue-700 bg-blue-100'
+                                    }`}>
+                                      {type === 'Bug' && <Bug className="h-3 w-3 mr-1" />}
+                                      {type === 'Story' && <Zap className="h-3 w-3 mr-1" />}
+                                      {type === 'Task' && <FileText className="h-3 w-3 mr-1" />}
+                                      {type}: {data.completed}/{data.count}
+                                    </span>
+                                  )) : <span className="text-xs text-gray-400">Veri yok</span>}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Çalışanlar</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {sprint.assignedDevelopers.length > 0
+                                    ? sprint.assignedDevelopers.map((dev: string, idx: number) => (
+                                        <span key={idx} className="px-2 py-0.5 bg-white border border-gray-200 text-gray-700 text-xs rounded shadow-sm">{dev}</span>
+                                      ))
+                                    : <span className="text-xs text-gray-400">Atanmış kişi yok</span>}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Tarihler</p>
+                                <div className="space-y-1 text-xs text-gray-600">
+                                  <div className="flex justify-between">
+                                    <span>Başlangıç</span>
+                                    <span className="font-medium">{sprint.startDate ? new Date(sprint.startDate).toLocaleDateString('tr-TR') : '—'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Bitiş (planlanan)</span>
+                                    <span className="font-medium">{sprint.endDate ? new Date(sprint.endDate).toLocaleDateString('tr-TR') : '—'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Kapanış (gerçek)</span>
+                                    <span className="font-medium text-indigo-600">{sprint.completeDate ? new Date(sprint.completeDate).toLocaleDateString('tr-TR') : '—'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Ana bileşen ──────────────────────────────────────────────────────────────
 export const ProjectSprintOverview: React.FC = () => {
   const { projects, sprints, sprintTasks, loading, error, refresh, sprintType, createdDateRange } = useJiraData();
   const { canAccessProject, getAccessibleProjects, user, hasRole } = useAuth();
@@ -93,17 +385,22 @@ export const ProjectSprintOverview: React.FC = () => {
   } | null>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   
-  // Analist/yazılımcı kullanıcıları için filtreler
+  // ── YENİ: Geçmiş sprint drawer ───────────────────────────────────────────
+  const [historyDrawer, setHistoryDrawer] = useState<{
+    projectKey: string;
+    projectName: string;
+  } | null>(null);
+  // ─────────────────────────────────────────────────────────────────────────
+
   const isAnalystOrDeveloper = useMemo(() => {
     return user && (hasRole('analyst') || hasRole('developer'));
   }, [user, hasRole]);
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [sprintNameFilter, setSprintNameFilter] = useState<string>('');
   const [debouncedSprintNameFilter, setDebouncedSprintNameFilter] = useState<string>('');
-  const [displayedSprintCount, setDisplayedSprintCount] = useState<number>(30); // İlk 30 sprint'i göster
+  const [displayedSprintCount, setDisplayedSprintCount] = useState<number>(30);
   const hasInitializedYear = useRef(false);
   
-  // Debounce sprint name filter (300ms gecikme)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSprintNameFilter(sprintNameFilter);
@@ -111,38 +408,22 @@ export const ProjectSprintOverview: React.FC = () => {
     return () => clearTimeout(timer);
   }, [sprintNameFilter]);
 
-  // Erişilebilir projeleri önceden hesapla (her sprint için tekrar kontrol etmeyi önle)
-  const accessibleProjects = useMemo(() => {
-    return getAccessibleProjects();
-  }, [getAccessibleProjects]);
+  const accessibleProjects = useMemo(() => getAccessibleProjects(), [getAccessibleProjects]);
+  const accessibleProjectsSet = useMemo(() => new Set(accessibleProjects), [accessibleProjects]);
 
-  // Erişilebilir proje kontrolü için Set kullan (O(1) lookup)
-  const accessibleProjectsSet = useMemo(() => {
-    return new Set(accessibleProjects);
-  }, [accessibleProjects]);
-
-  // canAccessProject fonksiyonunu optimize et
   const canAccessProjectOptimized = useCallback((projectKey: string): boolean => {
-    if (accessibleProjects.length === 0) return true; // Admin - tüm projelere erişebilir
+    if (accessibleProjects.length === 0) return true;
     return accessibleProjectsSet.has(projectKey);
   }, [accessibleProjects, accessibleProjectsSet]);
 
   useEffect(() => {
     if (sprints && sprintTasks) {
       setLastUpdate(new Date());
-      
-      // Debug bilgilerini sadece development modunda güncelle
       if (process.env.NODE_ENV === 'development') {
         setDebugInfo({
-          sprintType,
-          sprintsCount: sprints.length,
+          sprintType, sprintsCount: sprints.length,
           sprintTasksKeys: Object.keys(sprintTasks),
-          sprintDetails: sprints.map(s => ({
-            id: s.id,
-            name: s.name,
-            state: s.state,
-            projectKey: s.projectKey
-          }))
+          sprintDetails: sprints.map(s => ({ id: s.id, name: s.name, state: s.state, projectKey: s.projectKey }))
         });
       }
     }
@@ -151,37 +432,26 @@ export const ProjectSprintOverview: React.FC = () => {
   useEffect(() => {
     const loadUserEvaluations = async () => {
       if (!user || !sprints) return;
-
       const closedSprints = sprints.filter(sprint => sprint.state === 'closed');
-      if (closedSprints.length === 0) {
-        setUserEvaluations({});
-        return;
-      }
+      if (closedSprints.length === 0) { setUserEvaluations({}); return; }
 
-      // Paralel olarak tüm değerlendirmeleri kontrol et
       const evaluationPromises = closedSprints.map(async (sprint) => {
         try {
           const hasEvaluated = await supabaseEvaluationService.hasUserEvaluated(sprint.id, user.email);
           return { sprintId: sprint.id, hasEvaluated };
         } catch (error) {
-          console.error(`Error checking evaluation for sprint ${sprint.id}:`, error);
           return { sprintId: sprint.id, hasEvaluated: false };
         }
       });
 
       const results = await Promise.all(evaluationPromises);
       const evaluationStatus: Record<string, boolean> = {};
-      results.forEach(result => {
-        evaluationStatus[result.sprintId] = result.hasEvaluated;
-      });
-
+      results.forEach(result => { evaluationStatus[result.sprintId] = result.hasEvaluated; });
       setUserEvaluations(evaluationStatus);
     };
-
     loadUserEvaluations();
   }, [user, sprints]);
 
-  // Sprint detaylarını context'ten oluştur - optimize edilmiş versiyon
   const sprintDetails = useMemo(() => {
     if (!sprints || !sprintTasks) return [];
 
@@ -192,76 +462,48 @@ export const ProjectSprintOverview: React.FC = () => {
       .filter(sprint => canAccessProjectOptimized(sprint.projectKey || ''))
       .map((sprint: JiraSprint) => {
           const allTasks: JiraTask[] = sprintTasks[sprint.id] || [];
-          
-          // Tarih filtreleme - optimize edilmiş
           let tasks: JiraTask[] = shouldFilterByDate 
             ? filterTasksByDateRange(allTasks, start, end)
             : [...allTasks];
 
-          // Epic tespiti için cache (aynı task için tekrar kontrol etmemek için)
           const epicCache = new Map<string, boolean>();
           const isEpicTask = (task: JiraTask): boolean => {
-            if (epicCache.has(task.key)) {
-              return epicCache.get(task.key)!;
-            }
-            // Önce task.issueType'ı kontrol et (Jira'dan gelen gerçek değer)
+            if (epicCache.has(task.key)) return epicCache.get(task.key)!;
             if (task.issueType) {
-              const issueTypeLower = task.issueType.toLowerCase();
-              if (issueTypeLower === 'epic' || issueTypeLower === 'epik') {
-                epicCache.set(task.key, true);
-                return true;
-              }
+              const l = task.issueType.toLowerCase();
+              if (l === 'epic' || l === 'epik') { epicCache.set(task.key, true); return true; }
             }
-            // Sonra getIssueType ile kontrol et
             const typeName = getIssueType(task);
-            const typeNameLower = typeName.toLowerCase();
-            const isEpic = typeNameLower === 'epic' || typeNameLower === 'epik';
+            const isEpic = typeName.toLowerCase() === 'epic' || typeName.toLowerCase() === 'epik';
             epicCache.set(task.key, isEpic);
             return isEpic;
           };
 
-          // Parent key'leri önceden hesapla (Set kullanarak O(1) lookup)
-          // Epic'leri hariç tut
           const mainTasks = tasks.filter(t => !t.isSubtask);
           const epicKeys = new Set<string>();
           const parentKeySet = new Set<string>();
           const parentKeyMap = new Map<string, JiraTask>();
           
-          // Tek geçişte main task'ları işle
           for (const task of mainTasks) {
-            if (isEpicTask(task)) {
-              epicKeys.add(task.key);
-            } else {
-              parentKeySet.add(task.key);
-              parentKeyMap.set(task.key, task);
-            }
+            if (isEpicTask(task)) epicKeys.add(task.key);
+            else { parentKeySet.add(task.key); parentKeyMap.set(task.key, task); }
           }
           
-          // Subtask'ların parent'larını kontrol et (Epic parent'ları hariç)
           const orphanParentKeys = new Set<string>();
-          const subtasksByParent = new Map<string, JiraTask[]>(); // Optimize: relatedSubs için
+          const subtasksByParent = new Map<string, JiraTask[]>();
           
           for (const task of tasks) {
             if (task.isSubtask && task.parentKey) {
-              // Parent Epic değilse ve parentKeySet'te yoksa ekle
               if (!epicKeys.has(task.parentKey) && !parentKeySet.has(task.parentKey)) {
                 orphanParentKeys.add(task.parentKey);
               }
-              
-              // Subtask'ları parent'a göre grupla (daha sonra kullanmak için)
-              if (!subtasksByParent.has(task.parentKey)) {
-                subtasksByParent.set(task.parentKey, []);
-              }
+              if (!subtasksByParent.has(task.parentKey)) subtasksByParent.set(task.parentKey, []);
               subtasksByParent.get(task.parentKey)!.push(task);
             }
           }
           
-          // Eksik parent'ları ekle (Epic'ler hariç)
           for (const parentKey of orphanParentKeys) {
-            // Epic değilse ekle
-            if (epicKeys.has(parentKey)) {
-              continue; // Epic'i atla
-            }
+            if (epicKeys.has(parentKey)) continue;
             const parent = allTasks.find(t => !t.isSubtask && t.key === parentKey && !isEpicTask(t));
             if (parent && !parentKeyMap.has(parent.key)) {
               tasks.push(parent);
@@ -270,70 +512,45 @@ export const ProjectSprintOverview: React.FC = () => {
             }
           }
 
-          // Issue type breakdown ve saat hesaplamaları - tek geçişte
           const issueTypeBreakdown: Record<string, { count: number; completed: number }> = {};
-          let totalHours = 0;
-          let totalActualHours = 0;
+          let totalHours = 0, totalActualHours = 0;
           const assignedDevelopersSet = new Set<string>();
           
           for (const task of mainTasks) {
             const typeName = getIssueType(task);
-            
-            if (!issueTypeBreakdown[typeName]) {
-              issueTypeBreakdown[typeName] = { count: 0, completed: 0 };
-            }
-            
+            if (!issueTypeBreakdown[typeName]) issueTypeBreakdown[typeName] = { count: 0, completed: 0 };
             issueTypeBreakdown[typeName].count++;
-            
-            if (statusIsDone(task.status)) {
-              issueTypeBreakdown[typeName].completed++;
-            }
+            if (statusIsDone(task.status)) issueTypeBreakdown[typeName].completed++;
           }
           
-          // Tüm task'lar için saat hesaplamaları
           for (const task of tasks) {
             totalHours += task.estimatedHours || 0;
             totalActualHours += task.actualHours || 0;
-            if (task.assignee && task.assignee !== 'Unassigned') {
-              assignedDevelopersSet.add(task.assignee);
-            }
+            if (task.assignee && task.assignee !== 'Unassigned') assignedDevelopersSet.add(task.assignee);
           }
 
-          // Parent bazlı tamamlanma sayısı - optimize edilmiş
-          // Epic'ler zaten parentKeySet'ten hariç tutuldu
           const allParentKeys = new Set([...parentKeySet, ...orphanParentKeys]);
           let completedParentCount = 0;
-          
-          // Debug: Epic kontrolü
-          if (process.env.NODE_ENV === 'development' && sprint.projectKey === 'AN') {
-            console.log(`🔍 AN Sprint ${sprint.name} Epic Debug:`, {
-              epicKeys: Array.from(epicKeys),
-              epicCount: epicKeys.size,
-              parentKeySetSize: parentKeySet.size,
-              orphanParentKeysSize: orphanParentKeys.size,
-              totalParentCount: allParentKeys.size
-            });
-          }
-          
-          // Parent tamamlanma kontrolü - optimize edilmiş (Map kullanarak)
           for (const parentKey of allParentKeys) {
             const parent = parentKeyMap.get(parentKey);
             const relatedSubs = subtasksByParent.get(parentKey) || [];
-            
-            const isCompleted = (parent && statusIsDone(parent.status)) || 
-                              relatedSubs.some(st => statusIsDone(st.status));
-            
-            if (isCompleted) {
-              completedParentCount++;
-            }
+            const isCompleted = (parent && statusIsDone(parent.status)) || relatedSubs.some(st => statusIsDone(st.status));
+            if (isCompleted) completedParentCount++;
           }
           
+          if (process.env.NODE_ENV === 'development' && sprint.projectKey === 'AN') {
+            console.log(`🔍 AN Sprint ${sprint.name} Epic Debug:`, {
+              epicKeys: Array.from(epicKeys), epicCount: epicKeys.size,
+              parentKeySetSize: parentKeySet.size, orphanParentKeysSize: orphanParentKeys.size,
+              totalParentCount: allParentKeys.size
+            });
+          }
+
           return {
             ...sprint,
             boardName: getBoardNameFromProjectKey(sprint.projectKey || ''),
             projectName: getProjectNameFromKey(sprint.projectKey || ''),
-            taskCount: allParentKeys.size,
-            totalHours,
+            taskCount: allParentKeys.size, totalHours,
             totalActualHours: Math.round(totalActualHours * 10) / 10,
             assignedDevelopers: Array.from(assignedDevelopersSet),
             doneTaskCount: completedParentCount,
@@ -343,51 +560,29 @@ export const ProjectSprintOverview: React.FC = () => {
         });
   }, [sprints, sprintTasks, canAccessProjectOptimized, sprintType, createdDateRange]);
 
-  // Mevcut yılları hesapla (analist/yazılımcı için)
   const availableYears = useMemo(() => {
     if (!sprintDetails || sprintDetails.length === 0) return [];
     const years = new Set<number>();
     sprintDetails.forEach(sprint => {
       if (sprint.endDate) {
         const year = new Date(sprint.endDate).getFullYear();
-        if (year > 2020) {
-          years.add(year);
-        }
+        if (year > 2020) years.add(year);
       }
     });
-    return Array.from(years).sort((a, b) => b - a); // En yeni yıl önce
+    return Array.from(years).sort((a, b) => b - a);
   }, [sprintDetails]);
 
-  // Varsayılan olarak 2026 yılını seç (eğer mevcut yıllar arasındaysa)
   useEffect(() => {
-    // Sadece analist/yazılımcı kullanıcıları için ve kapatılan sprintlerde çalış
     if (!isAnalystOrDeveloper || sprintType !== 'closed') {
       hasInitializedYear.current = false;
       return;
     }
-
-    // availableYears henüz hesaplanmadıysa bekle
-    if (availableYears.length === 0) {
-      return;
-    }
-
-    // Sadece bir kez initialize et
-    if (hasInitializedYear.current) {
-      return;
-    }
-
-    // Varsayılan olarak 2026'yı seç veya en yeni yılı
-    if (availableYears.includes(2026)) {
-      setSelectedYear('2026');
-    } else if (availableYears.length > 0) {
-      // 2026 yoksa en yeni yılı seç
-      setSelectedYear(availableYears[0].toString());
-    }
-    
+    if (availableYears.length === 0 || hasInitializedYear.current) return;
+    if (availableYears.includes(2026)) setSelectedYear('2026');
+    else setSelectedYear(availableYears[0].toString());
     hasInitializedYear.current = true;
   }, [availableYears.length, isAnalystOrDeveloper, sprintType]);
 
-  // Filtre değiştiğinde pagination'ı sıfırla
   useEffect(() => {
     setDisplayedSprintCount(30);
   }, [selectedProject, selectedYear, debouncedSprintNameFilter, sprintType]);
@@ -397,64 +592,47 @@ export const ProjectSprintOverview: React.FC = () => {
       ? sprintDetails
       : sprintDetails.filter(sprint => sprint.projectKey === selectedProject);
 
-    // Analist/yazılımcı kullanıcıları için ek filtreler
     if (isAnalystOrDeveloper && sprintType === 'closed') {
-      // Yıl filtresi
       if (selectedYear !== 'all') {
         const year = parseInt(selectedYear);
         filtered = filtered.filter(sprint => {
           if (!sprint.endDate) return false;
-          const sprintYear = new Date(sprint.endDate).getFullYear();
-          return sprintYear === year;
+          return new Date(sprint.endDate).getFullYear() === year;
         });
       }
-
-      // Sprint adı filtresi (debounced)
       if (debouncedSprintNameFilter.trim() !== '') {
         const filterLower = debouncedSprintNameFilter.toLowerCase().trim();
-        filtered = filtered.filter(sprint => 
-          sprint.name.toLowerCase().includes(filterLower)
-        );
+        filtered = filtered.filter(sprint => sprint.name.toLowerCase().includes(filterLower));
       }
     }
-
     return filtered;
   }, [selectedProject, sprintDetails, isAnalystOrDeveloper, sprintType, selectedYear, debouncedSprintNameFilter]);
 
   const sortedSprints = useMemo(() => {
-    // Array kopyalama yerine doğrudan sıralama yap (daha hızlı)
-    const sprints = [...filteredSprints];
-    // Analist/yazılımcı için kapatılan sprintlerde tarihe göre sırala (en yeni önce)
+    const list = [...filteredSprints];
     if (isAnalystOrDeveloper && sprintType === 'closed') {
-      sprints.sort((a, b) => {
+      list.sort((a, b) => {
         const dateA = a.completeDate ? new Date(a.completeDate) : (a.endDate ? new Date(a.endDate) : new Date(0));
         const dateB = b.completeDate ? new Date(b.completeDate) : (b.endDate ? new Date(b.endDate) : new Date(0));
-        return dateB.getTime() - dateA.getTime(); // En yeni önce
+        return dateB.getTime() - dateA.getTime();
       });
     } else {
-      sprints.sort((a, b) => b.successRate - a.successRate);
+      list.sort((a, b) => b.successRate - a.successRate);
     }
-    return sprints;
+    return list;
   }, [filteredSprints, isAnalystOrDeveloper, sprintType]);
 
-  // Stats hesaplamasını optimize et - tek geçişte tüm hesaplamaları yap
   const stats = useMemo(() => {
-    let totalTasks = 0;
-    let totalHours = 0;
-    let totalActualHours = 0;
+    let totalTasks = 0, totalHours = 0, totalActualHours = 0;
     const developersSet = new Set<string>();
-    
     for (const sprint of sortedSprints) {
       totalTasks += sprint.taskCount;
       totalHours += sprint.totalHours;
       totalActualHours += sprint.totalActualHours || 0;
-      sprint.assignedDevelopers.forEach(dev => developersSet.add(dev));
+      sprint.assignedDevelopers.forEach((dev: string) => developersSet.add(dev));
     }
-    
     return {
-      totalSprints: sortedSprints.length,
-      totalTasks,
-      totalHours,
+      totalSprints: sortedSprints.length, totalTasks, totalHours,
       totalActualHours: Math.round(totalActualHours * 10) / 10,
       totalDevelopers: developersSet.size
     };
@@ -462,48 +640,29 @@ export const ProjectSprintOverview: React.FC = () => {
 
   const exportToCSV = () => {
     if (sortedSprints.length === 0) { alert('İndirilecek veri bulunamadı.'); return; }
-
-    const q = (val: string | number | null | undefined) =>
-      `"${String(val ?? '').replace(/"/g, '""')}"`;
-
-    const fmtDate = (d?: string | null) =>
-      d ? new Date(d).toLocaleDateString('tr-TR') : '—';
-
-    // Tüm sprint'lerde geçen issue tiplerini topla (Epic hariç)
+    const q = (val: string | number | null | undefined) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+    const fmtDate = (d?: string | null) => d ? new Date(d).toLocaleDateString('tr-TR') : '—';
     const allTypes = Array.from(new Set(
-      sortedSprints.flatMap(s =>
-        Object.keys(s.issueTypeBreakdown || {}).filter(t => {
-          const tl = t.toLowerCase();
-          return tl !== 'epic' && tl !== 'epik';
-        })
-      )
+      sortedSprints.flatMap(s => Object.keys(s.issueTypeBreakdown || {}).filter(t => {
+        const tl = t.toLowerCase(); return tl !== 'epic' && tl !== 'epik';
+      }))
     )).sort();
 
     const headers = [
-      q('Proje'), q('Sprint Adı'),
-      q('Ana Görev'), q('Tamamlanan'),
-      q('Başarı Oranı (%)'),
-      q('Toplam Tahmin (h)'), q('Harcanan Süre (h)'),
-      q('Sprint Başlangıç'), q('Sprint Bitiş'),
+      q('Proje'), q('Sprint Adı'), q('Ana Görev'), q('Tamamlanan'), q('Başarı Oranı (%)'),
+      q('Toplam Tahmin (h)'), q('Harcanan Süre (h)'), q('Sprint Başlangıç'), q('Sprint Bitiş'),
       ...allTypes.flatMap(t => [q(`${t} (Toplam)`), q(`${t} (Tamamlanan)`)]),
     ].join(',');
 
     const rows = sortedSprints.map(sprint => {
       const breakdown = sprint.issueTypeBreakdown || {};
       return [
-        q(`${sprint.projectKey} – ${sprint.projectName}`),
-        q(sprint.name),
-        q(sprint.taskCount),
-        q(sprint.doneTaskCount || 0),
-        q(`%${sprint.successRate}`),
+        q(`${sprint.projectKey} – ${sprint.projectName}`), q(sprint.name),
+        q(sprint.taskCount), q(sprint.doneTaskCount || 0), q(`%${sprint.successRate}`),
         q(sprint.totalHours > 0 ? `${Math.round(sprint.totalHours * 10) / 10}h` : '—'),
         q(sprint.totalActualHours > 0 ? `${Math.round((sprint.totalActualHours || 0) * 10) / 10}h` : '—'),
-        q(fmtDate(sprint.startDate)),
-        q(fmtDate(sprint.endDate)),
-        ...allTypes.flatMap(t => {
-          const data = breakdown[t];
-          return [q(data?.count ?? 0), q(data?.completed ?? 0)];
-        }),
+        q(fmtDate(sprint.startDate)), q(fmtDate(sprint.endDate)),
+        ...allTypes.flatMap(t => { const data = breakdown[t]; return [q(data?.count ?? 0), q(data?.completed ?? 0)]; }),
       ].join(',');
     });
 
@@ -513,9 +672,7 @@ export const ProjectSprintOverview: React.FC = () => {
     link.setAttribute('href', URL.createObjectURL(blob));
     link.setAttribute('download', `sprint_ozet_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
   };
 
   if (loading) {
@@ -536,10 +693,7 @@ export const ProjectSprintOverview: React.FC = () => {
           <Activity className="h-5 w-5 text-red-600" />
           <p className="text-red-800">{error}</p>
         </div>
-        <button
-          onClick={refresh}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-        >
+        <button onClick={refresh} className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
           Tekrar Dene
         </button>
       </div>
@@ -550,6 +704,29 @@ export const ProjectSprintOverview: React.FC = () => {
     <div className="space-y-6">
       {/* Onboarding Modal */}
       <ProjectSprintOnboarding isOpen={isOnboardingOpen} onClose={closeOnboarding} />
+
+      {/* ── Geçmiş Sprint Drawer ────────────────────────────────────────────── */}
+      {historyDrawer && (
+        <AllClosedSprintsDrawer
+          projectKey={historyDrawer.projectKey}
+          projectName={historyDrawer.projectName}
+          allSprintDetails={sprintDetails}
+          userEvaluations={userEvaluations}
+          sprintTasks={sprintTasks}
+          user={user}
+          hasRole={hasRole}
+          onEvaluate={(sprint) => {
+            setHistoryDrawer(null);
+            setShowEvaluationForm({
+              sprint,
+              tasks: sprintTasks?.[sprint.id] || [],
+              projectName: sprint.projectName
+            });
+          }}
+          onClose={() => setHistoryDrawer(null)}
+        />
+      )}
+      {/* ─────────────────────────────────────────────────────────────────────── */}
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -621,9 +798,22 @@ export const ProjectSprintOverview: React.FC = () => {
                   </option>
                 ))}
             </select>
+
+            {/* ── Geçmiş Sprintler butonu — closed modda filtre barında da göster ── */}
+            {sprintType === 'closed' && (
+              <button
+                onClick={() => setHistoryDrawer({
+                  projectKey: selectedProject,
+                  projectName: selectedProject === 'all' ? 'Tüm Projeler' : getProjectNameFromKey(selectedProject)
+                })}
+                className="flex items-center space-x-2 px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors font-medium text-sm"
+              >
+                <History className="h-4 w-4" />
+                <span>Tüm Geçmiş Sprintleri Gör</span>
+              </button>
+            )}
           </div>
           
-          {/* Analist/Yazılımcı kullanıcıları için ek filtreler */}
           {isAnalystOrDeveloper && sprintType === 'closed' && (
             <div className="flex items-center space-x-4 pt-2 border-t border-gray-200">
               <label className="text-sm font-medium text-gray-700">Yıl Filtresi:</label>
@@ -634,9 +824,7 @@ export const ProjectSprintOverview: React.FC = () => {
               >
                 <option value="all">Tüm Yıllar</option>
                 {availableYears.map(year => (
-                  <option key={year} value={year.toString()}>
-                    {year}
-                  </option>
+                  <option key={year} value={year.toString()}>{year}</option>
                 ))}
               </select>
               
@@ -648,12 +836,8 @@ export const ProjectSprintOverview: React.FC = () => {
                 placeholder="Sprint adına göre ara..."
                 className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent flex-1 max-w-md"
               />
-              
               {sprintNameFilter && (
-                <button
-                  onClick={() => setSprintNameFilter('')}
-                  className="text-sm text-gray-600 hover:text-gray-800 px-2"
-                >
+                <button onClick={() => setSprintNameFilter('')} className="text-sm text-gray-600 hover:text-gray-800 px-2">
                   Temizle
                 </button>
               )}
@@ -673,7 +857,6 @@ export const ProjectSprintOverview: React.FC = () => {
             <Activity className="h-8 w-8 text-blue-600" />
           </div>
         </div>
-
         <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
@@ -683,7 +866,6 @@ export const ProjectSprintOverview: React.FC = () => {
             <Calendar className="h-8 w-8 text-green-600" />
           </div>
         </div>
-
         <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
@@ -693,7 +875,6 @@ export const ProjectSprintOverview: React.FC = () => {
             <Clock className="h-8 w-8 text-purple-600" />
           </div>
         </div>
-
         <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
@@ -703,7 +884,6 @@ export const ProjectSprintOverview: React.FC = () => {
             <Clock className="h-8 w-8 text-orange-600" />
           </div>
         </div>
-
         <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
@@ -739,8 +919,7 @@ export const ProjectSprintOverview: React.FC = () => {
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                   sprint.state === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {sprint.state === 'active' ? 'Aktif' : 
-                   sprint.state === 'closed' ? 'Kapatıldı' : sprint.state}
+                  {sprint.state === 'active' ? 'Aktif' : sprint.state === 'closed' ? 'Kapatıldı' : sprint.state}
                 </span>
               </div>
 
@@ -754,10 +933,7 @@ export const ProjectSprintOverview: React.FC = () => {
                     <span className="font-medium text-blue-600">{sprint.taskCount} görev</span>
                     <div className="text-xs text-gray-500 mt-1">
                       {Object.entries(sprint.issueTypeBreakdown || {})
-                        .filter(([type]) => {
-                          const typeLower = type.toLowerCase();
-                          return typeLower !== 'epic' && typeLower !== 'epik';
-                        })
+                        .filter(([type]) => { const tl = type.toLowerCase(); return tl !== 'epic' && tl !== 'epik'; })
                         .map(([type, data]: [string, any]) => (
                         <div key={type} className="flex items-center justify-end space-x-1">
                           <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
@@ -769,11 +945,11 @@ export const ProjectSprintOverview: React.FC = () => {
                             {type === 'Story' && <Zap className="h-3 w-3 mr-1" />}
                             {type === 'Task' && <FileText className="h-3 w-3 mr-1" />}
                             {type}: {data.count}
-                          </span> 
-                        </div> 
+                          </span>
+                        </div>
                       ))}
                     </div>
-                  </div> 
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -782,10 +958,7 @@ export const ProjectSprintOverview: React.FC = () => {
                     <span className="font-medium text-green-600">{sprint.doneTaskCount} görev</span>
                     <div className="text-xs text-gray-500 mt-1">
                       {Object.entries(sprint.issueTypeBreakdown || {})
-                        .filter(([type]) => {
-                          const typeLower = type.toLowerCase();
-                          return typeLower !== 'epic' && typeLower !== 'epik';
-                        })
+                        .filter(([type]) => { const tl = type.toLowerCase(); return tl !== 'epic' && tl !== 'epik'; })
                         .map(([type, data]: [string, any]) => (
                         data.completed > 0 && (
                           <div key={type} className="flex items-center justify-end space-x-1">
@@ -845,12 +1018,11 @@ export const ProjectSprintOverview: React.FC = () => {
                 )}
               </div>
 
-              {/* Assigned Developers */}
               {sprint.assignedDevelopers.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <p className="text-xs font-medium text-gray-700 mb-2">Sprintte Çalışanlar:</p>
                   <div className="flex flex-wrap gap-1">
-                    {sprint.assignedDevelopers.map((developer, idx) => (
+                    {sprint.assignedDevelopers.map((developer: string, idx: number) => (
                       <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
                         {developer}
                       </span>
@@ -859,7 +1031,24 @@ export const ProjectSprintOverview: React.FC = () => {
                 </div>
               )}
 
-              {/* Evaluation Button for Closed Sprints */}
+              {/* ── YENİ: Geçmiş sprintler butonu — closed modda her kartta ── */}
+              {sprintType === 'closed' && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <button
+                    onClick={() => setHistoryDrawer({
+                      projectKey: sprint.projectKey || 'all',
+                      projectName: sprint.projectName
+                    })}
+                    className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors text-sm font-medium"
+                  >
+                    <History className="h-4 w-4" />
+                    <span>Tüm Geçmiş Sprintleri Gör</span>
+                    <ChevronRight className="h-4 w-4 ml-auto" />
+                  </button>
+                </div>
+              )}
+              {/* ──────────────────────────────────────────────────────────── */}
+
               {sprint.state === 'closed' && user && !hasRole('admin') && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   {userEvaluations[sprint.id] ? (
@@ -940,7 +1129,6 @@ export const ProjectSprintOverview: React.FC = () => {
           projectName={showEvaluationForm.projectName}
           onClose={() => setShowEvaluationForm(null)}
           onSubmit={() => {
-            // Refresh to update evaluation status
             if (user && showEvaluationForm) {
               setUserEvaluations(prev => ({
                 ...prev,
@@ -954,41 +1142,4 @@ export const ProjectSprintOverview: React.FC = () => {
       )}
     </div>
   );
-};
-
-// getProjectNameFromKey fonksiyonunu tekrar ekle
-const getProjectNameFromKey = (key: string): string => {
-  const projectNames: { [key: string]: string } = {
-    'ATK': 'Albaraka Türk Katılım Bankası',
-    'ALB': 'Alternatif Bank',
-    'AN': 'Anadolubank',
-    'BB': 'Burgan Bank',
-    'EK': 'Emlak Katılım',
-    'OB': 'Odeabank',
-    'QNB': 'QNB Bank',
-    'TFKB': 'Türkiye Finans',
-    'VK': 'Vakıf Katılım',
-    'ZK': 'Ziraat Katılım Bankası',
-    'DK': 'Dünya Katılım',
-    'HF': 'Hayat Finans'
-  };
-  return projectNames[key] || key;
-};
- 
-const getBoardNameFromProjectKey = (key: string): string => {
-  const boardNames: { [key: string]: string } = {
-    'VK': 'VK board',
-    'AN': 'AN board',
-    'TFKB': 'TFKB board',
-    'QNB': 'QNB board',
-    'ATK': 'ATK board',
-    'ALB': 'ALB board',
-    'BB': 'BB board',
-    'EK': 'EK board',
-    'ZK': 'ZK board',
-    'DK': 'DK board',
-    'OB': 'OB panosu',
-    'HF': 'HF board'
-  };
-  return boardNames[key] || key;
 };
