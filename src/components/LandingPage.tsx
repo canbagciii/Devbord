@@ -219,7 +219,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-[1100px] mx-auto text-center">
           <span className="inline-block text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1.5 rounded-md mb-4">Tanıdık geldi mi?</span>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 mb-4 max-w-[600px] mx-auto">Her takımın yaşadığı 3 büyük sorun</h2>
-          <p className="text-lg text-gray-600 max-w-[540px] mx-auto leading-relaxed">Devbord, yazılım ekiplerinin sprint ve insan kaynakları süreçlerinde yaşadığı karmaşayı ortadan kaldırır.</p>
+          <p className="text-lg text-gray-600 max-w-[540px] mx-auto leading-relaxed">Scrumlytics, yazılım ekiplerinin sprint ve insan kaynakları süreçlerinde yaşadığı karmaşayı ortadan kaldırır.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-[1100px] mx-auto mt-14">
           <div className="bg-white border-[1.5px] border-gray-200 rounded-2xl p-7 hover:border-blue-600 hover:shadow-lg hover:-translate-y-1 transition-all">
