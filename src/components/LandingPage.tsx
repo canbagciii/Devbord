@@ -46,7 +46,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-600/30">
               <Zap className="w-5 h-5 text-white fill-white" />
             </div>
-            Devbord
+            Scrumlytics
           </a>
           <ul className="hidden md:flex items-center gap-8 list-none">
             <li><a href="#problem" className="text-gray-600 text-sm font-medium hover:text-blue-600 transition-colors">Sorunlar</a></li>
