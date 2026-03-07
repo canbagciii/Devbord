@@ -360,7 +360,7 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
   const [totalCount, setTotalCount] = useState(0);
   const cancelRef = React.useRef(false);
 
-  // Getir fonksiyonu — sadece buton tıklandığında çalışır
+  // Getir fonksiyonu — proje bazlı modda otomatik, all modunda butona basınca çalışır
   const handleFetch = async () => {
     cancelRef.current = true; // önceki isteği iptal et
     await new Promise(r => setTimeout(r, 0));
@@ -449,6 +449,13 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
       }
     }
   };
+
+  // Proje bazlı modda drawer açılınca otomatik yükle
+  useEffect(() => {
+    if (projectKey !== 'all') {
+      handleFetch();
+    }
+  }, []);
 
   // Gösterilecek liste: Jira'dan gelen veriye context verisiyle zenginleştirilmiş
   const projectClosedSprints = useMemo(() => {
@@ -606,18 +613,20 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
               </select>
             )}
 
-            {/* Getir butonu */}
-            <button
-              onClick={handleFetch}
-              disabled={fetchStatus === 'loading'}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
-            >
-              {fetchStatus === 'loading' ? (
-                <><Loader className="h-3.5 w-3.5 animate-spin" />Yükleniyor...</>
-              ) : (
-                <><Activity className="h-3.5 w-3.5" />Getir</>
-              )}
-            </button>
+            {/* Getir butonu — sadece "tüm projeler" modunda göster */}
+            {projectKey === 'all' && (
+              <button
+                onClick={handleFetch}
+                disabled={fetchStatus === 'loading'}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+              >
+                {fetchStatus === 'loading' ? (
+                  <><Loader className="h-3.5 w-3.5 animate-spin" />Yükleniyor...</>
+                ) : (
+                  <><Activity className="h-3.5 w-3.5" />Getir</>
+                )}
+              </button>
+            )}
 
             {/* Arama — sadece data geldikten sonra göster */}
             {allClosedSprints.length > 0 && (
@@ -646,7 +655,7 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
 
         {/* Tablo */}
         <div className="flex-1 overflow-y-auto">
-          {fetchStatus === 'idle' ? (
+          {fetchStatus === 'idle' && projectKey === 'all' ? (
             <div className="flex flex-col items-center justify-center h-64 text-gray-400 space-y-3">
               <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center">
                 <History className="h-7 w-7 text-indigo-300" />
