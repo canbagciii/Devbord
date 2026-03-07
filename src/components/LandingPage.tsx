@@ -300,7 +300,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="max-w-[1100px] mx-auto">
             <div className="text-center mb-14">
               <h2 className="text-white text-3xl md:text-4xl font-extrabold mb-3">Sayılar konuşuyor</h2>
-              <p className="text-white/60 text-base">Devbord kullanan ekipler ne kazanıyor?</p>
+              <p className="text-white/60 text-base">Scrumlytics kullanan ekipler ne kazanıyor?</p>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-10">
               {[
