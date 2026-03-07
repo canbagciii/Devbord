@@ -38,7 +38,6 @@ class JiraService {
       throw new Error(`Failed to fetch XSRF token: ${response.status}`);
     }
 
-    // Get XSRF token from response headers
     const xsrfToken = response.headers.get('X-Atlassian-Token') || 
                      response.headers.get('x-atlassian-token') ||
                      `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -58,7 +57,6 @@ class JiraService {
           throw error;
         }
         
-        // Wait before retry (exponential backoff)
         const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -84,16 +82,14 @@ class JiraService {
 
   clearCache(): void {
     cache.clear();
-    this.xsrfToken = null; // Clear XSRF token when clearing cache
+    this.xsrfToken = null;
   }
 
   private async makeRequest<T>(endpoint: string, apiVersion: 'api3' | 'agile' = 'api3', options: RequestInit = {}): Promise<T> {
-    // Check if Jira credentials are configured
     if (!JIRA_EMAIL || !JIRA_TOKEN) {
       throw new Error('Jira credentials not configured. Please set VITE_JIRA_EMAIL and VITE_JIRA_TOKEN in your .env file.');
     }
 
-    // Check cache first
     const cacheKey = `${apiVersion}:${endpoint}`;
     const cached = this.getFromCache<T>(cacheKey);
     if (cached) {
@@ -110,7 +106,6 @@ class JiraService {
       ...options.headers,
     };
 
-    // Add XSRF bypass header for non-GET requests
     if (options.method && options.method !== 'GET') {
       try {
         const xsrfToken = await this._fetchXsrfToken();
@@ -133,7 +128,6 @@ class JiraService {
 
     const result = await response.json();
     
-    // Cache the result
     this.setCache(cacheKey, result);
     
     return result;
@@ -184,15 +178,66 @@ class JiraService {
     }
   }
 
+  /**
+   * Son kapatılan sprinti getirir (ana ekran kartları için — hızlı yükleme).
+   */
   async getClosedSprintsForBoard(boardId: string): Promise<JiraSprint[]> {
     try {
-      const response = await this.makeRequestWithRetry<{ values: JiraSprint[] }>(`/board/${boardId}/sprint?state=closed&maxResults=1`, 'agile');
+      const response = await this.makeRequestWithRetry<{ values: JiraSprint[] }>(
+        `/board/${boardId}/sprint?state=closed&maxResults=1`,
+        'agile'
+      );
       return response.values;
     } catch (error) {
       console.warn(`Could not fetch closed sprints for board ${boardId}:`, error);
       return [];
     }
   }
+
+  /**
+   * Bir board'un TÜM kapatılan sprintlerini getirir (geçmiş drawer için).
+   * Jira API sayfalama ile tüm sayfaları döner, en yeniden eskiye sıralar.
+   */
+  async getAllClosedSprintsForBoard(boardId: string): Promise<JiraSprint[]> {
+    try {
+      const allSprints: JiraSprint[] = [];
+      let startAt = 0;
+      const maxResults = 50;
+
+      while (true) {
+        const response = await this.makeRequestWithRetry<{
+          values: JiraSprint[];
+          isLast: boolean;
+          total?: number;
+        }>(
+          `/board/${boardId}/sprint?state=closed&maxResults=${maxResults}&startAt=${startAt}`,
+          'agile'
+        );
+
+        allSprints.push(...response.values);
+
+        // Son sayfa mı?
+        if (response.isLast || response.values.length < maxResults) {
+          break;
+        }
+
+        startAt += maxResults;
+      }
+
+      // En yeni kapanan sprint önce (completeDate veya endDate'e göre)
+      allSprints.sort((a, b) => {
+        const dateA = a.completeDate ? new Date(a.completeDate) : (a.endDate ? new Date(a.endDate) : new Date(0));
+        const dateB = b.completeDate ? new Date(b.completeDate) : (b.endDate ? new Date(b.endDate) : new Date(0));
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      return allSprints;
+    } catch (error) {
+      console.warn(`Could not fetch all closed sprints for board ${boardId}:`, error);
+      return [];
+    }
+  }
+
   async getActiveSprintsForProject(projectKey: string): Promise<JiraSprint[]> {
     try {
       const boards = await this.getBoards();
@@ -230,6 +275,7 @@ class JiraService {
       return [];
     }
   }
+
   async createIssue(issueData: {
     projectKey: string;
     summary: string;
@@ -242,27 +288,19 @@ class JiraService {
     try {
       const payload: any = {
         fields: {
-          project: {
-            key: issueData.projectKey
-          },
+          project: { key: issueData.projectKey },
           summary: issueData.summary,
           description: issueData.description || '',
-          issuetype: {
-            name: issueData.issueType
-          }
+          issuetype: { name: issueData.issueType }
         }
       };
 
-      // Add assignee if provided
       if (issueData.assignee) {
-        payload.fields.assignee = {
-          displayName: issueData.assignee
-        };
+        payload.fields.assignee = { displayName: issueData.assignee };
       }
 
-      // Add time estimate if provided
       if (issueData.estimatedHours) {
-        payload.fields.timeoriginalestimate = issueData.estimatedHours * 3600; // Convert hours to seconds
+        payload.fields.timeoriginalestimate = issueData.estimatedHours * 3600;
       }
 
       const response = await this.makeRequest<{ key: string; id: string }>('/issue', 'api3', {
@@ -270,7 +308,6 @@ class JiraService {
         body: JSON.stringify(payload)
       });
 
-      // If sprint is provided, add issue to sprint
       if (issueData.sprintId && response.id) {
         try {
           await this.addIssueToSprint(response.id, issueData.sprintId);
@@ -279,9 +316,7 @@ class JiraService {
         }
       }
 
-      // Clear cache to refresh data
       this.clearCache();
-
       return response;
     } catch (error) {
       console.error('Error creating Jira issue:', error);
@@ -292,9 +327,7 @@ class JiraService {
   private async addIssueToSprint(issueId: string, sprintId: string): Promise<void> {
     await this.makeRequest(`/sprint/${sprintId}/issue`, 'agile', {
       method: 'POST',
-      body: JSON.stringify({
-        issues: [issueId]
-      })
+      body: JSON.stringify({ issues: [issueId] })
     });
   }
 
@@ -353,6 +386,7 @@ class JiraService {
     const allSprints: { sprint: JiraSprint; boardName: string; projectKey: string }[] = [];
 
     for (const board of boards) {
+      // Her board'dan sadece son 1 sprint (performans için — ana ekran için)
       const sprints = await this.getClosedSprintsForBoard(board.id);
       for (const sprint of sprints) {
         allSprints.push({
@@ -370,8 +404,35 @@ class JiraService {
     return allSprints;
   }
 
+  /**
+   * Tüm board'ların TÜM kapatılan sprintlerini getirir (geçmiş drawer için).
+   * Opsiyonel olarak tek bir projeye filtrelenebilir.
+   */
+  async getAllClosedSprintsHistory(projectKey?: string): Promise<{ sprint: JiraSprint; boardName: string; projectKey: string }[]> {
+    const boards = await this.getBoards();
+    const allSprints: { sprint: JiraSprint; boardName: string; projectKey: string }[] = [];
+
+    // Eğer belirli bir proje isteniyorsa sadece o board'u çek (daha hızlı)
+    const targetBoards = projectKey && projectKey !== 'all'
+      ? boards.filter(b => b.name.toUpperCase().includes(projectKey.toUpperCase()))
+      : boards;
+
+    for (const board of targetBoards) {
+      const sprints = await this.getAllClosedSprintsForBoard(board.id);
+      const pk = this.extractProjectKeyFromBoard(board.name);
+      for (const sprint of sprints) {
+        allSprints.push({
+          sprint: { ...sprint, boardId: board.id, projectKey: pk },
+          boardName: board.name,
+          projectKey: pk
+        });
+      }
+    }
+
+    return allSprints;
+  }
+
   private extractProjectKeyFromBoard(boardName: string): string {
-    // Extract project key from board name (e.g., "ATK Board" -> "ATK")
     const bankProjectKeys = ['ATK', 'ALB', 'AN', 'BB', 'EK', 'OB', 'QNB', 'TFKB', 'VK', 'ZK', 'DK', 'HF'];
     for (const key of bankProjectKeys) {
       if (boardName.toUpperCase().includes(key)) {
@@ -383,7 +444,6 @@ class JiraService {
 
   async getDeveloperWorkloadAnalysis(): Promise<DeveloperWorkload[]> {
     try {
-      // Check if we have cached workload data
       const cacheKey = 'workload-analysis';
       const cached = this.getFromCache<DeveloperWorkload[]>(cacheKey);
       if (cached) {
@@ -428,13 +488,9 @@ class JiraService {
 
       console.log(`✅ Toplam ${allTasks.length} görev yüklendi`);
 
-      // Group tasks by developer
       const developerTasksMap = new Map<string, JiraTask[]>();
-      
-      // allowedDevelopers'ı normalize edilmiş şekilde hazırla
       const normalizedAllowed = allowedDevelopers.map(name => this.normalizeName(name));
       
-      // Analiz ve rapor hesaplamalarında Unassigned olanları filtrele
       allTasks.forEach(task => {
         if (
           task.assignee &&
@@ -450,14 +506,12 @@ class JiraService {
         }
       });
 
-      // Calculate workload for each developer
       const workloadAnalysis: DeveloperWorkload[] = [];
 
       developerTasksMap.forEach((tasks, developer) => {
         const totalTasks = tasks.length;
         const totalHours = tasks.reduce((sum, task) => sum + task.estimatedHours, 0);
         
-        // Group tasks by project and sprint
         const projectSprintMap = new Map<string, Map<string, JiraTask[]>>();
         
         tasks.forEach(task => {
@@ -473,7 +527,6 @@ class JiraService {
           sprintMap.get(task.sprint)!.push(task);
         });
 
-        // Create project-sprint details
         const details: ProjectSprintDetail[] = [];
         projectSprintMap.forEach((sprintMap, project) => {
           sprintMap.forEach((sprintTasks, sprint) => {
@@ -488,7 +541,6 @@ class JiraService {
           });
         });
 
-        // Determine status based on total hours
         let status: 'Eksik Yük' | 'Yeterli' | 'Aşırı Yük';
         if (totalHours < 70) {
           status = 'Eksik Yük';
@@ -505,13 +557,12 @@ class JiraService {
           totalHours,
           totalActualHours: tasks.reduce((sum, task) => sum + task.actualHours, 0),
           status,
-          details: details.sort((a, b) => b.hours - a.hours) // Sort by hours descending
+          details: details.sort((a, b) => b.hours - a.hours)
         });
       });
 
       const result = workloadAnalysis.sort((a, b) => a.totalHours - b.totalHours);
       
-      // Cache the result
       this.setCache(cacheKey, result);
       
       console.log(`📈 ${result.length} yazılımcının analizi tamamlandı`);
@@ -543,7 +594,6 @@ class JiraService {
   }
 
   private getDeveloperEmail(name: string): string {
-    // Convert name to email format
     const emailMap: { [name: string]: string } = {
       'Buse Eren': 'buse.eren@acerpro.com.tr',
       'Canberk İsmet DİZDAŞ': 'canberk.dizdas@acerpro.com.tr',
@@ -566,23 +616,14 @@ class JiraService {
     return emailMap[name] || `${name.toLowerCase().replace(/\s+/g, '.')}@company.com`;
   }
 
-  // Türkçe karakter ve büyük/küçük harf duyarsız karşılaştırma için normalize fonksiyonu
   private normalizeName(name: string): string {
     return name
       .toLocaleLowerCase('tr')
-      .replace(/ı/g, 'i')
-      .replace(/ş/g, 's')
-      .replace(/ç/g, 'c')
-      .replace(/ğ/g, 'g')
-      .replace(/ü/g, 'u')
-      .replace(/ö/g, 'o')
-      .replace(/İ/g, 'i')
-      .replace(/Ş/g, 's')
-      .replace(/Ç/g, 'c')
-      .replace(/Ğ/g, 'g')
-      .replace(/Ü/g, 'u')
-      .replace(/Ö/g, 'o')
-      .replace(/[^a-zA-Z0-9\s]/g, '') // özel karakterleri kaldır
+      .replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ç/g, 'c')
+      .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o')
+      .replace(/İ/g, 'i').replace(/Ş/g, 's').replace(/Ç/g, 'c')
+      .replace(/Ğ/g, 'g').replace(/Ü/g, 'u').replace(/Ö/g, 'o')
+      .replace(/[^a-zA-Z0-9\s]/g, '')
       .trim();
   }
 
@@ -600,7 +641,6 @@ class JiraService {
     try {
       const allFields = await this.getAllFields();
 
-      // İsminde story/point içeren tüm field'ları bul
       const storyPointFields = allFields.filter(field => {
         const nameLower = field.name.toLowerCase();
         return (nameLower.includes('story') && nameLower.includes('point')) ||
@@ -613,7 +653,6 @@ class JiraService {
       console.log('📊 All field candidates found:', storyPointFields.length);
       storyPointFields.forEach(f => console.log(`  - ${f.name} (${f.id})`));
 
-      // Eğer proje belirtilmişse, o projeden bir issue çekerek kullanılan field'ları doğrula
       if (projectKey && storyPointFields.length > 0) {
         try {
           const searchUrl = `/search?jql=project=${projectKey}&maxResults=1&fields=${storyPointFields.map(f => f.id).join(',')}`;
@@ -624,7 +663,6 @@ class JiraService {
             const issue = searchResult.issues[0];
             console.log('📋 Sample issue fields:', Object.keys(issue.fields));
 
-            // Issue'da gerçekten dolu olan field'ları filtrele
             const activeFields = storyPointFields.filter(field => {
               const value = issue.fields[field.id];
               const hasValue = value !== undefined && value !== null;
