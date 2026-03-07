@@ -346,95 +346,109 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
   projectKey, projectName, allSprintDetails, userEvaluations,
   sprintTasks, user, hasRole, onEvaluate, onClose
 }) => {
-  const [yearFilter, setYearFilter] = useState<string>('all');
+  // ── Filtre seçimleri (kullanıcı bunları seçer, Getir'e basar) ───────────────
+  const currentYear = new Date().getFullYear().toString();
+  const [yearFilter, setYearFilter] = useState<string>(currentYear);
   const [monthFilter, setMonthFilter] = useState<string>('all');
-  const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [projectFilter, setProjectFilter] = useState<string>(projectKey !== 'all' ? projectKey : 'all');
   const [nameFilter, setNameFilter] = useState<string>('');
 
-  // supabaseJiraService üzerinden tüm closed sprintleri çek
+  // ── Fetch state ───────────────────────────────────────────────────────────
   const [allClosedSprints, setAllClosedSprints] = useState<any[]>([]);
   const [fetchStatus, setFetchStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [loadedCount, setLoadedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const cancelRef = React.useRef(false);
 
-  useEffect(() => {
-    let cancelled = false;
+  // Getir fonksiyonu — sadece buton tıklandığında çalışır
+  const handleFetch = async () => {
+    cancelRef.current = true; // önceki isteği iptal et
+    await new Promise(r => setTimeout(r, 0));
+    cancelRef.current = false;
+
     setLoadedCount(0);
     setTotalCount(0);
+    setAllClosedSprints([]);
+    setFetchStatus('loading');
 
-    const fetchAll = async () => {
-      setFetchStatus('loading');
-      setAllClosedSprints([]);
-      try {
-        // 1) Tüm closed sprint listesini çek
-        const results = await supabaseJiraService.getAllClosedSprints();
-        if (cancelled) return;
+    try {
+      const results = await supabaseJiraService.getAllClosedSprints();
+      if (cancelRef.current) return;
 
-        const filtered = projectKey === 'all'
-          ? results
-          : results.filter(r => r.projectKey === projectKey);
+      // Proje ve yıl bazında ön-filtre (fazla data çekme)
+      let filtered = projectKey === 'all'
+        ? results
+        : results.filter(r => r.projectKey === projectKey);
 
-        // Sprint listesini hemen göster (_statsLoading: true ile)
-        const flat = filtered.map(({ sprint, boardName, projectKey: pk }) => {
-          const fromContext = allSprintDetails.find(s => s.id === sprint.id);
-          return {
-            ...sprint,
-            boardName,
-            projectKey: pk,
-            projectName: getProjectNameFromKey(pk),
-            taskCount: fromContext?.taskCount ?? 0,
-            doneTaskCount: fromContext?.doneTaskCount ?? 0,
-            successRate: fromContext?.successRate ?? 0,
-            totalHours: fromContext?.totalHours ?? 0,
-            totalActualHours: fromContext?.totalActualHours ?? 0,
-            assignedDevelopers: fromContext?.assignedDevelopers ?? [],
-            issueTypeBreakdown: fromContext?.issueTypeBreakdown ?? {},
-            _statsLoading: true,
-          };
-        });
-
-        setAllClosedSprints(flat);
-        setTotalCount(flat.length);
-
-        // 2) Tüm sprint'lerin task'larını 5'erli batch ile paralel yükle
-        const BATCH = 5;
-        for (let i = 0; i < flat.length; i += BATCH) {
-          if (cancelled) return;
-          const batch = flat.slice(i, i + BATCH);
-
-          await Promise.all(batch.map(async (sprintItem) => {
-            try {
-              const tasks = await supabaseJiraService.getSprintIssues(sprintItem.id);
-              if (cancelled) return;
-              const stats = computeSprintStats(tasks);
-              setAllClosedSprints(prev =>
-                prev.map(s => s.id === sprintItem.id ? { ...s, ...stats, _statsLoading: false } : s)
-              );
-            } catch {
-              setAllClosedSprints(prev =>
-                prev.map(s => s.id === sprintItem.id ? { ...s, _statsLoading: false } : s)
-              );
-            } finally {
-              if (!cancelled) setLoadedCount(c => c + 1);
-            }
-          }));
-        }
-
-        if (!cancelled) setFetchStatus('done');
-      } catch (err) {
-        if (!cancelled) {
-          console.error('Failed to fetch all closed sprints:', err);
-          setFetchStatus('error');
-          const fallback = allSprintDetails
-            .filter(s => s.state === 'closed' && (projectKey === 'all' || s.projectKey === projectKey));
-          setAllClosedSprints(fallback);
-        }
+      if (projectFilter !== 'all') {
+        filtered = filtered.filter(r => r.projectKey === projectFilter);
       }
-    };
+      if (yearFilter !== 'all') {
+        const y = parseInt(yearFilter);
+        filtered = filtered.filter(r => {
+          const d = r.sprint.completeDate || r.sprint.endDate;
+          return d && new Date(d).getFullYear() === y;
+        });
+      }
+      if (monthFilter !== 'all') {
+        const m = parseInt(monthFilter);
+        filtered = filtered.filter(r => {
+          const d = r.sprint.completeDate || r.sprint.endDate;
+          return d && new Date(d).getMonth() + 1 === m;
+        });
+      }
 
-    fetchAll();
-    return () => { cancelled = true; };
-  }, [projectKey]);
+      const flat = filtered.map(({ sprint, boardName, projectKey: pk }) => {
+        const fromContext = allSprintDetails.find(s => s.id === sprint.id);
+        return {
+          ...sprint,
+          boardName,
+          projectKey: pk,
+          projectName: getProjectNameFromKey(pk),
+          taskCount: fromContext?.taskCount ?? 0,
+          doneTaskCount: fromContext?.doneTaskCount ?? 0,
+          successRate: fromContext?.successRate ?? 0,
+          totalHours: fromContext?.totalHours ?? 0,
+          totalActualHours: fromContext?.totalActualHours ?? 0,
+          assignedDevelopers: fromContext?.assignedDevelopers ?? [],
+          issueTypeBreakdown: fromContext?.issueTypeBreakdown ?? {},
+          _statsLoading: true,
+        };
+      });
+
+      setAllClosedSprints(flat);
+      setTotalCount(flat.length);
+
+      const BATCH = 5;
+      for (let i = 0; i < flat.length; i += BATCH) {
+        if (cancelRef.current) return;
+        const batch = flat.slice(i, i + BATCH);
+        await Promise.all(batch.map(async (sprintItem) => {
+          try {
+            const tasks = await supabaseJiraService.getSprintIssues(sprintItem.id);
+            if (cancelRef.current) return;
+            const stats = computeSprintStats(tasks);
+            setAllClosedSprints(prev =>
+              prev.map(s => s.id === sprintItem.id ? { ...s, ...stats, _statsLoading: false } : s)
+            );
+          } catch {
+            setAllClosedSprints(prev =>
+              prev.map(s => s.id === sprintItem.id ? { ...s, _statsLoading: false } : s)
+            );
+          } finally {
+            if (!cancelRef.current) setLoadedCount(c => c + 1);
+          }
+        }));
+      }
+
+      if (!cancelRef.current) setFetchStatus('done');
+    } catch (err) {
+      if (!cancelRef.current) {
+        console.error('Failed to fetch sprints:', err);
+        setFetchStatus('error');
+      }
+    }
+  };
 
   // Gösterilecek liste: Jira'dan gelen veriye context verisiyle zenginleştirilmiş
   const projectClosedSprints = useMemo(() => {
@@ -449,31 +463,28 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
     });
   }, [allClosedSprints, allSprintDetails, projectKey]);
 
-  const availableYears = useMemo(() => {
-    const years = new Set<number>();
-    projectClosedSprints.forEach(s => {
-      const d = s.completeDate || s.endDate;
-      if (d) {
-        const y = new Date(d).getFullYear();
-        if (y > 2020) years.add(y);
-      }
-    });
-    return Array.from(years).sort((a, b) => b - a);
-  }, [projectClosedSprints]);
+  // Yıl listesi: sabit (son 5 yıl)
+  const currentYearNum = new Date().getFullYear();
+  const availableYears = Array.from({ length: 5 }, (_, i) => currentYearNum - i);
 
-  useEffect(() => {
-    if (availableYears.includes(2026)) setYearFilter('2026');
-    else if (availableYears.length > 0) setYearFilter(availableYears[0].toString());
-  }, [availableYears.length]);
-
-  // Proje listesi (all modunda birden fazla proje olabilir)
+  // Proje listesi: drawer all modunda tüm projeler, tekli modda sadece o proje
   const availableProjects = useMemo(() => {
-    const map = new Map<string, string>();
-    projectClosedSprints.forEach(s => {
-      if (s.projectKey && s.projectName) map.set(s.projectKey, s.projectName);
-    });
-    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [projectClosedSprints]);
+    const projectNames: Record<string, string> = {
+      'ATK': 'Albaraka Türk', 'ALB': 'Alternatif Bank', 'AN': 'Anadolubank',
+      'BB': 'Burgan Bank', 'EK': 'Emlak Katılım', 'OB': 'OdeaBank',
+      'QNB': 'QNB Bank', 'TFKB': 'Türkiye Finans', 'VK': 'Vakıf Katılım',
+      'ZK': 'Ziraat Katılım', 'DK': 'Dünya Katılım', 'ASS': 'Aylık Statü',
+      'IGW': 'InsurGateway', 'AIR': 'InsurGW - AIR'
+    };
+    // allSprintDetails'ten veya sabit listeden proje anahtarlarını al
+    const keys = new Set<string>(
+      allSprintDetails.map(s => s.projectKey).filter(Boolean)
+    );
+    if (projectKey !== 'all') keys.add(projectKey);
+    return Array.from(keys)
+      .map(k => [k, projectNames[k] || k] as [string, string])
+      .sort((a, b) => a[1].localeCompare(b[1]));
+  }, [allSprintDetails, projectKey]);
 
   const filteredSprints = useMemo(() => {
     let list = [...projectClosedSprints];
@@ -554,77 +565,111 @@ const AllClosedSprintsDrawer: React.FC<AllClosedSprintsDrawerProps> = ({
           </div>
         )}
 
-        {/* Filtreler */}
-        <div className="px-4 py-2.5 border-b border-gray-100 bg-white flex flex-wrap items-center gap-2">
-          {/* Yıl */}
-          <select
-            value={yearFilter}
-            onChange={e => { setYearFilter(e.target.value); setMonthFilter('all'); }}
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          >
-            <option value="all">Tüm Yıllar</option>
-            {availableYears.map(y => (
-              <option key={y} value={y.toString()}>{y}</option>
-            ))}
-          </select>
-
-          {/* Ay */}
-          <select
-            value={monthFilter}
-            onChange={e => setMonthFilter(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          >
-            <option value="all">Tüm Aylar</option>
-            {['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'].map((ay, i) => (
-              <option key={i+1} value={(i+1).toString()}>{ay}</option>
-            ))}
-          </select>
-
-          {/* Proje (all modunda göster, tekli projede de göster ama zaten filtreli) */}
-          {availableProjects.length > 1 && (
+        {/* Filtreler + Getir butonu */}
+        <div className="px-4 py-3 border-b border-gray-100 bg-white">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Yıl */}
             <select
-              value={projectFilter}
-              onChange={e => setProjectFilter(e.target.value)}
-              className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent max-w-[160px]"
+              value={yearFilter}
+              onChange={e => { setYearFilter(e.target.value); setMonthFilter('all'); }}
+              className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             >
-              <option value="all">Tüm Projeler</option>
-              {availableProjects.map(([key, name]) => (
-                <option key={key} value={key}>{key} – {name}</option>
+              <option value="all">Tüm Yıllar</option>
+              {availableYears.map(y => (
+                <option key={y} value={y.toString()}>{y}</option>
               ))}
             </select>
-          )}
 
-          {/* Arama */}
-          <div className="flex items-center border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white flex-1 min-w-[160px] max-w-xs">
-            <Search className="h-3.5 w-3.5 text-gray-400 flex-shrink-0 mr-1.5" />
-            <input
-              type="text"
-              value={nameFilter}
-              onChange={e => setNameFilter(e.target.value)}
-              placeholder="Sprint adında ara..."
-              className="text-xs text-gray-700 placeholder-gray-400 outline-none flex-1 bg-transparent"
-            />
-            {nameFilter && (
-              <button onClick={() => setNameFilter('')} className="text-gray-300 hover:text-gray-500 ml-1 text-xs">✕</button>
+            {/* Ay */}
+            <select
+              value={monthFilter}
+              onChange={e => setMonthFilter(e.target.value)}
+              className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              <option value="all">Tüm Aylar</option>
+              {['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'].map((ay, i) => (
+                <option key={i+1} value={(i+1).toString()}>{ay}</option>
+              ))}
+            </select>
+
+            {/* Proje */}
+            {(projectKey === 'all' || availableProjects.length > 1) && (
+              <select
+                value={projectFilter}
+                onChange={e => setProjectFilter(e.target.value)}
+                className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent max-w-[180px]"
+              >
+                <option value="all">Tüm Projeler</option>
+                {availableProjects.map(([key, name]) => (
+                  <option key={key} value={key}>{key} – {name}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Getir butonu */}
+            <button
+              onClick={handleFetch}
+              disabled={fetchStatus === 'loading'}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+            >
+              {fetchStatus === 'loading' ? (
+                <><Loader className="h-3.5 w-3.5 animate-spin" />Yükleniyor...</>
+              ) : (
+                <><Activity className="h-3.5 w-3.5" />Getir</>
+              )}
+            </button>
+
+            {/* Arama — sadece data geldikten sonra göster */}
+            {allClosedSprints.length > 0 && (
+              <div className="flex items-center border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white flex-1 min-w-[140px] max-w-xs">
+                <Search className="h-3.5 w-3.5 text-gray-400 flex-shrink-0 mr-1.5" />
+                <input
+                  type="text"
+                  value={nameFilter}
+                  onChange={e => setNameFilter(e.target.value)}
+                  placeholder="Sprint adında ara..."
+                  className="text-xs text-gray-700 placeholder-gray-400 outline-none flex-1 bg-transparent"
+                />
+                {nameFilter && (
+                  <button onClick={() => setNameFilter('')} className="text-gray-300 hover:text-gray-500 ml-1 text-xs">✕</button>
+                )}
+              </div>
+            )}
+
+            {allClosedSprints.length > 0 && (
+              <span className="ml-auto text-xs text-gray-400 whitespace-nowrap">
+                <span className="font-semibold text-gray-600">{filteredSprints.length}</span> sprint
+              </span>
             )}
           </div>
-
-          <span className="ml-auto text-xs text-gray-400 whitespace-nowrap">
-            <span className="font-semibold text-gray-600">{filteredSprints.length}</span> sprint
-          </span>
         </div>
 
         {/* Tablo */}
         <div className="flex-1 overflow-y-auto">
-          {fetchStatus === 'loading' && allClosedSprints.length === 0 ? (
+          {fetchStatus === 'idle' ? (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-400 space-y-3">
+              <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center">
+                <History className="h-7 w-7 text-indigo-300" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-500">Filtreni seç ve "Getir"e bas</p>
+                <p className="text-xs text-gray-400 mt-1">Yıl, ay ve proje seçimini yaptıktan sonra veriyi getir</p>
+              </div>
+            </div>
+          ) : fetchStatus === 'loading' && allClosedSprints.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-gray-400 space-y-3">
               <Loader className="h-7 w-7 animate-spin text-indigo-400" />
-              <p className="text-sm">Geçmiş sprintler yükleniyor...</p>
+              <p className="text-sm">Sprintler getiriliyor...</p>
+            </div>
+          ) : fetchStatus === 'error' ? (
+            <div className="flex flex-col items-center justify-center h-40 text-red-400 space-y-2">
+              <p className="text-sm">Veri alınamadı. Tekrar dene.</p>
+              <button onClick={handleFetch} className="text-xs text-indigo-600 underline">Yeniden dene</button>
             </div>
           ) : filteredSprints.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-gray-400">
               <Activity className="h-8 w-8 mb-2" />
-              <p className="text-sm">Sprint bulunamadı.</p>
+              <p className="text-sm">Bu filtrelere uygun sprint bulunamadı.</p>
             </div>
           ) : (
             <table className="w-full text-sm">
