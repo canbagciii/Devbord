@@ -112,7 +112,7 @@ class AuthService {
       // Edge function başarı dönse bile kullanıcı objesi yoksa bunu hata olarak ele al
       // (örneğin e-posta kayıtlı değilse veya hesap bulunamadıysa)
       if (!user) {
-        throw new Error('Bu e-posta ile kayıtlı bir Devbord hesabı bulunamadı. Lütfen önce kayıt olun.');
+        throw new Error('Bu e-posta ile kayıtlı bir Scrumlytics hesabı bulunamadı. Lütfen önce kayıt olun.');
       }
 
       // Supabase session'ı ayarla
